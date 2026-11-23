@@ -1,0 +1,1725 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ParaLab</title>
+<meta name="description" content="Offline Paradise and My Lab ROM tools. Edit, inspect, update, and back up your own device.">
+<link rel="icon" type="image/svg+xml" href="__BRAND_ICON__">
+<style>
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--ink);
+  font: 15px/1.5 "M PLUS Rounded 1c", "Segoe UI", system-ui, sans-serif;
+}
+button, select, input { font: inherit; color: inherit; }
+img, canvas { image-rendering: pixelated; }
+:focus-visible { outline: 3px solid var(--sky); outline-offset: 2px; }
+
+/* top bar */
+.bar {
+  position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px;
+  padding: 10px 20px; background: var(--panel); border-bottom: 2px solid var(--line);
+}
+.brand { display: flex; align-items: center; gap: 10px; flex: none; }
+.brand-name { display: block; font-size: 20px; font-weight: 800; line-height: 1.1; letter-spacing: -0.01em; }
+.brand-version { display: block; margin-top: 3px; color: var(--soft); font-size: 11px; font-weight: 700; line-height: 1.2; }
+.brand-icon { display: block; flex: none; image-rendering: auto; }
+.romname { color: var(--soft); font-size: 13px; max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.spacer { flex: 1; }
+.btn {
+  border: 2px solid var(--line); background: var(--panel); border-radius: 999px; padding: 6px 14px; cursor: pointer; font-weight: 700;
+}
+.btn:hover { border-color: var(--sky); }
+.btn.primary { background: var(--pink); border-color: var(--pink); color: var(--pink-ink); }
+.btn.primary:hover { filter: brightness(1.05); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn.small { padding: 3px 10px; font-size: 13px; }
+.lang { display: flex; border: 2px solid var(--line); border-radius: 999px; overflow: hidden; }
+.lang button { border: 0; background: none; padding: 4px 10px; cursor: pointer; font-weight: 700; color: var(--soft); }
+.lang button[aria-pressed="true"] { background: var(--ink); color: var(--panel); }
+
+/* start screen */
+.start { max-width: 760px; margin: 48px auto; padding: 0 16px; }
+.start h1 { font-size: 34px; line-height: 1.15; margin: 0 0 10px; font-weight: 800; letter-spacing: -0.02em; }
+.start p { color: var(--soft); margin: 0 0 12px; max-width: 64ch; }
+.drop {
+  margin-top: 26px; border: 3px dashed var(--line); border-radius: 24px; padding: 40px 20px 0; text-align: center; cursor: pointer;
+  background: var(--panel); overflow: hidden;
+}
+.drop.over { border-color: var(--pink); }
+.drop strong { display: block; font-size: 20px; }
+.drop span { color: var(--soft); font-size: 14px; }
+.drop .ground { height: 46px; margin: 26px -20px 0; position: relative;
+  background: conic-gradient(var(--check-a) 25%, var(--check-b) 0 50%, var(--check-a) 0 75%, var(--check-b) 0) 0 0 / 16px 16px;
+  border-bottom: 10px solid var(--grass); }
+.drop .ground::after { content: ""; position: absolute; left: calc(50% - 14px); bottom: 0; width: 28px; height: 24px; border-radius: 50% 50% 40% 40%;
+  background: #ffe98a; box-shadow: inset 0 0 0 2px var(--ink); }
+.feathead { font-size: 20px; margin: 30px 0 0; }
+.feats { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-top: 12px; }
+.feat { background: var(--panel); border-radius: var(--radius); padding: 14px 16px; border: 2px solid var(--line); border-left: 6px solid var(--grass); font-size: 14px; color: var(--soft); }
+.feat b { display: block; color: var(--ink); font-size: 16px; margin-bottom: 4px; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin-top: 26px; }
+.fact { background: var(--panel); border-radius: var(--radius); padding: 14px 16px; border: 2px solid var(--line); font-size: 14px; color: var(--soft); }
+.fact b { display: block; color: var(--ink); font-size: 15px; margin-bottom: 2px; }
+
+.emustat { margin: 6px 4px; font-weight: 700; white-space: pre-line; }
+.dlcgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 8px; margin: 8px 4px; }
+.dlcbox { border: 2px solid var(--line); border-radius: 10px; padding: 6px 8px; font-size: 13px; min-width: 0; }
+.dlcbox h4 { margin: 0 0 4px; font-size: 14px; }
+.dlcrow { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px; padding: 1px 0; }
+.dlcrow.free { color: var(--soft); }
+.itemname { display: inline-flex; align-items: center; gap: 4px; flex: 1 1 80px; min-width: 0; overflow-wrap: anywhere; }
+.itemctl { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+.itempic { image-rendering: pixelated; }
+.picgrid { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 4px; }
+.picgrid figure { margin: 0; text-align: center; font-size: 12px; }
+.picgrid canvas { width: 64px; height: 64px; image-rendering: pixelated; display: block; }
+.dlcrow button { font-size: 11px; padding: 0 6px; }
+/* workspace */
+.work { display: none; }
+.work.on { display: block; }
+.info { display: flex; flex-wrap: wrap; gap: 6px 22px; padding: 12px 20px 0; font-size: 14px; color: var(--soft); }
+.info b { color: var(--ink); }
+.meter { width: 160px; height: 8px; border-radius: 4px; background: var(--line); display: inline-block; vertical-align: middle; overflow: hidden; }
+.meter i { display: block; height: 100%; background: var(--sky); }
+.meter.full i { background: var(--warn); }
+.tabs { display: flex; gap: 6px; padding: 14px 20px 0; flex-wrap: wrap; }
+.tab { border: 0; background: none; padding: 8px 14px; border-radius: 12px 12px 0 0; cursor: pointer; font-weight: 700; color: var(--soft); }
+.tab[aria-selected="true"] { background: var(--panel); color: var(--ink); }
+.pane { background: var(--panel); margin: 0 20px 24px; border-radius: 0 var(--radius) var(--radius) var(--radius); padding: 16px; min-height: 60vh; }
+.tools { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; margin-bottom: 14px; }
+.tools .hint { color: var(--soft); font-size: 13px; }
+.uartwarn { margin: 6px 0; padding: 6px 8px; border-radius: 6px; background: #fff3cd; color: #5c4400; font-size: 13px; }
+.uartwarn[hidden] { display: none; }
+.tools .lbl { min-width: 96px; }
+.check { display: inline-flex; gap: 6px; align-items: center; font-size: 14px; }
+
+/* overview of the new ROM */
+.plan { margin: 12px 20px 0; padding: 12px 14px; background: var(--panel); border-radius: var(--radius); border: 2px solid var(--line); }
+.plan-h { font-weight: 800; margin-bottom: 6px; }
+#myLabRom .tab[aria-selected="true"] { box-shadow: inset 0 -3px var(--sky); }
+#myLabRom [role="tabpanel"] { padding: 14px 0 4px; }
+#myLabRom select { max-width: 100%; }
+#myLabRom input[type="number"] { width: 7em; }
+#myLabRom canvas { image-rendering: pixelated; max-width: 100%; }
+.lab-dialog { width: min(520px, 92vw); color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+.lab-dialog::backdrop { background: #0008; }
+#myLabRom .lab-preview { min-height: 120px; display: grid; place-items: center; padding: 12px; border: 1px solid var(--line); border-radius: 12px; }
+#myLabRom .hint { margin: 6px 0 10px; }
+.help h3 { font-size: 14px; margin: 12px 0 4px; }
+.help p { margin: 0; white-space: pre-line; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px 8px; margin-bottom: 10px; }
+.proglist { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 10px; }
+.prow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 4px 10px; border: 2px solid var(--line); border-radius: 10px; }
+.prow.main { border-color: var(--sky); }
+.prow.gone .pname { text-decoration: line-through; color: var(--soft); }
+.prow .pname { font-weight: 600; min-width: 110px; }
+.prow .ptag { font-size: 12px; color: var(--soft); flex: 1; }
+.prow .pinfo { cursor: help; }
+.prow .ptog { min-width: 28px; }
+.prow .pstar { font-size: 15px; line-height: 1; color: var(--soft); }
+.prow .pstar.on { color: #e8a100; opacity: 1; }
+.prow .pstar:disabled:not(.on) { opacity: .35; }
+.nlist { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 4px 16px; }
+.nlist label { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.nlist label span { flex: 0 0 120px; color: var(--soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nlist input { flex: 1; min-width: 0; text-transform: uppercase; }
+.nlist input.chg { border-color: var(--pink); }
+.eyerow { display: flex; gap: 12px; align-items: flex-start; margin: 8px 0; }
+.facecol { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.posebar { justify-content: center; align-items: center; gap: 6px; }
+.posebar .on { background: var(--ink); color: var(--panel); }
+.eyerow canvas { width: 192px; height: 192px; image-rendering: pixelated; background: #fff; border: 1px solid var(--line); border-radius: 6px; flex: 0 0 auto; }
+.savesec { font-size: 14px; margin: 16px 0 6px; padding-bottom: 4px; border-bottom: 1px solid var(--line); }
+.savesec:first-child { margin-top: 2px; }
+.pdet { margin: -4px 0 4px 14px; padding: 8px 10px; border-left: 3px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
+.pdet .tools { margin: 0; }
+.chip { border-radius: 999px; padding: 2px 10px; font-size: 13px; border: 2px solid var(--line); color: var(--soft); }
+.chip b { color: var(--ink); }
+.chip.new { border-color: var(--pink); }
+.chip.keep { border-color: var(--sky); }
+.chip.del { border-color: var(--warn); text-decoration: line-through; }
+.flash { display: flex; height: 14px; border-radius: 7px; overflow: hidden; background: var(--line); }
+.seg { display: block; height: 100%; }
+.seg.fw, .dot.fw { background: #285ddf; } .seg.doom, .dot.doom { background: #d9480f; } .seg.emu, .dot.emu { background: var(--sky); } .seg.wolf, .dot.wolf { background: #6b8e23; } .seg.gb, .dot.gb { background: #c9a227; } .seg.sms, .dot.sms { background: #0f8a7e; } .seg.pm, .dot.pm { background: #c2410c; } .seg.ab, .dot.ab { background: #7c3aed; }
+.seg.slots, .dot.slots { background: #008669; } .seg.save, .dot.save { background: #c96c17; } .seg.free, .dot.free { background: #dde2e7; } .seg.resv, .dot.resv { background: #775795; }
+.dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; border: 1px solid var(--line); }
+.device { margin-bottom: 12px; }
+.device .tools { margin: 8px 0; }
+.device-tabs { padding: 0; border-bottom: 2px solid var(--line); }
+.device-tabs .tab[aria-selected="true"] { box-shadow: inset 0 -3px var(--sky); }
+.device [role="tabpanel"] { padding-top: 8px; }
+#visGhost { max-width: min(100%, 350px); }
+.devinfo { font-weight: 700; }
+.legend { display: flex; flex-wrap: wrap; gap: 2px 16px; font-size: 12px; color: var(--soft); margin-top: 6px; }
+.rule { font-size: 13px; color: var(--soft); margin-top: 6px; }
+.keys h3 { margin: 14px 0 8px; font-size: 15px; }
+.keygrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px 14px; margin-bottom: 10px; }
+.keygrid label { display: flex; flex-direction: column; gap: 3px; font-size: 13px; color: var(--soft); }
+.hint.bad { color: var(--warn); font-weight: 700; }
+@media (max-width: 640px) { .plan { margin: 10px 8px 0; } }
+/* tiles: each sprite stands on a strip of grass */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 10px; }
+.tile {
+  border: 2px solid transparent; border-radius: 12px; padding: 0; cursor: pointer; text-align: center; background: none; position: relative;
+}
+.tile:hover, .tile.sel { border-color: var(--sky); }
+.tile .stage {
+  height: 104px; display: flex; align-items: flex-end; justify-content: center; border-radius: 10px 10px 0 0;
+  background: conic-gradient(var(--check-a) 25%, var(--check-b) 0 50%, var(--check-a) 0 75%, var(--check-b) 0) 0 0 / 16px 16px;
+  border-bottom: 5px solid var(--grass); overflow: hidden;
+}
+.tile canvas { max-width: 100%; max-height: 100%; }
+.tile .cap { font-size: 12px; color: var(--soft); padding: 3px 0 4px; }
+.tile .cap b { color: var(--ink); }
+.tile.locked { opacity: .55; }
+.tile.changed::after { content: ""; position: absolute; top: 6px; right: 6px; width: 10px; height: 10px; border-radius: 50%; background: var(--pink); }
+
+/* detail drawer */
+.drawer {
+  position: fixed; inset: 0 0 0 auto; width: min(760px, 100vw); background: var(--panel); border-left: 2px solid var(--line);
+  z-index: 10; transform: translateX(100%); transition: transform .18s ease-out; display: flex; flex-direction: column;
+}
+.drawer.open { transform: none; }
+@media (prefers-reduced-motion: reduce) { .drawer { transition: none; } }
+.drawer header { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-bottom: 2px solid var(--line); }
+.drawer header h2 { margin: 0; font-size: 18px; flex: 1; }
+.drawer .body { padding: 16px 18px; overflow: auto; flex: 1; }
+.drawer .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.sheetwrap {
+  overflow: auto; border-radius: 10px; border: 2px solid var(--line); max-height: 60vh;
+  background: conic-gradient(var(--check-a) 25%, var(--check-b) 0 50%, var(--check-a) 0 75%, var(--check-b) 0) 0 0 / 16px 16px;
+}
+.zoom { display: inline-flex; gap: 4px; }
+.meta { font-size: 13px; color: var(--soft); margin: 10px 0 0; }
+.meta li { margin: 2px 0; }
+.scrim { position: fixed; inset: 0; background: rgba(10, 20, 40, .35); z-index: 9; display: none; }
+.scrim.on { display: block; }
+
+/* card */
+.dimgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 10px; }
+.assign { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 14px 0; padding: 12px; border-radius: 12px; background: var(--bg); }
+.eyeed { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; margin: 0 0 16px; }
+.eyecv { cursor: crosshair; border-radius: 10px; border: 2px solid var(--line);
+  background: conic-gradient(var(--check-a) 25%, var(--check-b) 0 50%, var(--check-a) 0 75%, var(--check-b) 0) 0 0 / 16px 16px; max-width: 100%; }
+.eyeed > div { flex: 1; min-width: 220px; }
+select { border: 2px solid var(--line); border-radius: 10px; padding: 5px 8px; background: var(--panel); }
+.playdate-pictures { display: flex; flex-wrap: wrap; gap: 16px; }
+.playdate-pictures figure { margin: 0; }
+.playdate-pictures canvas { display: block; width: 128px; height: 128px; object-fit: contain; }
+.playdate-pictures figcaption { color: var(--soft); font-size: 13px; }
+.playdate-details { margin-top: 8px; }
+.playdate-details summary { cursor: pointer; }
+.playdate-details dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 2px 14px; }
+.playdate-details dd { margin: 0; overflow-wrap: anywhere; }
+.playdate-animation { margin-top: 6px; }
+.playdate-animation .tools { margin: 6px 0; }
+@supports (appearance: base-select) and selector(::picker(select)) {
+  .model-select, .model-select::picker(select) { appearance: base-select; }
+  .model-select::picker(select) {
+    padding: 4px; border: 2px solid var(--line); border-radius: 10px; background: var(--panel);
+  }
+  .model-select option::before { content:""; width:.65em; height:.65em; flex:none; border-radius:50%; background:currentColor; }
+  .model-select option { padding: 5px 8px; border-radius: 6px; }
+  .model-select option:is(:hover, :focus, :checked) { background: var(--bg); }
+}
+
+/* messages */
+.toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); background: var(--ink); color: var(--panel); padding: 10px 18px; border-radius: 12px; z-index: 20; max-width: min(640px, 92vw); font-size: 14px; display: none; white-space: pre-line; }
+.toast.on { display: block; }
+.toast.err { background: var(--warn); color: #fff; }
+.rule.warn { color: var(--warn); font-weight: 600; }
+.devwarn { color: var(--warn); font-weight: 700; margin: 4px 0; }
+@media (max-width: 640px) {
+  .bar { padding: 10px 16px; }
+  .pane { margin: 0 8px 16px; padding: 12px; }
+  .tabs, .info { padding-left: 16px; padding-right: 16px; }
+  .grid, .dimgrid { grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); }
+}
+/* ParaLab visual system: compact, readable controls and clear hierarchy. */
+body{font:15px/1.55 var(--ui-font);letter-spacing:.002em}
+.bar{padding:14px clamp(16px,3vw,42px);gap:10px 14px;border-bottom:1px solid var(--line);box-shadow:0 2px 16px #10232c0a;backdrop-filter:blur(12px)}
+.brand{gap:12px}.brand-name{font-size:21px;font-weight:750;letter-spacing:-.035em}.brand-version{font-size:11px;font-weight:550;letter-spacing:.03em}
+.btn{border:1px solid var(--line);border-radius:10px;padding:7px 13px;font-weight:650;transition:background .16s,border-color .16s,transform .16s}
+.btn:hover:not(:disabled){border-color:var(--sky);background:var(--check-a);transform:translateY(-1px)}
+.btn.primary{background:var(--pink);border-color:var(--pink);color:var(--pink-ink)}
+.btn.primary:hover:not(:disabled){background:var(--sky);border-color:var(--sky)}
+.btn.small{padding:5px 10px;font-size:13px}.start{max-width:900px;margin:60px auto;padding:0 20px}
+.start h1{font-size:clamp(32px,5vw,52px);font-weight:780;letter-spacing:-.055em;max-width:15ch}
+.start p{font-size:16px;max-width:65ch}.drop{border:2px dashed var(--line);border-radius:18px;padding:36px 20px 0;box-shadow:0 8px 30px #1826330a}
+.drop:hover,.drop.over{border-color:var(--sky)}.drop .ground{height:26px;margin-top:30px;border-bottom:5px solid var(--grass)}
+.drop .ground::after{display:none}.feat,.fact,.plan{border:1px solid var(--line);box-shadow:0 4px 14px #18263308}
+.feat{border-left:3px solid var(--sky)}.tabs{gap:4px;padding-top:18px;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:thin}
+.tab{white-space:nowrap;border-radius:9px 9px 0 0;font-weight:640;padding:9px 13px}
+.tab:hover{color:var(--ink);background:var(--check-a)}.tab[aria-selected="true"]{box-shadow:inset 0 -3px var(--sky)}
+.pane{border:1px solid var(--line);border-top:0;padding:20px;min-height:48vh}
+input,select,textarea{accent-color:var(--sky)}input[type="text"],input[type="number"],input[type="search"],select{border:1px solid var(--line);border-radius:8px;padding:5px 8px;background:var(--panel)}
+.tile{border-radius:12px}.tile .stage{border-bottom:3px solid var(--grass)}
+.drawer{border-left:1px solid var(--line);box-shadow:-12px 0 32px #0d192733}
+/* Compatibility readers remain for old ROMs; additional program installers are not offered. */
+#work [data-tab="emu"],#work [data-tab="doom"],#work [data-tab="gb"],
+#work [data-tab="sms"],#work [data-tab="pm"],#work [data-tab="ab"],
+#pane-emu,#pane-doom,#pane-gb,#pane-sms,#pane-pm,#pane-ab,
+#appsOnlyRow,#cleanRow,#cleanClockRow,#gplayRow{display:none!important}
+@media(max-width:640px){.bar{position:relative}.tabs{padding-left:8px;padding-right:8px}.pane{margin:0 8px 20px;padding:14px}.start{margin:32px auto}}
+.zh-state{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin:12px 0 22px}.zh-state>div{padding:14px 16px;background:var(--check-a);border:1px solid var(--line);border-radius:11px}.zh-state strong{display:block;color:var(--soft);font-size:11px;letter-spacing:.08em;text-transform:uppercase}.zh-state span{display:block;margin-top:5px;font-weight:700}.zh-panel h3{font-size:20px;letter-spacing:-.025em;margin:0 0 5px}.zh-panel>p{color:var(--soft);margin:0 0 13px}.zh-form{display:flex;flex-wrap:wrap;align-items:end;gap:10px}.zh-form label{display:grid;gap:4px;font-size:13px;font-weight:650}.zh-form select{min-width:150px}.zh-status{white-space:pre-line;min-height:24px;margin:16px 0}
+__STUDIO_LAYOUT__
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="brand"><img class="brand-icon" src="__BRAND_ICON__" width="34" height="34" alt=""><span class="brand-name">ParaLab</span></div>
+  <nav class="destinations" aria-label="Main navigation">
+    <button id="btnWorkspace" aria-current="page">Workspace</button>
+    <button id="btnDevice" data-t="device"></button>
+    <button id="btnLabCodes" data-t="Lab & Shop Codes">Lab &amp; Shop Codes</button>
+    <button id="btnHelp">Guide</button>
+  </nav>
+  <div class="interface-language">
+    <span class="interface-language-icon" aria-hidden="true"></span>
+    <select id="interfaceLanguage" aria-label="Interface language" title="Language"></select>
+  </div>
+  <div class="file-actions">
+    <div class="header-rom"><span class="romname" id="romname"><span></span></span><span class="rom-source-edition" id="headerRomEdition" hidden></span></div>
+    <div class="file-buttons">
+      <button class="btn" id="btnOpen" data-t="open"></button>
+      <button class="btn" id="reviewDevice">Review Device Write…</button>
+      <button class="btn primary" id="btnSave" data-t="save" disabled></button>
+    </div>
+  </div>
+</header>
+<input type="file" id="fileRom" hidden accept=".bin,.BIN">
+<input type="file" id="fileSheets" hidden multiple accept=".png,.zip">
+<input type="file" id="fileOne" hidden accept=".png">
+<input type="file" id="fileDim" hidden accept=".bin,.BIN">
+<input type="file" id="fileEmu" hidden accept=".bin,.BIN,.sav,.SAV">
+<input type="file" id="fileSave" hidden accept=".tamasave">
+<input type="file" id="fileMyLabSave" hidden accept=".tamastate,.mylabsave,.sav">
+<input type="file" id="fileEmuSav" hidden accept=".sav,.SAV,.bin,.BIN,.eep,.EEP">
+<input type="file" id="fileT7Fig" hidden multiple accept=".bin,.BIN">
+<input type="file" id="fileApp" hidden accept=".bin,.BIN">
+<input type="file" id="filePmBios" hidden accept=".min,.MIN,.bin,.BIN,.zip,.ZIP">
+<input type="file" id="fileDlc" hidden multiple accept=".jpg,.JPG,.jpeg,.bin,.zip">
+<input type="file" id="fileT18Item" hidden multiple accept=".txt,.bin,.zip">
+<input type="file" id="fileT18Pic" hidden multiple accept=".png,.json,.zip">
+<input type="file" id="fileField" hidden accept=".zip,.ZIP">
+
+<dialog id="deviceDialog" aria-labelledby="deviceDialogTitle" aria-describedby="deviceDialogMessage">
+  <form method="dialog">
+    <h2 id="deviceDialogTitle"></h2>
+    <div id="deviceDialogMessage"></div>
+    <section id="writeSummary" hidden aria-label="Write details">
+      <div class="write-route"><div><small>Source ROM</small><strong id="reviewSourceName"></strong><span class="rom-source-edition" id="reviewSourceEdition" hidden></span></div><span aria-hidden="true">→</span><div><small>Target Device</small><strong id="reviewTargetName"></strong></div></div>
+      <dl class="write-facts">
+        <dt>Write Content</dt><dd id="reviewContent"></dd>
+        <dt>Device Saves</dt><dd id="reviewSaves"></dd>
+        <dt>Write Mode</dt><dd id="reviewMode"></dd>
+        <dt>Image Difference</dt><dd><strong id="reviewBytes"></strong><small>Compared with the source file before device-specific adjustments.</small></dd>
+      </dl>
+
+    </section>
+    <aside class="device-risk" id="writeRisk" hidden>
+      <strong>Write at Your Own Risk</strong>
+      <p>A failed write can erase saves or leave the device unable to start. Check your backup before continuing. Keep the device powered on and connected until the write finishes.</p>
+    </aside>
+    <div class="device-dialog-actions">
+      <button type="submit" class="btn" value="cancel" id="deviceDialogCancel">Cancel</button>
+      <button type="submit" class="btn primary" value="accept" id="deviceDialogAccept"></button>
+    </div>
+  </form>
+</dialog>
+<main data-view="workspace">
+  <section class="plan help" id="helpBox" hidden>
+    <div class="guide-heading"><h1>Guide</h1><button class="btn" id="helpClose" type="button">Back to Workspace</button></div>
+    <section class="guide-workflow">
+      <h2>Edit a ROM</h2>
+      <ol class="guide-steps">
+        <li><h3>Load the Source</h3><p data-sentence="sentenceGuideSource"><button data-sentence-part="open" type="button" id="guideOpenRom" class="text-action" data-t="open">Open ROM</button> loads a <span data-sentence-part="paradise" data-edition-label="paradise">Tamagotchi Paradise</span> or <span data-sentence-part="myLab" data-edition-label="my-lab">My Lab Tamagotchi</span> ROM. To read a ROM from your device, use <a data-sentence-part="read" href="#romTransfer" data-view-link="uart">Read ROM</a> and keep the downloaded backup.</p></li>
+        <li><h3>Edit and Export</h3><p data-sentence="sentenceGuideEdit">Make changes in <a data-sentence-part="workspace" href="#btnWorkspace" data-view-link="workspace">Workspace</a>. Choose Save New ROM to download the edited copy.</p></li>
+        <li><h3>Write to a Device</h3><p data-sentence="sentenceGuideWrite">For a separately exported translation, open the translated ROM first. In <a data-sentence-part="write" href="#writeReview" data-view-link="uart">Write to Device</a>, review the source file, target device and save settings before confirming.</p></li>
+      </ol>
+    </section>
+    <section class="guide-reference guide-demos" id="guide-demos">
+      <h2>Walkthroughs</h2>
+      <section class="demo-group">
+        <h3><span data-edition-label="my-lab">My Lab Tamagotchi</span></h3>
+        <details name="guide-walkthrough">
+          <summary id="demo-entry-title" data-t="myLabComputer">myLabComputer</summary>
+          <img class="demo-lcd" id="demo-entry" width="160" height="128" data-poster="__GUIDE_entry.png__" data-animation="__GUIDE_entry.gif__" alt="" aria-labelledby="demo-entry-title">
+          <button class="btn small demo-toggle" type="button" aria-controls="demo-entry" aria-pressed="false"><span class="demo-play">Play</span><span class="demo-stop">Stop</span></button>
+        </details>
+        <details name="guide-walkthrough">
+          <summary id="demo-garden-title" data-t="Edit a Garden Character">Edit a Garden Character</summary>
+          <p>Choose a slot in the ParaLab menu, change the body, eyes and color, then review and save.</p>
+          <img class="demo-lcd" id="demo-garden" width="640" height="512" data-poster="__GUIDE_garden.png__" data-animation="__GUIDE_garden.gif__" alt="" aria-labelledby="demo-garden-title">
+          <button class="btn small demo-toggle" type="button" aria-controls="demo-garden" aria-pressed="false"><span class="demo-play">Play</span><span class="demo-stop">Stop</span></button>
+        </details>
+        <details name="guide-walkthrough">
+          <summary id="demo-saves-title" data-t="Save Slots">Save Slots</summary>
+          <img class="demo-lcd" id="demo-saves" width="160" height="128" data-poster="__GUIDE_saves.png__" data-animation="__GUIDE_saves.gif__" alt="" aria-labelledby="demo-saves-title">
+          <button class="btn small demo-toggle" type="button" aria-controls="demo-saves" aria-pressed="false"><span class="demo-play">Play</span><span class="demo-stop">Stop</span></button>
+        </details>
+        <details name="guide-walkthrough">
+          <summary id="demo-items-title" data-t="Add an Item">Add an Item</summary>
+          <img class="demo-lcd" id="demo-items" width="160" height="128" data-poster="__GUIDE_bulk.png__" data-animation="__GUIDE_items.gif__" alt="" aria-labelledby="demo-items-title">
+          <button class="btn small demo-toggle" type="button" aria-controls="demo-items" aria-pressed="false"><span class="demo-play">Play</span><span class="demo-stop">Stop</span></button>
+        </details>
+        <details name="guide-walkthrough">
+          <summary id="demo-bulk-title" data-t="Add Missing Items">Add Missing Items</summary>
+          <img class="demo-lcd" id="demo-bulk" width="160" height="128" data-poster="__GUIDE_bulk.png__" data-animation="__GUIDE_bulk.gif__" alt="" aria-labelledby="demo-bulk-title">
+          <button class="btn small demo-toggle" type="button" aria-controls="demo-bulk" aria-pressed="false"><span class="demo-play">Play</span><span class="demo-stop">Stop</span></button>
+        </details>
+        <details name="guide-walkthrough">
+          <summary id="demo-decor-title" data-t="Lab Decorations">Lab Decorations</summary>
+          <img class="demo-lcd" id="demo-decor" width="160" height="128" data-poster="__GUIDE_bulk.png__" data-animation="__GUIDE_decor.gif__" alt="" aria-labelledby="demo-decor-title">
+          <button class="btn small demo-toggle" type="button" aria-controls="demo-decor" aria-pressed="false"><span class="demo-play">Play</span><span class="demo-stop">Stop</span></button>
+        </details>
+        <details name="guide-walkthrough">
+          <summary id="demo-treasure-title" data-t="Treasures">Treasures</summary>
+          <img class="demo-lcd" id="demo-treasure" width="160" height="128" data-poster="__GUIDE_bulk.png__" data-animation="__GUIDE_treasure.gif__" alt="" aria-labelledby="demo-treasure-title">
+          <button class="btn small demo-toggle" type="button" aria-controls="demo-treasure" aria-pressed="false"><span class="demo-play">Play</span><span class="demo-stop">Stop</span></button>
+        </details>
+        <details name="guide-walkthrough">
+          <summary id="demo-points-title" data-t="petPoints">petPoints</summary>
+          <img class="demo-lcd" id="demo-points" width="160" height="128" data-poster="__GUIDE_points.png__" data-animation="__GUIDE_points.gif__" alt="" aria-labelledby="demo-points-title">
+          <button class="btn small demo-toggle" type="button" aria-controls="demo-points" aria-pressed="false"><span class="demo-play">Play</span><span class="demo-stop">Stop</span></button>
+        </details>
+        <details name="guide-walkthrough">
+          <summary id="demo-level-title" data-t="Researcher Level">Researcher Level</summary>
+          <img class="demo-lcd" id="demo-level" width="160" height="128" data-poster="__GUIDE_level.png__" data-animation="__GUIDE_level.gif__" alt="" aria-labelledby="demo-level-title">
+          <button class="btn small demo-toggle" type="button" aria-controls="demo-level" aria-pressed="false"><span class="demo-play">Play</span><span class="demo-stop">Stop</span></button>
+        </details>
+        <details name="guide-walkthrough">
+          <summary id="demo-files-title" data-t="Tama File">Tama File</summary>
+          <img class="demo-lcd" id="demo-files" width="160" height="128" data-poster="__GUIDE_files.png__" data-animation="__GUIDE_files.gif__" alt="" aria-labelledby="demo-files-title">
+          <button class="btn small demo-toggle" type="button" aria-controls="demo-files" aria-pressed="false"><span class="demo-play">Play</span><span class="demo-stop">Stop</span></button>
+        </details>
+        <details name="guide-walkthrough">
+          <summary id="demo-flash-title" data-t="UART Flash Tool">UART Flash Tool</summary>
+          <img class="demo-lcd" id="demo-flash" width="160" height="128" data-poster="__GUIDE_flash.png__" data-animation="__GUIDE_flash.gif__" alt="" aria-labelledby="demo-flash-title">
+          <button class="btn small demo-toggle" type="button" aria-controls="demo-flash" aria-pressed="false"><span class="demo-play">Play</span><span class="demo-stop">Stop</span></button>
+        </details>
+        <details name="guide-walkthrough">
+          <summary id="demo-about-title" data-t="About">About</summary>
+          <img class="demo-lcd" id="demo-about" width="160" height="128" data-poster="__GUIDE_about.png__" data-animation="__GUIDE_about.gif__" alt="" aria-labelledby="demo-about-title">
+          <button class="btn small demo-toggle" type="button" aria-controls="demo-about" aria-pressed="false"><span class="demo-play">Play</span><span class="demo-stop">Stop</span></button>
+        </details>
+      </section>
+      <section class="demo-group">
+        <h3><span data-edition-label="paradise">Tamagotchi Paradise</span></h3>
+        <details name="guide-walkthrough">
+          <summary id="demo-shortcut-title" data-t="Menu Shortcut">Menu Shortcut</summary>
+          <p><kbd>A</kbd> + <kbd>C</kbd></p>
+          <img class="demo-lcd" id="demo-shortcut" width="128" height="128" data-poster="__GUIDE_shortcut.png__" alt="" aria-labelledby="demo-shortcut-title">
+        </details>
+        <details name="guide-walkthrough">
+          <summary id="demo-field-title" data-t="myLabField">myLabField</summary>
+          <img class="demo-lcd" id="demo-field" width="128" height="128" data-poster="__GUIDE_field.png__" data-animation="__GUIDE_field.gif__" alt="" aria-labelledby="demo-field-title">
+          <button class="btn small demo-toggle" type="button" aria-controls="demo-field" aria-pressed="false"><span class="demo-play">Play</span><span class="demo-stop">Stop</span></button>
+        </details>
+        <details name="guide-walkthrough">
+          <summary id="demo-care-title" data-t="Tama Care">Tama Care</summary>
+          <img class="demo-lcd" id="demo-care" width="128" height="128" data-poster="__GUIDE_care.png__" data-animation="__GUIDE_care.gif__" alt="" aria-labelledby="demo-care-title">
+          <button class="btn small demo-toggle" type="button" aria-controls="demo-care" aria-pressed="false"><span class="demo-play">Play</span><span class="demo-stop">Stop</span></button>
+        </details>
+        <details name="guide-walkthrough">
+          <summary id="demo-age-title" data-t="Age in Days">Age in Days</summary>
+          <img class="demo-lcd" id="demo-age" width="128" height="128" data-poster="__GUIDE_age.png__" data-animation="__GUIDE_age.gif__" alt="" aria-labelledby="demo-age-title">
+          <button class="btn small demo-toggle" type="button" aria-controls="demo-age" aria-pressed="false"><span class="demo-play">Play</span><span class="demo-stop">Stop</span></button>
+        </details>
+        <details name="guide-walkthrough">
+          <summary id="demo-appearance-title" data-t="Appearance">Appearance</summary>
+          <img class="demo-lcd" id="demo-appearance" width="128" height="128" data-poster="__GUIDE_appearance.png__" data-animation="__GUIDE_appearance.gif__" alt="" aria-labelledby="demo-appearance-title">
+          <button class="btn small demo-toggle" type="button" aria-controls="demo-appearance" aria-pressed="false"><span class="demo-play">Play</span><span class="demo-stop">Stop</span></button>
+        </details>
+      </section>
+      <section class="demo-group">
+        <h3><span data-edition-label="neon">Neon Planets</span></h3>
+        <details name="guide-walkthrough">
+          <summary id="demo-galaxy-title" data-t="Galaxy Level">Galaxy Level</summary>
+          <img class="demo-lcd" id="demo-galaxy" width="128" height="128" data-poster="__GUIDE_galaxy.png__" data-animation="__GUIDE_galaxy.gif__" alt="" aria-labelledby="demo-galaxy-title">
+          <button class="btn small demo-toggle" type="button" aria-controls="demo-galaxy" aria-pressed="false"><span class="demo-play">Play</span><span class="demo-stop">Stop</span></button>
+        </details>
+        <details name="guide-walkthrough">
+          <summary id="demo-missions-title" data-t="petMission">petMission</summary>
+          <img class="demo-lcd" id="demo-missions" width="128" height="128" data-poster="__GUIDE_galaxy.png__" data-animation="__GUIDE_missions.gif__" alt="" aria-labelledby="demo-missions-title">
+          <button class="btn small demo-toggle" type="button" aria-controls="demo-missions" aria-pressed="false"><span class="demo-play">Play</span><span class="demo-stop">Stop</span></button>
+        </details>
+        <details name="guide-walkthrough">
+          <summary id="demo-planets-title" data-t="Current Planet">Current Planet</summary>
+          <img class="demo-lcd" id="demo-planets" width="128" height="128" data-poster="__GUIDE_access.png__" data-animation="__GUIDE_planets.gif__" alt="" aria-labelledby="demo-planets-title">
+          <button class="btn small demo-toggle" type="button" aria-controls="demo-planets" aria-pressed="false"><span class="demo-play">Play</span><span class="demo-stop">Stop</span></button>
+        </details>
+        <details name="guide-walkthrough">
+          <summary id="demo-access-title" data-t="Planet Access">Planet Access</summary>
+          <img class="demo-lcd" id="demo-access" width="128" height="128" data-poster="__GUIDE_access.png__" data-animation="__GUIDE_access.gif__" alt="" aria-labelledby="demo-access-title">
+          <button class="btn small demo-toggle" type="button" aria-controls="demo-access" aria-pressed="false"><span class="demo-play">Play</span><span class="demo-stop">Stop</span></button>
+        </details>
+      </section>
+    </section>
+    <div class="guide-grid">
+      <section class="guide-card">
+        <h2>Saves and Backups</h2>
+        <ul>
+          <li data-sentence="sentenceGuideSaves"><a data-sentence-part="backup" href="#deviceSaveTools" data-view-link="uart">Save Backup &amp; Restore</a> reads or restores the connected device’s save.</li>
+          <li data-sentence="sentenceGuideWorkspaceSave"><a data-sentence-part="save" href="#btnWorkspace" data-view-link="save">Workspace → Save</a> opens save tools for the loaded ROM.</li>
+          <li data-sentence="sentenceGuideGarden">The <strong data-sentence-part="garden" data-sentence="sentenceGuideGardenName"><span data-sentence-part="menu" data-rom-term="garden" data-rom-profile="my-lab">GARDEN</span> in <span data-sentence-part="device" data-edition-label="my-lab">My Lab Tamagotchi</span></strong> is part of the device save. To write your Garden changes, turn off Keep saves and check the write summary.</li>
+        </ul>
+      </section>
+      <section class="guide-card">
+        <h2>Visits and Transfers</h2>
+        <ul>
+          <li data-sentence="sentenceGuidePlaydate"><a data-sentence-part="playdate" href="#deviceTabPlaydate" data-view-link="device">Playdate</a> starts a visit with a <span data-sentence-part="paradise" data-edition-label="paradise">Tamagotchi Paradise</span>.</li>
+          <li data-sentence="sentenceGuideMyLab"><a data-sentence-part="send" href="#deviceTabLab" data-view-link="device" data-t="labSend">Send to My Lab Tamagotchi</a> transfers an adult Tama to the Garden.</li>
+          <li data-sentence="sentenceGuideFood"><a data-sentence-part="food" href="#deviceTabFood" data-view-link="device">Special Food</a> lets you choose the egg traits to send to <span data-sentence-part="neon" data-edition-label="neon">Neon Planets</span>.</li>
+          <li data-sentence="sentenceGuideGifts"><a data-sentence-part="gift" href="#deviceTabGift" data-view-link="device">Send Gift</a> exchanges a gift. <a data-sentence-part="item" href="#deviceTabItem" data-view-link="device">Send Lab Item</a> lets you choose an item and edit its prices before sending.</li>
+          <li data-sentence="sentenceGuideItems"><a data-sentence-part="items" href="#deviceLabItemsTitle" data-view-link="uart">Downloaded Lab Items</a> reads the items already saved on a connected <span data-sentence-part="paradise" data-edition-label="paradise">Tamagotchi Paradise</span>.</li>
+        </ul>
+      </section>
+    </div>
+    <section class="guide-reference">
+      <h2 data-t="{editionParadise} Controls">Tamagotchi Paradise Controls</h2>
+      <details><summary>Menu and Fields</summary>
+        <ul>
+          <li data-sentence="sentenceGuideButtons">With the menu shortcut installed, press <kbd data-sentence-part="a">A</kbd> and <kbd data-sentence-part="c">C</kbd> together on the home screen. Turn the wheel to select, press <kbd data-sentence-part="b">B</kbd> to confirm or <kbd data-sentence-part="back">C</kbd> to go back.</li>
+          <li data-sentence="sentenceGuideFields">In the ParaLab menu, use <strong data-sentence-part="fields" translate="no">FIELD</strong> to move your Tama. Switching fields stores the current field’s save and restores the destination’s save. DNA and residents stay with their field.</li>
+          <li data-sentence="sentenceGuideImports">In the six-field configuration, <span data-sentence-part="tropics" data-edition-label="tropics">Orange Tropics</span> and <span data-sentence-part="glacier" data-edition-label="glacier">White Glacier</span> can import <span data-sentence-part="land" data-rom-field="1">LAND</span>, <span data-sentence-part="water" data-rom-field="2">WATER</span> and <span data-sentence-part="sky" data-rom-field="3">SKY</span> from your ROMs. <span data-sentence-part="jade" data-edition-label="jade">Jade Forest</span> can import <span data-sentence-part="jadeField" data-rom-field="3">SKY</span>.</li>
+        </ul>
+      </details>
+      <details><summary>Return to the Flash Tool</summary>
+        <p data-sentence="sentenceGuideRecovery">On a <span data-sentence-part="paradise" data-edition-label="paradise">Tamagotchi Paradise</span> with the recovery Flash Tool installed, hold <kbd data-sentence-part="c">C</kbd> while pressing Reset or inserting the batteries. Then <a data-sentence-part="reconnect" href="#connectionTitle" data-view-link="uart">reconnect in Device Console</a>.</p>
+      </details>
+    </section>
+    <section class="guide-reference">
+      <h2>Report a Problem</h2>
+      <p>Search existing issues first. If you open a new issue, include your ParaLab version, device model, browser, and the steps that triggered the problem.</p>
+      <a class="btn primary" href="https://github.com/x43x61x69/ParaLab/issues" target="_blank" rel="noopener noreferrer">Open ParaLab Issues</a>
+    </section>
+  </section>
+  <section class="collection-reference" id="labCodesPage" hidden aria-labelledby="labCodesTitle">
+    <header class="collection-reference-intro">
+      <h1 id="labCodesTitle" data-t="Lab & Shop Codes">Lab &amp; Shop Codes</h1>
+    </header>
+    <div class="code-toolbar">
+      <div class="segmented" role="group" aria-labelledby="labCodesTitle">
+        <button class="btn" id="showLabCodes" type="button" aria-controls="labCodePanel" aria-pressed="true" data-t="Lab Codes">Lab Codes</button>
+        <button class="btn" id="showShopCodes" type="button" aria-controls="shopCodePanel" aria-pressed="false" data-t="Shop Codes">Shop Codes</button>
+      </div>
+      <label class="code-search"><span data-t="Find a Code">Find a Code</span><input id="findCode" type="search"></label>
+    </div>
+    <section id="labCodePanel" aria-labelledby="showLabCodes">
+      <p class="code-path" data-t="Hold the Zoom Dial, then open LAB LOG → MICROSCOPE → LAB CODE."></p>
+      <div class="collection-reference-grid" id="labCodeCards"></div>
+    </section>
+    <section id="shopCodePanel" hidden aria-labelledby="showShopCodes">
+      <p class="code-path" data-t="Enter the code under SHOP → SHOP CODE, then purchase the unlocked item."></p>
+      <p id="shopCodeStatus" role="status" hidden></p>
+      <button class="btn" type="button" id="shopCodeRetry" data-t="Retry" hidden>Retry</button>
+      <div class="collection-reference-grid" id="shopCodeCards"></div>
+    </section>
+    <p id="codeEmpty" role="status" data-t="No matching codes." hidden>No matching codes.</p>
+  </section>
+  <section class="plan device" id="device" hidden>
+    <div class="device-heading">
+      <h1>Device Console</h1>
+      <button type="button" class="btn" id="changeDevicePort" hidden>Change USB Adapter…</button>
+    </div>
+    <div class="tabs device-tabs" id="deviceTabs" role="tablist" aria-labelledby="btnDevice">
+      <button class="tab" id="deviceTabUart" type="button" role="tab" aria-selected="true" aria-controls="deviceUart" data-t="devTitle"></button>
+      <button class="tab" id="deviceTabPlaydate" type="button" role="tab" aria-selected="false" aria-controls="devicePlaydate" tabindex="-1" data-t="visTitle"></button>
+      <button class="tab" id="deviceTabLab" type="button" role="tab" aria-selected="false" aria-controls="deviceLab" tabindex="-1" data-t="labSend"></button>
+      <button class="tab" id="deviceTabFood" type="button" role="tab" aria-selected="false" aria-controls="deviceFood" tabindex="-1" data-t="foodTitle"></button>
+      <button class="tab" id="deviceTabGift" type="button" role="tab" aria-selected="false" aria-controls="deviceGift" tabindex="-1">Send Gift</button>
+      <button class="tab" id="deviceTabItem" type="button" role="tab" aria-selected="false" aria-controls="deviceItem" tabindex="-1">Send Lab Item</button>
+    </div>
+    <section id="deviceUart" role="tabpanel" aria-labelledby="deviceTabUart">
+      <aside class="device-risk">
+        <strong>Use Device Console at Your Own Risk</strong>
+        <p>Incorrect wiring can damage your device. Before connecting, check the adapter pins. Before writing, back up your ROM and saves.</p>
+      </aside>
+      <div class="console-layout">
+        <section class="connection">
+          <h2 id="connectionTitle" tabindex="-1">Connection</h2>
+          <div class="connection-card">
+            <div class="connection-bar">
+              <div class="connected-device">
+                <span id="connectedDeviceArt" class="device-art" aria-hidden="true" hidden></span>
+                <span class="devinfo" id="devInfo" role="status"></span>
+              </div>
+              <div class="connection-actions">
+                <button class="btn small" id="btnDevStop" data-t="devStop" hidden></button>
+                <button class="btn small primary" id="btnConn" data-t="devConnect"></button>
+                <button class="btn small" id="btnUartRelease" data-t="uartFree" hidden></button>
+              </div>
+            </div>
+            <p class="hint" id="uartConnectionHint" hidden></p>
+            <div class="transfer-progress" id="devProgress" hidden>
+              <div class="flash" id="devMeter" role="progressbar" aria-label="Device transfer" aria-valuemin="0" aria-valuemax="100"><span class="seg emu" id="devBar"></span></div>
+              <span id="devPercent" aria-hidden="true"></span>
+            </div>
+            <div class="device-progress-details">
+              <p class="emustat" id="devStat" role="status"></p>
+              <small id="devEta" hidden></small>
+            </div>
+          </div>
+          <ol class="connection-steps" id="connectionSteps">
+            <li>
+              <h3>Wire the Adapter</h3>
+              <figure class="pinout">
+                <figcaption>
+                  <strong>Top Connector</strong>
+                  <div data-sentence="sentenceUartSharedPinout">This pinout applies to <span data-sentence-part="paradise" data-edition-label="paradise">Tamagotchi Paradise</span> and <span data-sentence-part="myLab" data-edition-label="my-lab">My Lab Tamagotchi</span>.</div>
+                  <div>Open the top cover and hold the device with the screen facing you and the buttons below it.</div>
+                </figcaption>
+                <table class="contact-map" aria-label="Device front view and corresponding 3.3 V UART adapter pins">
+                  <thead><tr><td></td><th scope="col">Left</th><th scope="col">Center</th><th scope="col">Right</th></tr></thead>
+                  <tbody>
+                    <tr><th scope="row" data-t="device">Device</th><td>TX</td><td>GND</td><td>RX</td></tr>
+                    <tr><th scope="row">Adapter</th><td>RX</td><td>GND</td><td>TX</td></tr>
+                  </tbody>
+                </table>
+              </figure>
+              <p>Use 3.3 V UART logic. Match the adapter’s printed pin labels and leave its power pin disconnected.</p>
+            </li>
+            <li>
+              <h3>Prepare the Device</h3>
+              <div class="device-route">
+                <span class="device-art land" aria-hidden="true"></span>
+                <div><h4 data-edition-label="paradise">Tamagotchi Paradise</h4><p data-sentence="sentenceUartParadise">On the Planet screen, press <kbd data-sentence-part="a">A</kbd>. Select <b data-sentence-part="connect" data-rom-term="connection" data-rom-profile="paradise neon">Connect</b>, then select <b data-sentence-part="download" data-rom-term="download" data-rom-profile="paradise neon">Download</b> twice.</p></div>
+              </div>
+              <div class="device-route">
+                <span class="device-art my-lab" aria-hidden="true"></span>
+                <div><h4 data-edition-label="my-lab">My Lab Tamagotchi</h4>
+                  <p data-sentence="sentenceUartMyLab">Open the <b data-sentence-part="tool" translate="no">FLASH TOOL</b> on <span data-sentence-part="device" data-edition-label="my-lab">My Lab Tamagotchi</span>. Wait for the <b data-sentence-part="ready" translate="no">READY</b> screen.</p>
+                  <p class="device-prerequisite" data-sentence="sentenceUartMyLabPrerequisite">Before using UART on <span data-sentence-part="device" data-edition-label="my-lab">My Lab Tamagotchi</span>, install Flash Tool by flashing a modified update file or ROM that includes it.</p>
+                </div>
+              </div>
+            </li>
+            <li>
+              <h3>Choose the USB Port</h3>
+              <svg class="port-icon" viewBox="0 0 96 44" aria-hidden="true" focusable="false"><g stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="50" height="30" rx="4" fill="#ffffff"/><path d="M4 13h50M20 40h18M29 35v5" fill="none"/><path d="M60 25h8q6 0 6-6v-2" fill="none"/><rect x="68" y="11" width="12" height="12" rx="2" fill="var(--grass)"/><path d="M70 11V4h8v7" fill="var(--check-b)"/></g></svg>
+              <p>Select Connect above, then choose your USB adapter in desktop Chrome or Edge.</p>
+            </li>
+          </ol>
+          <section class="restart-guide" id="devRestartGuide" hidden>
+            <h3>Start the Updated ROM</h3>
+            <ol><li>Unplug the UART adapter from the top of the Tamagotchi.</li>
+              <li data-sentence="sentenceUartRestart">Press and release the <strong data-sentence-part="reset">Reset</strong> button on the back of the Tamagotchi once. Alternatively, remove the batteries and put them back in.</li></ol>
+          </section>
+        </section>
+        <div class="uart-tools">
+          <div class="tabs uart-tool-tabs" id="uartToolTabs" role="tablist" aria-label="UART Tools">
+            <button type="button" class="tab" id="romTransferTitle" role="tab" aria-selected="true" aria-controls="uartRomTools">ROM Transfer</button>
+            <button type="button" class="tab" id="deviceSaveTools" role="tab" aria-selected="false" aria-controls="uartSaveTools" tabindex="-1">Save Backup &amp; Restore</button>
+            <button type="button" class="tab" id="deviceLabItemsTitle" role="tab" aria-selected="false" aria-controls="uartLabItems" tabindex="-1">Downloaded Lab Items</button>
+          </div>
+          <section id="uartRomTools" role="tabpanel" aria-labelledby="romTransferTitle">
+            <div class="rom-transfer-cards">
+              <section class="rom-transfer-card" aria-labelledby="romTransfer">
+                <h3 id="romTransfer" tabindex="-1">Read from Device</h3>
+                <p>Download the connected device’s ROM as a .bin backup and open it in Workspace.</p>
+                <button class="btn small" id="btnDump" data-t="devDump" disabled></button>
+              </section>
+              <section class="rom-transfer-card write-review" aria-labelledby="writeReview">
+                <h3 id="writeReview" tabindex="-1">Write to Device</h3>
+                <p data-sentence="sentenceReviewWorkspace">Review the ROM from <a data-sentence-part="workspace" href="#drop" data-view-link="workspace">Workspace</a> before writing it to the connected device.</p>
+                <dl><dt>Source file</dt><dd><span id="writeSource"></span><span class="rom-source-edition" id="writeSourceEdition" hidden></span></dd>
+                  <dt>Write Content</dt><dd id="writeContent"></dd>
+                  <dt>Target device</dt><dd id="writeTarget"></dd>
+                  <dt>Device saves</dt><dd id="writeSaves"></dd></dl>
+                <div class="tools">
+                  <label class="check"><input type="checkbox" id="devOnly" checked> <span data-t="devOnly"></span></label>
+                  <label class="check"><input type="checkbox" id="devKeep" checked> <span data-t="devKeep"></span></label>
+                </div>
+                <p class="write-note">Back up the ROM first. Keep the device powered on throughout the write.</p>
+                <button class="btn small primary" id="btnWrite" disabled>Review and Write…</button>
+                <div class="tools" id="rescueResume" hidden>
+                  <button class="btn small primary" id="btnResume" data-t="resResume"></button>
+                </div>
+                <div class="tools" id="rescueBox" hidden>
+                  <button class="btn small" id="btnRescueTest" data-t="resTest" disabled></button>
+                  <button class="btn small" id="btnRescueBack" data-t="resBack" disabled></button>
+                </div>
+              </section>
+            </div>
+          </section>
+          <section id="uartSaveTools" role="tabpanel" aria-labelledby="deviceSaveTools" hidden>
+            <div class="tools">
+              <button class="btn small" id="btnSaveRead" data-t="devSaveRead" disabled></button>
+              <button class="btn small" id="btnSaveWrite" data-t="devSaveWrite" disabled></button>
+              <span class="hint" id="devSaveHint" data-t="deviceSaveFormats"></span>
+            </div>
+          </section>
+          <section id="uartLabItems" role="tabpanel" aria-labelledby="deviceLabItemsTitle" hidden>
+            <p data-t="Read and export Lab Items stored on the connected {editionParadise}.">Read and export Lab Items stored on the connected Paradise.</p>
+            <button class="btn small" id="btnReadLabItems" type="button" disabled>Read Lab Items</button>
+            <p class="hint" id="deviceLabItemsStatus" role="status" hidden></p>
+            <div id="deviceLabItems" hidden></div>
+          </section>
+        </div>
+      </div>
+    </section>
+    <section id="devicePlaydate" role="tabpanel" aria-labelledby="deviceTabPlaydate" hidden>
+    <div id="visitBox" class="session-layout">
+      <div class="session-content">
+        <section class="session-card">
+          <h2>Choose a Character</h2>
+          <ul class="source-list" id="visSourceHint">
+            <li>
+              <a class="btn small source-link" href="#drop" data-view-link="workspace">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10 13a5 5 0 0 0 7 .5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>
+                <span>Workspace ROM</span>
+              </a>
+              <span id="visitorSourceName">Open a Tamagotchi Paradise or My Lab Tamagotchi ROM in Workspace.</span>
+            </li>
+            <li><button class="btn small" id="btnVisGhostImport" type="button" data-t="visImport"></button><span>Ghost or Playdate .bin, or .ghost.png</span></li>
+          </ul>
+          <input id="visGhostImport" type="file" accept=".png,.bin" multiple hidden>
+          <p class="hint" id="visGhostImportStatus" role="status" hidden><span data-t="visImported"></span> <span id="visGhostImportedFiles"></span></p>
+          <label class="session-field"><span><span id="visCharacterLabel" data-t="visCharacter"></span> <span id="visitorCount" class="choice-count"></span></span>
+            <select id="visGhost"><option id="visDefault" value="" data-t="visMirror"></option>
+              <optgroup id="visRomVisitors" label="ROM characters" hidden></optgroup>
+              <optgroup id="visSavedVisitors" label="Saved Visitors" hidden></optgroup>
+            </select>
+          </label>
+          <p class="hint" id="visitorChoiceHint"></p>
+          <p class="hint" id="visGhostError" role="status"></p>
+          <p class="hint" id="visRomVisitorError" role="status"></p>
+          <div class="visitor-actions">
+            <button class="btn small" id="btnVisSave" type="button" data-t="Save Visitor" hidden>Save Visitor</button>
+            <button class="btn small" id="btnVisForget" type="button" data-t="Remove Saved Visitor" hidden>Remove Saved Visitor</button>
+          </div>
+          <p class="hint" id="visSavedStatus" role="status" hidden></p>
+        </section>
+        <details class="session-card" id="visUnlock">
+          <summary data-t="Unlock Hidden Characters">Unlock Hidden Characters</summary>
+          <div class="unlock-controls">
+            <p data-t="While raising a qualifying Young Tama, finish Playdates with two different editions other than your own."></p>
+            <label class="session-field"><span data-t="Your Device Edition">Your Device Edition</span><select class="model-select" id="visUnlockTarget"></select></label>
+            <div class="unlock-preview">
+              <img id="visUnlockPortrait" alt="" width="64" height="64" loading="lazy" referrerpolicy="no-referrer" hidden>
+              <p class="hint" id="visUnlockConditions"></p>
+            </div>
+            <div id="visUnlockEditions"></div>
+            <p class="hint" id="visUnlockNeedsRom" data-t="Load a {editionParadise} ROM or import the matching Kid visitor to enable unavailable editions." hidden></p>
+            <p class="hint" id="visUnlockStatus" role="status"></p>
+            <button class="btn small" id="btnVisUnlockReset" type="button" data-t="Clear Playdate Progress" hidden>Clear Playdate Progress</button>
+          </div>
+        </details>
+      <div class="session-card" id="visVisitor" hidden>
+        <h2>Character Preview</h2>
+        <p id="visVisitorName" role="status"></p>
+        <p class="hint" id="visVisitorInfo"></p>
+        <div class="playdate-pictures">
+          <figure id="visVisitorCharacter" hidden>
+            <canvas aria-labelledby="visVisitorCharacterCaption"></canvas>
+            <figcaption id="visVisitorCharacterCaption" data-t="visCharacterPreview"></figcaption>
+            <div class="playdate-animation">
+              <div class="tools">
+                <label><span data-t="visAnimationView"></span>
+                  <select id="visVisitorZoom">
+                    <option value="0" data-t="visTamaZoom"></option>
+                    <option value="1" data-t="visFieldZoom"></option>
+                  </select>
+                </label>
+                <label><span data-t="visAnimationLayer"></span>
+                  <select id="visVisitorLayer">
+                    <option value="pose" data-t="visAllLayers"></option>
+                    <option value="0" data-t="visBody"></option>
+                    <option value="1" data-t="visEyes"></option>
+                    <option value="2" data-t="visMouth"></option>
+                  </select>
+                </label>
+              </div>
+              <div class="tools">
+                <button class="btn small" id="visVisitorPlayback" type="button" disabled></button>
+                <span class="hint" id="visVisitorFrame"></span>
+              </div>
+            </div>
+          </figure>
+          <figure id="visVisitorPlanet" hidden>
+            <canvas aria-label="Planet screenshot"></canvas>
+            <figcaption><span data-t="visPlanetPreview"></span><span id="visVisitorPlanetName"></span></figcaption>
+          </figure>
+        </div>
+        <p class="hint" id="visVisitorImageStatus" data-t="visNoImage" hidden></p>
+        <div id="visVisitorAppearance" hidden>
+          <div class="tools">
+            <label><span data-t="visVisitorColor"></span>
+              <select id="visColorChoice"></select>
+            </label>
+            <label><span data-t="visEyes"></span>
+              <select id="visEyesChoice"></select>
+            </label>
+            <button class="btn small" id="btnVisVisitorExport" type="button" data-t="visVisitorExport"></button>
+          </div>
+          <p class="hint" id="visAppearanceNeedsRom" data-t="visAppearanceNeedsRom" hidden></p>
+        </div>
+        <details class="playdate-details" id="visPlaydateEditor">
+          <summary data-t="visPlaydateEditor"></summary>
+          <div class="tools">
+            <label><span data-t="visPlanetImageChoice"></span>
+              <select id="visPlanetChoice"></select>
+            </label>
+            <span class="hint" id="visPlanetNeedsRom" data-t="visPlanetNeedsRom" hidden></span>
+          </div>
+          <div class="keygrid" id="visPlaydateFields"></div>
+        </details>
+        <details class="playdate-details">
+          <summary data-t="visParameters"></summary>
+          <dl id="visVisitorParameters"></dl>
+        </details>
+      </div>
+      </div>
+      <aside class="session-card session-transfer">
+        <div id="playdateActions">
+          <h2>Playdate Setup</h2>
+          <label class="session-field"><span data-t="Visitor Edition">Visitor Edition</span><select class="model-select" id="visEd"></select></label>
+          <ol class="session-steps" id="visHint">
+            <li>Connect the USB-UART adapter with the game running.</li>
+            <li data-sentence="sentencePlaydateStart">Select <b data-sentence-part="start" data-t="visStart">Start Playdate</b> below and choose the adapter.</li>
+            <li data-sentence="sentencePlaydateDevice">On the device, open <b data-sentence-part="path" data-rom-term="connection playdate" data-rom-profile="paradise neon">CONNECTION → PLAYDATE</b> and press <kbd data-sentence-part="b">B</kbd>.</li>
+          </ol>
+          <div class="visitor-actions">
+            <button class="btn primary" id="btnVis" data-t="visStart"></button>
+            <button class="btn" id="btnVisBreed" type="button" data-t="Start Breeding Playdate…" disabled>Start Breeding Playdate…</button>
+          </div>
+          <p class="emustat" id="visStat" role="status"></p>
+          <button class="btn small" id="btnVisCapture" data-t="visCapture" disabled></button>
+        </div>
+        <div id="labActions" hidden>
+          <h2 data-t="Transfer to {editionMyLab}">My Lab Transfer</h2>
+          <ol class="session-steps" id="labHint">
+            <li data-t="Connect the USB-UART adapter to {editionMyLab}.">Connect the USB-UART adapter to My Lab.</li>
+            <li data-sentence="sentenceMyLabInvite">Open <b data-sentence-part="path" data-rom-term="connection labInvite" data-rom-profile="my-lab">CONNECTION → LAB INVITE</b>. If the garden is full, choose a Tama to replace.</li>
+            <li data-sentence="sentenceMyLabSend">Select <b data-sentence-part="send" data-t="labSend">Send to My Lab</b> below and choose the adapter.</li>
+          </ol>
+          <button class="btn primary" id="btnLabRelease" data-t="labSend" disabled></button>
+          <p class="emustat" id="labStat" role="status"></p>
+        </div>
+        <p class="hint" id="visConnectionHint" hidden></p>
+      </aside>
+    </div>
+      <section class="session-card session-result" id="visPeer" aria-labelledby="visPeerTitle" hidden>
+        <h2 id="visPeerTitle" data-t="visPeerTitle"></h2>
+        <p id="visPeerName" role="status"></p>
+        <p class="hint" id="visPeerInfo"></p>
+        <div class="playdate-pictures">
+          <figure id="visPeerCharacter" hidden>
+            <canvas aria-labelledby="visPeerCharacterCaption"></canvas>
+            <figcaption id="visPeerCharacterCaption" data-t="visCharacterPreview"></figcaption>
+            <div class="playdate-animation">
+              <div class="tools">
+                <label><span data-t="visAnimationView"></span>
+                  <select id="visPeerZoom">
+                    <option value="0" data-t="visTamaZoom"></option>
+                    <option value="1" data-t="visFieldZoom"></option>
+                  </select>
+                </label>
+                <label><span data-t="visAnimationLayer"></span>
+                  <select id="visPeerLayer">
+                    <option value="pose" data-t="visAllLayers"></option>
+                    <option value="0" data-t="visBody"></option>
+                    <option value="1" data-t="visEyes"></option>
+                    <option value="2" data-t="visMouth"></option>
+                  </select>
+                </label>
+              </div>
+              <div class="tools">
+                <button class="btn small" id="visPeerPlayback" type="button" disabled></button>
+                <span class="hint" id="visPeerFrame"></span>
+              </div>
+            </div>
+          </figure>
+          <figure id="visPeerPlanet" hidden>
+            <canvas aria-label="Planet screenshot"></canvas>
+            <figcaption><span data-t="visPlanetPreview"></span><span id="visPeerPlanetName"></span></figcaption>
+          </figure>
+        </div>
+        <p class="hint" id="visPeerImageStatus" data-t="visNoImage" hidden></p>
+        <details class="playdate-details">
+          <summary data-t="visParameters"></summary>
+          <dl id="visPeerParameters"></dl>
+        </details>
+        <div class="tools">
+          <button class="btn small" id="btnVisPeerExport" data-t="visPeerExport" disabled></button>
+        </div>
+      </section>
+    </section>
+    <section id="deviceLab" role="tabpanel" aria-labelledby="deviceTabLab" hidden></section>
+    <section id="deviceGift" role="tabpanel" aria-labelledby="deviceTabGift" hidden>
+      <div class="session-layout catalog-layout">
+        <section class="session-card">
+          <h2>Gifts <small class="catalog-count" id="giftCount" role="status"></small></h2>
+          <label class="session-field">Search Gifts<input type="search" id="giftSearch" placeholder="Name or item ID"></label>
+          <p class="hint" id="giftCatalogStatus" role="status"></p>
+          <button class="btn small" id="giftCatalogRetry" type="button" hidden>Retry Catalog</button>
+          <ul class="lab-items-grid transfer-catalog" id="giftCatalog" aria-label="Gifts"></ul>
+        </section>
+        <div class="session-content">
+        <aside class="session-card session-transfer">
+          <h2>Gift Exchange</h2>
+          <label class="session-field">Target Edition<select class="model-select" id="giftEdition"></select></label>
+          <p class="file-selection" id="giftSelection">No gift selected</p>
+          <ol class="session-steps">
+            <li>Connect the USB-UART adapter and select <b>Send Gift</b> below.</li>
+            <li data-sentence="sentenceGiftDevice">On <span data-sentence-part="paradise" data-edition-label="paradise">Tamagotchi Paradise</span>, open <b data-sentence-part="path" data-rom-term="connection gifts" data-rom-profile="paradise neon">Connect → Gift</b> and press <kbd data-sentence-part="b">B</kbd>. Follow the prompts on the device.</li>
+          </ol>
+          <button class="btn primary" id="btnGiftSend" type="button" disabled>Send Gift</button>
+          <p id="giftStat" class="emustat" role="status"></p>
+          <p id="giftConnectionHint" class="hint" hidden></p>
+        </aside>
+          <section class="session-card" id="giftDetails" hidden>
+            <h2>Gift Details</h2>
+            <dl class="write-facts" id="giftFacts"></dl>
+            <details class="localized-section">
+              <summary>Localized Names</summary>
+              <dl class="localized-names" id="giftNames"></dl>
+            </details>
+          </section>
+        </div>
+      </div>
+    </section>
+    <section id="deviceItem" role="tabpanel" aria-labelledby="deviceTabItem" hidden>
+      <div class="session-layout catalog-layout">
+        <section class="session-card">
+          <h2>Lab Items <small class="catalog-count" id="itemCount" role="status"></small></h2>
+          <div class="tools">
+            <button class="btn small" id="btnItemImport" type="button">Open ARC2…</button>
+            <button class="btn small" id="btnItemFolder" type="button">Open Item Folder…</button>
+          </div>
+          <input id="itemImport" type="file" accept=".arc2,.bin" hidden>
+          <input id="itemFolder" type="file" webkitdirectory multiple hidden>
+          <label class="session-field">Search Lab Items<input type="search" id="itemSearch" placeholder="Name or item ID"></label>
+          <p class="hint" id="itemCatalogStatus" role="status"></p>
+          <button class="btn small" id="itemCatalogRetry" type="button" hidden>Retry Catalog</button>
+          <ul class="lab-items-grid transfer-catalog" id="itemCatalog" aria-label="Lab Items"></ul>
+        </section>
+        <div class="session-content">
+          <aside class="session-card session-transfer">
+            <h2>Lab Item Transfer</h2>
+            <label class="session-field">Target Edition<select class="model-select" id="itemEdition"></select></label>
+            <ol class="session-steps">
+              <li data-t="Connect the USB-UART adapter to {editionParadise}.">Connect the USB-UART adapter to Paradise.</li>
+              <li data-sentence="sentenceItemDevice">On <span data-sentence-part="paradise" data-edition-label="paradise">Tamagotchi Paradise</span>, open <b data-sentence-part="path" data-rom-term="connection download download" data-rom-profile="paradise neon">Connect → Download → Download</b>. Then select <b data-sentence-part="send">Send Lab Item</b> below.</li>
+            </ol>
+            <button class="btn primary" id="btnItemSend" type="button" disabled>Send Lab Item</button>
+            <div class="transfer-progress" id="itemProgress" hidden>
+              <div class="flash" id="itemMeter" role="progressbar" aria-label="Lab Item transfer" aria-valuemin="0" aria-valuemax="100"><span class="seg emu" id="itemBar"></span></div>
+              <span id="itemPercent" aria-hidden="true"></span>
+            </div>
+            <p id="itemStat" class="emustat" role="status"></p>
+            <p id="itemConnectionHint" class="hint" hidden></p>
+          </aside>
+          <section class="session-card" id="itemEditor" hidden>
+            <h2>Lab Item Editor</h2>
+            <p id="itemSource" class="file-selection"></p>
+            <details class="localized-section">
+              <summary>Localized Names</summary>
+              <fieldset id="itemNameFields" aria-label="Localized Names">
+                <div class="localized-inputs" id="itemNames"></div>
+              </fieldset>
+            </details>
+            <div id="itemPrices" hidden>
+              <div class="keygrid">
+                <label class="session-field">Buy Price<input type="number" id="itemBuy" min="0" max="65535" step="1" required></label>
+                <label class="session-field">Sell Price<input type="number" id="itemSell" min="0" max="65535" step="1" required></label>
+              </div>
+              <div class="tools">
+                <button class="btn small" id="btnItemPreset" type="button">Buy 0 / Sell 9999</button>
+                <button class="btn small" id="btnItemReset" type="button">Restore Original Prices</button>
+              </div>
+            </div>
+            <button class="btn small" id="btnItemExport" type="button" disabled>Download ARC2 Copy</button>
+            <div id="itemPreview" class="lab-item-gallery" hidden></div>
+          </section>
+          <p id="itemEditorStatus" class="hint" role="status"></p>
+        </div>
+      </div>
+    </section>
+    <section id="deviceFood" role="tabpanel" aria-labelledby="deviceTabFood" hidden>
+      <div class="session-layout">
+        <section class="session-card">
+          <h2>Special Food Source</h2>
+          <label class="session-field">Prepare Food<select id="foodMode"><option value="editor">Build a Character Combination</option><option value="file">Use a Food File</option></select></label>
+          <div id="foodEditor">
+            <p class="hint" id="foodNeedsRom" data-sentence="sentenceFoodWorkspace"><a data-sentence-part="open" data-view-link="workspace" href="#drop">Open a ROM in Workspace</a> to choose an adult character.</p>
+            <label class="session-field">Body<select id="foodBody"></select></label>
+            <label class="session-field">Eyes<select id="foodEyes"></select></label>
+            <label class="session-field">Color<select id="foodColor"></select></label>
+            <figure id="foodPreview" hidden><canvas aria-label="Selected adult appearance"></canvas><figcaption>Growth Target</figcaption></figure>
+            <p id="foodEditorStatus" class="hint" role="status"></p>
+          </div>
+          <div id="foodFilePanel" hidden>
+          <ul class="source-list"><li><button class="btn small" id="btnFoodImport" type="button" data-t="foodImport"></button><span data-t="Decoded food file from {editionMyLab} (.bin)">Decoded My Lab food file (.bin)</span></li></ul>
+          <input id="foodImport" type="file" accept=".bin" hidden>
+          <h3>Selected File</h3>
+          <p class="file-selection" id="foodFile" role="status">No food file selected</p>
+          </div>
+        </section>
+        <aside class="session-card session-transfer">
+          <h2 data-t="Transfer to {editionNeon}">Neon Planets Transfer</h2>
+          <ol class="session-steps" id="foodHint">
+            <li data-t="Connect the USB-UART adapter to {editionNeon}.">Connect the USB-UART adapter to Neon Planets.</li>
+            <li data-sentence="sentenceFoodWait">Select <b data-sentence-part="wait" data-t="foodSend">Wait for Paradise</b> below and choose the adapter.</li>
+            <li data-sentence="sentenceFoodDevice">With an adult Tama, open <b data-sentence-part="path" data-rom-term="connection specialFood getFood" data-rom-profile="neon">CONNECTION → SPECIAL FOOD → GET FOOD</b>.</li>
+          </ol>
+          <p class="food-effect" data-t="Accepting the food on {editionNeon} starts a new egg.">Accepting the food on Neon Planets starts a new egg.</p>
+          <button class="btn primary" id="btnFoodSend" type="button" data-t="foodSend" aria-describedby="foodHint" disabled></button>
+          <p class="emustat" id="foodStat" role="status"></p>
+          <p class="hint" id="foodConnectionHint" hidden></p>
+        </aside>
+      </div>
+    </section>
+  </section>
+
+  <section class="start" id="start">
+    <div class="launch" id="romDropZone">
+      <div class="instrument"><img src="__DEVICE_ART_paradise-blueprint__" width="1080" height="720" alt="Three-quarter view of a virtual pet device with a side dial, drafting guides and a castle marked Paradise."></div>
+      <div class="launch-copy">
+        <h1>ROM Studio</h1>
+        <p data-t="Explore characters, edit saves and build a custom ROM for your {editionParadise} or {editionMyLab}.">Explore characters, edit saves and build a custom ROM for your Tamagotchi Paradise or My Lab.</p>
+        <button class="drop" id="drop"><strong>Open ROM</strong><span aria-hidden="true">↗</span></button>
+        <small>Or drop a .bin file anywhere on this card.</small>
+      </div>
+    </div>
+    <div class="launch-links">
+      <button id="launchDevice"><span class="launch-symbol" aria-hidden="true">⇄</span><span><strong>Device Console</strong><small>Connect via UART for backups, transfers and visits.</small></span><b aria-hidden="true">↗</b></button>
+      <button id="launchGuide"><span class="launch-symbol" aria-hidden="true">≡</span><span><strong>Guide</strong><small>Find ROM editing steps, save tools and device transfers.</small></span><b aria-hidden="true">↗</b></button>
+    </div>
+  </section>
+
+  <section class="plan" id="myLabRom" aria-label="My Lab workspace" hidden>
+    <div class="menu-update-notice" id="myLabUpdateNotice" hidden>
+      <strong role="status"><span aria-hidden="true">↑</span> ParaLab Menu Update Available</strong>
+      <button type="button" id="myLabReviewUpdate">Review Update →</button>
+    </div>
+    <details class="inspector" open>
+      <summary><span class="inspector-label">ROM Details</span><span class="info" id="myLabInfo"></span></summary>
+    <p class="hint" id="myLabChangeStatus" role="status"></p>
+      <div class="plan my-lab-overview">
+        <div class="chips">
+          <span class="chip" id="myLabMenuChip"><b data-t="planMenu"></b> <span role="status" id="myLabMenuPlan"></span></span>
+        </div>
+        <h3 class="flash-heading">Flash Layout</h3>
+        <div class="flash" id="myLabLayoutBar" aria-hidden="true"></div>
+        <div class="legend" id="myLabLayoutLegend"></div>
+        <h3 class="flash-heading">Programmed Blocks</h3>
+        <div class="flash usage-meter" id="myLabFlashMeter" role="meter" aria-valuemin="0" aria-valuemax="100" aria-labelledby="myLabFlashUsage">
+          <i class="seg fw" id="myLabFlashUsed"></i>
+        </div>
+        <p class="legend" id="myLabFlashUsage"></p>
+        </div>
+    </details>
+    <aside class="toolbox">
+      <label class="mobile-tools">Tool <select id="labTool"></select></label>
+      <div class="tabs" id="myLabTabs" role="tablist" aria-label="My Lab tools">
+      <span class="nav-group" role="presentation">Library</span>
+      <button class="tab" id="myLabTabCharacters" role="tab" aria-controls="myLabCharacters" aria-selected="true" data-t="tabFigs"></button>
+      <button class="tab" id="myLabTabSprites" role="tab" aria-controls="myLabSprites" aria-selected="false" tabindex="-1" data-t="tabAll"></button>
+      <span class="nav-group" role="presentation">Device &amp; Data</span>
+      <button class="tab" id="myLabTabGarden" role="tab" aria-controls="myLabGarden" aria-selected="false" tabindex="-1" data-rom-term="garden" data-rom-profile="my-lab">Garden</button>
+      <button class="tab" id="myLabTabMenu" role="tab" aria-controls="myLabMenu" aria-selected="false" tabindex="-1" data-t="myLabMenuTitle"></button>
+      <button class="tab" id="myLabTabSave" role="tab" aria-controls="myLabSave" aria-selected="false" tabindex="-1" data-t="tabSave"></button>
+      <button class="tab" id="myLabTabUpdate" role="tab" aria-controls="myLabUpdate" aria-selected="false" tabindex="-1" data-t="myLabUpdateHeading"></button>
+      <span class="nav-group" role="presentation">Language</span>
+      <button class="tab" id="myLabTabZh" role="tab" aria-controls="myLabZh" aria-selected="false" tabindex="-1">Translate</button>
+      <span class="nav-group" role="presentation" data-t="myLabExperimental"></span>
+      <button class="tab" id="myLabTabPort" role="tab" aria-controls="myLabPort" aria-selected="false" tabindex="-1" data-t="myLabPortTab"></button>
+    </div>
+    </aside>
+    <h1 class="tool-heading" id="labHeading">Characters</h1>
+    <section id="myLabCharacters" role="tabpanel" aria-labelledby="myLabTabCharacters">
+      <div class="tools">
+        <label><span data-t="myLabField"></span> <select id="myLabCharacterField"></select></label>
+        <label><span data-t="namesFind"></span> <input type="search" id="myLabCharacterSearch" placeholder="Name or ID"></label>
+      </div>
+      <p id="labSearchEmpty" class="search-empty" role="status" hidden>No matching characters. Try another name, ID or field.</p>
+      <div class="grid" id="myLabCharacterGrid"></div>
+      <dialog class="lab-dialog" id="myLabCharacterPreview" aria-labelledby="myLabCharacterInfo">
+        <header><h2 id="myLabCharacterInfo"></h2><form method="dialog"><button class="btn small" autofocus data-t="close"></button></form></header>
+        <div class="character-drawer-body">
+        <div class="lab-preview">
+          <canvas id="myLabCharacterImage" role="img" aria-labelledby="myLabCharacterInfo" hidden></canvas>
+        </div>
+
+        <div class="tools">
+          <label><span data-t="myLabZoom"></span> <select id="myLabCharacterZoom">
+            <option value="0" data-t="faceBig"></option>
+            <option value="1" data-t="faceSmall"></option>
+          </select></label>
+          <input type="number" id="myLabCharacterPose" min="1" step="1" value="1" hidden>
+          <button class="btn small" id="myLabCharacterPlayback" type="button" disabled>Play</button>
+          <span id="myLabCharacterFrame"></span>
+          <button class="btn small" id="myLabCharacterExport" type="button" data-t="myLabExport"></button>
+        </div>
+        <div class="tools">
+          <button class="btn small" id="labSheetDownload">Download Sheet</button>
+          <button class="btn small" id="labSheetReplace">Replace Sheet…</button>
+          <input type="file" accept="image/png" id="labSheetFile" hidden>
+        </div>
+        <p id="labSheetStatus" role="status"></p>
+        <div class="sheetwrap"><canvas id="labSheetCanvas"></canvas></div>
+        </div>
+      </dialog>
+    </section>
+    <section id="myLabSprites" role="tabpanel" aria-labelledby="myLabTabSprites" hidden>
+      <div class="tools">
+        <button type="button" class="btn small" id="myLabSpriteZipExport" data-t="zipAll"></button>
+        <button type="button" class="btn small" id="myLabSpriteZipImport" data-t="myLabSpriteZipImport"></button>
+        <input type="file" id="myLabSpriteZipFile" accept=".zip,application/zip" hidden>
+        <span class="hint" data-t="myLabSpriteZipHint"></span>
+      </div>
+      <div class="tools">
+        <label><span data-t="myLabArchive"></span>
+          <select id="myLabArchive">
+            <option value="1" data-t="myLabMainArchive"></option>
+            <option value="0" data-t="myLabBootArchive"></option>
+          </select>
+        </label>
+        <label><span data-t="myLabSprite"></span> <input id="myLabSprite" type="number" min="0" value="0" step="1"></label>
+      </div>
+      <nav class="tools sprite-pages" aria-label="Sprite pages">
+        <button type="button" class="btn small" id="myLabSpritesPrev">Previous</button>
+        <label>Page <select id="myLabSpritesPage"></select></label>
+        <button type="button" class="btn small" id="myLabSpritesNext">Next</button>
+        <span id="myLabSpritesRange" class="hint" role="status"></span>
+      </nav>
+      <div class="grid" id="myLabSpriteGrid" aria-label="Sprite thumbnails"></div>
+      <dialog class="lab-dialog" id="myLabSpritePreview" aria-labelledby="myLabSpriteTitle">
+        <h3 id="myLabSpriteTitle"></h3>
+        <div class="sprite-preview"><canvas id="myLabSpriteImage" role="img" aria-labelledby="myLabSpriteTitle" hidden></canvas></div>
+        <p class="hint" id="myLabSpriteStatus" role="status"></p>
+        <div class="tools">
+          <label><span data-t="myLabFrame"></span> <input id="myLabFrame" type="number" min="0" value="0" step="1"></label>
+          <form method="dialog"><button class="btn small" data-t="close"></button></form>
+        </div>
+      </dialog>
+    </section>
+    <section id="myLabGarden" role="tabpanel" aria-labelledby="myLabTabGarden" hidden>
+      <div class="grid" id="myLabGardenSlots"></div>
+      <dialog class="lab-dialog" id="gardenEditor" aria-labelledby="myLabPortraitLabel">
+        <h3 id="myLabPortraitLabel"></h3>
+        <div class="lab-preview"><canvas id="myLabPortrait" role="img" aria-labelledby="myLabPortraitLabel"></canvas></div>
+        <div class="garden-choices">
+          <label>Body<select id="gardenBody"></select></label>
+          <div class="garden-choice"><label for="gardenEyes">Eyes</label><select id="gardenEyes"></select><button type="button" class="btn small" id="gardenDefaultEyes" aria-label="Use body default eyes">Use Body Default</button></div>
+          <div class="garden-choice"><label for="gardenColor">Body Color</label><select id="gardenColor"></select><button type="button" class="btn small" id="gardenDefaultColor" aria-label="Use body default color">Use Body Default</button></div>
+        </div>
+        <p class="hint" role="status" id="gardenPreviewStatus"></p>
+        <div class="tools">
+          <button class="btn small primary" type="button" id="gardenApply">Apply to Workspace</button>
+          <button class="btn small" type="button" id="myLabExport" data-t="myLabExport"></button>
+          <form method="dialog"><button class="btn small" data-t="close"></button></form>
+        </div>
+      </dialog>
+    </section>
+    <section id="myLabMenu" role="tabpanel" aria-labelledby="myLabTabMenu" hidden>
+      <header class="menu-intro"><h2>My Lab Menu</h2><p>Review the device menu and manage the ParaLab entry for this ROM.</p></header>
+      <section class="menu-status"><h3 id="myLabMenuStatusHeading">Menu Status</h3>
+        <p class="menu-state" role="status" id="myLabMenuInfo"></p>
+        <p class="hint" id="myLabMenuDetail" hidden></p>
+      </section>
+      <section class="menu-group" id="myLabMenuActions" hidden>
+        <label class="menu-switch">
+          <span id="myLabMenuSwitchLabel">Include ParaLab Menu</span>
+          <input id="myLabMenuSwitch" type="checkbox" role="switch" aria-describedby="myLabMenuHint">
+        </label>
+        <p class="hint" id="myLabMenuHint"></p>
+        <input type="file" id="myLabMenuKey" accept=".key" hidden>
+      </section>
+      <section class="menu-group" id="myLabMenuContents" hidden>
+        <h3 class="menu-heading" id="myLabEntriesHeading">Device Menu Entries</h3>
+        <div class="computer-screen" aria-label="My Lab Computer menu preview">
+          <div class="computer-viewport" id="computerViewport" tabindex="0" aria-label="Computer menu. Use the up and down arrows to browse.">
+            <ul class="computer-rows" id="myLabMenuEntries"></ul>
+          </div>
+          <div class="computer-navigation">
+            <button type="button" id="computerPrev" aria-label="Previous menu entry">▲</button>
+            <button type="button" id="computerNext" aria-label="Next menu entry">▼</button>
+          </div>
+        </div>
+      </section>
+    </section>
+    <section id="myLabSave" role="tabpanel" aria-labelledby="myLabTabSave" hidden>
+      <p id="myLabSaveInfo"></p>
+      <section class="rom-save-card"><h3 class="section-title">Active Save</h3>
+      <div class="tools">
+        <button class="btn small" id="myLabSaveExport" type="button" data-t="myLabSaveExport"></button>
+        <button class="btn small" id="myLabSaveReplace" type="button" data-t="myLabSaveReplace"></button>
+        <input id="myLabSaveFile" type="file" accept=".tamastate,.mylabsave,.sav" hidden>
+        <button class="btn small" id="myLabSaveDelete" type="button" data-t="paraClear"></button>
+        <button class="btn small" id="myLabSaveUndo" type="button" data-t="emuUndo" hidden></button>
+      </div>
+      <p class="hint" data-t="myLabSaveHint"></p>
+      </section>
+      <section class="rom-save-card"><h3 class="section-title">Individual Save Pages</h3>
+      <div class="tools">
+        <label><span data-t="myLabPage"></span> <select id="myLabSavePage"></select></label>
+        <button class="btn small" id="myLabSaveBackup" type="button" data-t="myLabSaveBackup"></button>
+      </div>
+      <p class="hint" id="myLabPageInfo"></p>
+      </section>
+    </section>
+    <section id="myLabUpdate" role="tabpanel" aria-labelledby="myLabTabUpdate" hidden>
+      <fieldset class="update-source">
+        <legend>Start From</legend>
+        <label><input type="radio" name="updateSource" id="updateSourceRom" checked> Loaded ROM</label>
+        <label><input type="radio" name="updateSource" id="updateSourcePackage"> Existing update file</label>
+      </fieldset>
+      <section id="updateFromRom" class="update-path">
+        <h3>Create a UART Update</h3>
+        <p>Build a microSD update that starts the writable Flash Tool on My Lab.</p>
+        <dl class="file-facts"><dt>Source ROM</dt><dd id="updateRomName"></dd><dt>Required file</dt><dd>Matching device key (.key)</dd></dl>
+        <button class="btn primary" id="myLabUartCreate" type="button" data-t="myLabUartCreate"></button>
+        <input id="myLabUartKey" type="file" accept=".key" hidden>
+        <p id="updateRomStatus" role="status"></p>
+      </section>
+      <section id="updateFromPackage" class="update-path" hidden>
+        <h3>Inspect an Update File</h3>
+        <p>Open an existing My Lab microSD update to check its layout and header checksum.</p>
+        <button class="btn" id="myLabUpdateOpen" type="button" data-t="myLabUpdateOpen"></button>
+        <input id="myLabUpdateFile" type="file" accept=".bin" hidden>
+        <p id="myLabUpdateStatus" role="status"></p>
+        <div id="updatePackageActions" hidden>
+          <p>Download a copy of the inspected file. For a supported stock ROM, you can also add the writable UART Flash Tool with its matching device key.</p>
+          <div class="tools">
+            <button class="btn primary" id="myLabUpdatePatch" type="button" data-t="myLabUpdatePatch" disabled></button>
+            <input id="myLabUpdatePatchKey" type="file" accept=".key" hidden>
+            <button class="btn" id="myLabUpdateExport" type="button" disabled>Download Original File</button>
+          </div>
+          <p id="updatePatchStatus" role="status"></p>
+        </div>
+      </section>
+      <p id="updateRequiresStock" class="hint" hidden>Creating or patching a UART update requires a supported stock My Lab ROM. You can still inspect and download an existing update file.</p>
+      <details class="update-install">
+        <summary>Using the Download on My Lab</summary>
+        <p data-sentence="sentenceMyLabUpdate">Copy <code data-sentence-part="file">MLTUPD.BIN</code> to the root of the microSD card. After installing the UART update, open <a data-sentence-part="read" href="#romTransfer" data-view-link="uart">Device → Read ROM</a> to back up the device. A failed write may require Recovery.</p>
+      </details>
+    </section>
+    <section class="zh-panel" id="myLabZh" role="tabpanel" aria-labelledby="myLabTabZh" hidden>
+      <h3>Traditional Chinese</h3><p>Download a translated copy of the loaded ROM. Open the download in Workspace to use it for a device write.</p>
+      <div class="zh-state"><div><strong>Chinese text</strong><span id="myLabZhText">Checking…</span></div><div><strong>Settings language entry</strong><span id="myLabZhMenu">Checking…</span></div></div>
+      <div class="zh-form"><label>Variant<select id="myLabZhVariant"><option value="tw">Taiwan</option><option value="hk">Hong Kong</option><option value="standard">Standard Traditional</option></select></label><label>Glyph font<select id="myLabZhFont"><option value="cubic11">Cubic 11</option><option value="fusion">Fusion Pixel</option></select></label><button class="btn primary" id="myLabZhRun" type="button" disabled>Create Translated ROM</button></div>
+      <p class="zh-status" id="myLabZhStatus" role="status"></p>
+      <p class="hint"><a href="#license">License</a></p>
+    </section>
+    <section id="myLabPort" role="tabpanel" aria-labelledby="myLabTabPort" hidden>
+      <header class="menu-intro"><h2 data-t="myLabPortTitle"></h2><p data-t="myLabPortHelp"></p></header>
+      <div class="menu-group" id="myLabScreenFitRow">
+        <label class="menu-switch">
+          <span data-t="myLabScreenFit"></span>
+          <input id="myLabScreenFit" type="checkbox" disabled aria-describedby="myLabScreenFitHint">
+        </label>
+        <p class="hint" id="myLabScreenFitHint" data-t="myLabScreenFitHint"></p>
+      </div>
+      <div class="update-path" id="myLabParadiseBuilder" hidden>
+        <div class="tools">
+          <label><span data-t="myLabPortBackup"></span> <input id="myLabPortBackup" type="file" accept=".bin,.BIN"></label>
+          <label id="myLabPortKeyRow"><span data-t="myLabPortKey"></span> <input id="myLabPortKey" type="file" accept=".key"></label>
+        </div>
+        <label class="menu-switch">
+          <span data-t="myLabPortStage"></span>
+          <input id="myLabPortSwitch" type="checkbox" role="switch" aria-describedby="myLabPortStatus" disabled>
+        </label>
+        <p class="hint" role="status" id="myLabPortStatus"></p>
+      </div>
+      <p class="hint" id="myLabPortUnsupported" data-t="myLabPortUnsupported" hidden></p>
+    </section>
+  </section>
+
+  <section class="work" id="work" aria-label="Paradise workspace">
+    <details class="inspector" open>
+      <summary><span class="inspector-label">ROM Details</span><span class="info" id="info"></span></summary>
+      <div class="plan" id="plan">
+        <div id="paradisePlanChanges"></div>
+        <h3 class="flash-heading">Flash Layout</h3>
+        <div class="flash" id="paradiseLayoutBar" aria-hidden="true"></div>
+        <div class="legend" id="paradiseLayoutLegend"></div>
+        <div id="paradiseAssetUsage" hidden>
+          <h3 class="flash-heading" id="paradiseAssetHeading">Character Asset Space</h3>
+          <div class="flash usage-meter" id="paradiseAssetMeter" role="meter" aria-valuemin="0" aria-valuemax="100" aria-labelledby="paradiseAssetHeading" aria-describedby="paradiseAssetUsageText">
+            <i class="seg fw" id="paradiseAssetUsed"></i>
+          </div>
+          <p class="legend" id="paradiseAssetUsageText"></p>
+        </div>
+      </div>
+    </details>
+    <aside class="toolbox">
+      <label class="mobile-tools">Tool <select id="paradiseTool"></select></label>
+      <div class="tabs" role="tablist" aria-label="Paradise tools">
+      <span class="nav-group" role="presentation">Library</span>
+      <button class="tab" role="tab" data-tab="figs" aria-selected="true" data-t="tabFigs"></button>
+      <button class="tab" role="tab" data-tab="all" aria-selected="false" data-t="tabAll"></button>
+      <button class="tab" role="tab" data-tab="names" aria-selected="false" data-t="tabNames"></button>
+      <button class="tab" role="tab" data-tab="dim" aria-selected="false" data-t="tabDim"></button>
+      <button class="tab" role="tab" data-legacy data-tab="emu" aria-selected="false" data-t="tabEmu"></button>
+      <button class="tab" role="tab" data-legacy data-tab="gb" aria-selected="false" data-t="tabGb"></button>
+      <button class="tab" role="tab" data-legacy data-tab="sms" aria-selected="false" data-t="tabSms"></button>
+      <button class="tab" role="tab" data-legacy data-tab="pm" aria-selected="false" data-t="tabPm"></button>
+      <button class="tab" role="tab" data-legacy data-tab="ab" aria-selected="false" data-t="tabAb"></button>
+      <span class="nav-group" role="presentation">Device &amp; Data</span>
+      <button class="tab" role="tab" data-tab="feld" aria-selected="false" data-t="tabFeld"></button>
+      <button class="tab" role="tab" data-tab="save" aria-selected="false" data-t="tabSave"></button>
+      <button class="tab" role="tab" data-tab="lab-items" aria-selected="false">Lab Items</button>
+      <span class="nav-group" role="presentation">Language</span>
+      <button class="tab" role="tab" data-tab="zh" aria-selected="false">Translate</button>
+    </div>
+    </aside>
+    <h1 class="tool-heading" id="paradiseHeading">Characters</h1>
+    <section class="pane" id="pane-lab-items" hidden>
+      <p>Preview and export downloaded ARC2 files stored in this ROM. Saved name and price edits are included when you export a new ROM.</p>
+      <div id="romLabItems"></div>
+    </section>
+    <div class="pane" id="pane-figs">
+      <div class="tools">
+        <label class="check"><span data-t="figField"></span> <select id="figField"></select></label>
+        <button class="btn small" id="btnZipField" data-t="zipField" hidden></button>
+        <button class="btn small" id="btnFieldIn" data-t="fieldIn" hidden></button>
+        <button class="btn small" id="btnZipFigs" data-t="zipFigs"></button>
+        <button class="btn small" id="btnUpload" data-t="upload"></button>
+        <details class="test-tools"><summary>Test Tools</summary><button class="btn small" id="btnNumbers" data-t="numbers"></button></details>
+        <span class="hint" data-t="figHint"></span>
+      </div>
+      <div class="grid" id="gridFigs"></div>
+    </div>
+    <div class="pane" id="pane-all" hidden>
+      <div class="tools">
+        <button class="btn small" id="btnZipAll" data-t="zipAll"></button>
+        <button class="btn small" id="btnUpload2" data-t="upload"></button>
+        <label class="check"><input type="checkbox" id="optColors"> <span data-t="moreColors"></span></label>
+        <span class="hint" data-t="allHint"></span>
+      </div>
+      <nav class="tools sprite-pages" aria-label="Sprite pages">
+        <button type="button" class="btn small" id="paradiseSpritesPrev">Previous</button>
+        <label>Page <select id="paradiseSpritesPage"></select></label>
+        <button type="button" class="btn small" id="paradiseSpritesNext">Next</button>
+        <span id="paradiseSpritesRange" class="hint" role="status"></span>
+      </nav>
+      <div class="grid" id="gridAll"></div>
+    </div>
+    <div class="pane" id="pane-names" hidden>
+      <p class="hint" data-t="namesHint"></p>
+      <details class="name-list" open><summary data-t="namesFields"></summary>
+      <div class="nlist" id="namesFields"></div></details>
+      <details class="name-list"><summary data-t="namesChars"></summary>
+      <div class="nlist" id="namesChars"></div></details>
+      <details class="name-list"><summary data-t="namesItems"></summary>
+      <div class="tools"><input type="search" id="namesFind" aria-label="Find an item"> <button class="btn small" id="namesUndo" data-t="namesUndo"></button></div>
+      <p id="itemSearchEmpty" class="search-empty" role="status" hidden>No matching items. Try another name.</p>
+      <div class="nlist" id="namesItems"></div></details>
+    </div>
+    <div class="pane" id="pane-dim" hidden>
+      <div class="tools">
+        <button class="btn small" id="btnDim" data-t="dimLoad"></button>
+        <span class="hint" data-t="dimHint"></span>
+      </div>
+      <div id="dimArea"></div>
+    </div>
+    <div class="pane" id="pane-emu" hidden>
+      <div class="tools">
+        <button class="btn small" id="btnEmu" data-t="emuPick"></button>
+        <button class="btn small" id="btnEmuOff" data-t="emuOff" hidden></button>
+        <button class="btn small" id="btnEmuUndo" data-t="emuUndo" hidden></button>
+        <button class="btn small" id="btnT7Fig" data-t="t7FigPick" hidden></button>
+        <span class="hint" data-t="emuHint"></span>
+      </div>
+      <div class="proglist" id="appsList"></div>
+      <p class="emustat" id="emuStat"></p>
+      <div class="chips" id="t7Figs" hidden></div>
+      <div class="tools" id="emuAutoRow" hidden><label class="check"><input type="checkbox" id="emuAuto"> <span data-t="emuAuto"></span></label> <span class="hint" data-t="emuAutoHint"></span></div>
+      <div class="tools" id="emuClockRow" hidden><label class="check"><input type="checkbox" id="emuClock" checked> <span data-t="emuClock"></span></label> <span class="hint" data-t="emuClockHint"></span></div>
+      <div class="tools" id="emuNfcRow" hidden><label class="check"><input type="checkbox" id="emuNfc" checked> <span data-t="emuNfc"></span></label> <span class="hint" data-t="emuNfcHint"></span></div>
+      <div id="appsBox" hidden>
+        <div class="tools">
+          <button class="btn small" id="btnApp" data-t="appPick"></button>
+          <span class="hint" data-t="appHint"></span>
+        </div>
+      </div>
+      <div id="emuDlc" hidden>
+        <div class="tools" hidden>
+          <button class="btn small" id="btnDlc" data-t="dlcPick"></button>
+          <span class="hint" data-t="dlcHint"></span>
+        </div>
+        <div class="dlcgrid" id="dlcList"></div>
+      </div>
+    </div>
+    <div class="pane" id="pane-gb" hidden>
+      <div class="tools">
+        <button class="btn small" id="btnGb" data-t="gbPick"></button>
+        <input type="file" id="fileGb" hidden multiple accept=".gb,.GB,.gbc,.GBC">
+        <span class="hint" data-t="gbHint"></span>
+      </div>
+      <div class="dlcbox" id="gbList"></div>
+      <div class="keys" id="gbKeys">
+        <h3 data-t="gbKeysTitle"></h3>
+        <div class="keygrid" id="gbKeyGrid"></div>
+        <div class="tools">
+          <label class="check"><input type="checkbox" id="gbInv"> <span data-t="kInv"></span></label>
+          <button class="btn small" id="btnGbKeysDef" data-t="gbKeysDef"></button>
+        </div>
+        <p class="hint" id="gbKeysStat"></p>
+      </div>
+    </div>
+    <div class="pane" id="pane-sms" hidden>
+      <div class="tools">
+        <button class="btn small" id="btnSms" data-t="smsPick"></button>
+        <input type="file" id="fileSms" hidden multiple accept=".sms,.SMS,.gg,.GG">
+        <span class="hint" data-t="smsHint"></span>
+      </div>
+      <div class="dlcbox" id="smsList"></div>
+      <div class="keys" id="smsKeys">
+        <h3 data-t="gbKeysTitle"></h3>
+        <div class="keygrid" id="smsKeyGrid"></div>
+        <div class="tools">
+          <label class="check"><input type="checkbox" id="smsInv"> <span data-t="kInv"></span></label>
+          <button class="btn small" id="btnSmsKeysDef" data-t="gbKeysDef"></button>
+        </div>
+        <p class="hint" id="smsKeysStat"></p>
+      </div>
+    </div>
+    <div class="pane" id="pane-pm" hidden>
+      <div class="tools">
+        <button class="btn small" id="btnPm" data-t="pmPick"></button>
+        <input type="file" id="filePm" hidden multiple accept=".min,.MIN,.zip,.ZIP">
+        <span class="hint" data-t="pmHint"></span>
+      </div>
+      <div class="dlcbox" id="pmList"></div>
+      <div class="tools">
+        <button class="btn small" id="btnPmBios" data-t="pmBiosPick"></button>
+        <button class="btn small" id="btnPmBiosDel" data-t="pmBiosDel"></button>
+        <span class="hint" id="pmBiosStat"></span>
+      </div>
+      <div class="keys" id="pmKeys">
+        <h3 data-t="gbKeysTitle"></h3>
+        <div class="keygrid" id="pmKeyGrid"></div>
+        <div class="tools">
+          <label class="check"><input type="checkbox" id="pmInv"> <span data-t="kInv"></span></label>
+          <button class="btn small" id="btnPmKeysDef" data-t="gbKeysDef"></button>
+        </div>
+        <p class="hint" id="pmKeysStat"></p>
+      </div>
+    </div>
+    <div class="pane" id="pane-ab" hidden>
+      <div class="tools">
+        <button class="btn small" id="btnAb" data-t="abPick"></button>
+        <input type="file" id="fileAb" hidden multiple accept=".hex,.HEX,.zip,.ZIP">
+        <span class="hint" data-t="abHint"></span>
+      </div>
+      <div class="dlcbox" id="abList"></div>
+      <div class="keys" id="abKeys">
+        <h3 data-t="gbKeysTitle"></h3>
+        <div class="keygrid" id="abKeyGrid"></div>
+        <div class="tools">
+          <label class="check"><input type="checkbox" id="abInv"> <span data-t="kInv"></span></label>
+          <button class="btn small" id="btnAbKeysDef" data-t="gbKeysDef"></button>
+        </div>
+        <p class="hint" id="abKeysStat"></p>
+      </div>
+    </div>
+    <div class="pane" id="pane-save" hidden>
+      <section class="rom-save-card"><h3 class="section-title">Active Save</h3>
+      <div class="tools" id="paraSlotRow" hidden>
+        <label class="lbl" for="paraSlot" data-t="saveSlotL"></label>
+        <select id="paraSlot"></select>
+        <button class="btn small" id="btnSlotClear" data-t="slotClearB"></button>
+      </div>
+      <div class="tools">
+        <button class="btn small" id="btnParaOut" data-t="saveParaOutB"></button>
+        <button class="btn small" id="btnParaIn" data-t="saveParaInB"></button>
+        <button class="btn small" id="btnParaClear" data-t="paraClear"></button>
+      </div>
+      <p class="hint" data-sentence="sentenceSaveConnect">Export reads the selected save from this ROM. To write it directly to hardware, first <a data-sentence-part="connect" href="#connectionTitle" data-view-link="uart">connect the device</a>.</p>
+      <p class="hint" id="paraClearStatus" hidden></p>
+      </section>
+      <section class="rom-save-card"><h3 class="section-title">Edit Character Save</h3>
+      <div class="tools">
+        <button class="btn small" id="btnPetOpen" data-t="petOpen"></button>
+        <button class="btn small" id="btnPetRom" data-t="petRom"></button>
+        <input type="file" id="filePet" accept=".tamasave" hidden>
+      </div>
+      <div class="tools" id="petRow" hidden>
+        <label><span data-t="petLevel"></span> <select id="petLevel"></select></label>
+        <label id="petCharRow"><span data-t="petChar"></span> <select id="petChar"></select></label>
+        <label class="check" id="petCareRow"><input type="checkbox" id="petCare"> <span data-t="petCare"></span></label>
+        <label id="petPointsRow" hidden><span data-t="petPoints"></span> <input id="petPoints" type="number" min="0" max="99999" step="1"></label>
+        <label id="petMissionRow" hidden><span data-t="petMission"></span> <select id="petMission"></select></label>
+        <label id="petMissionActionRow" hidden><span data-t="petMissionAction"></span> <select id="petMissionAction">
+          <option value="" data-t="petKeep"></option>
+          <option value="complete" data-t="petMissionComplete"></option>
+          <option value="reset" data-t="petMissionReset"></option>
+        </select></label>
+        <button class="btn small" id="btnPetSave" data-t="petSave"></button>
+        <button class="btn small" id="btnPetClose" data-t="petClose"></button>
+      </div>
+      <p class="emustat" id="petStat"></p>
+      </section>
+      <details class="name-list" id="programSaveTools" hidden>
+      <summary>Program Saves</summary>
+      <div class="tools" id="saveForRow" hidden>
+        <label class="lbl" for="saveFor" data-t="saveFor"></label>
+        <select id="saveFor"></select>
+      </div>
+      <div class="tools">
+        <button class="btn small" id="btnEmuOut"></button>
+        <button class="btn small" id="btnEmuIn"></button>
+      </div>
+      <p class="emustat" id="saveStat"></p>
+      </details>
+    </div>
+    <div class="pane zh-panel" id="pane-zh" hidden>
+      <h3>Traditional Chinese</h3><p>Download a translated copy of the loaded ROM. Open the download in Workspace to use it for a device write.</p>
+      <div class="zh-state"><div><strong>Chinese text</strong><span id="zhText">Checking…</span></div><div><strong>Settings language entry</strong><span id="zhMenu">Checking…</span></div></div>
+      <div class="zh-form"><label>Variant<select id="zhVariant"><option value="tw">Taiwan</option><option value="hk">Hong Kong</option><option value="standard">Standard Traditional</option></select></label><label>Glyph font<select id="zhFont"><option value="cubic11">Cubic 11</option><option value="fusion">Fusion Pixel</option></select></label><button class="btn primary" id="zhRun" type="button" disabled>Create Translated ROM</button></div>
+      <p class="zh-status" id="zhStatus" role="status"></p>
+      <p class="hint"><a href="#license">License</a></p>
+    </div>
+    <div class="pane" id="pane-feld" hidden>
+      <header class="menu-intro"><h2>Paradise Menu</h2><p data-sentence="sentenceMenuExport">Choose the tools to include on your Paradise. Use <a data-sentence-part="save" href="#btnSave" data-t="save">Save New ROM</a> to export your choices.</p></header>
+      <section class="menu-status" aria-label="ROM status"><h3>ROM Status</h3><ul id="feldStat"></ul></section>
+      <section class="menu-group">
+        <h3 class="menu-heading">Gameplay Tools</h3>
+        <p class="hint" id="feldControls" hidden></p>
+        <div class="menu-option"><label class="check"><input type="checkbox" id="feldOn" aria-describedby="feldHint"> <span data-t="feldOn"></span></label><p class="hint" id="feldHint">Start a save in a field of your choice and switch between saves.</p></div>
+        <div class="menu-option"><label class="check"><input type="checkbox" id="bagOn" aria-describedby="bagOnHelp"> <span data-t="bagOn"></span></label><p class="hint" id="bagOnHelp">Add items to the bag and adjust the Tamapoint balance.</p></div>
+        <div class="menu-option"><label class="check"><input type="checkbox" id="tamaOn" aria-describedby="tamaOnHelp"> <span data-t="tamaOn"></span></label><p class="hint" id="tamaOnHelp">Change your Tama’s level, care and character.</p></div>
+        <div class="tools" id="paramixShortcutRow">
+          <label class="check"><input type="checkbox" id="paramixShortcut"> <span data-t="paramixShortcut"></span></label>
+          <span class="hint" data-t="paramixShortcutHint"></span>
+        </div>
+      </section>
+      <section class="menu-group">
+        <h3 class="menu-heading">Fields and Planets</h3>
+        <div class="tools" id="sixRow" hidden>
+          <label class="check"><input type="checkbox" id="sixOn"> <span id="sixOnTxt" data-t="sixOn"></span></label>
+          <button class="btn small" id="btnSix" data-t="sixPick"></button>
+          <input type="file" id="fileSix" accept=".bin,.BIN" hidden>
+          <span class="hint" id="sixHintTxt" data-t="sixHint"></span>
+        </div>
+        <div class="tools" id="sixPlanetRow" hidden>
+          <label class="check"><input type="checkbox" id="sixPlanet" checked> <span data-t="sixPlanet"></span></label>
+          <label class="check"><input type="checkbox" id="sixMenu" checked> <span data-t="sixMenu"></span></label>
+        </div>
+        <div class="tools" id="neonDonorRow" hidden>
+          <strong>Neon Planets Content</strong>
+          <button class="btn small" id="neonDonorPick" data-t="neonDonorPick"></button>
+          <input type="file" id="neonDonorFile" accept=".bin,.BIN" hidden>
+          <span class="hint" id="neonDonorStat"></span>
+        </div>
+      </section>
+      <section class="menu-group">
+        <h3 class="menu-heading">In-Game Connections</h3>
+        <div class="tools" id="labReleaseRow" hidden>
+          <label class="check"><input type="checkbox" id="labReleaseOn"> <span data-t="labReleaseOn"></span></label>
+          <label class="check"><input type="checkbox" id="specialFoodOn"> <span data-t="specialFoodOn"></span></label>
+          <button class="btn small" id="labReleasePick" data-t="neonDonorPick" hidden></button>
+          <input type="file" id="labReleaseFile" accept=".bin,.BIN" hidden>
+          <span class="hint" id="labReleaseStat"></span>
+        </div>
+      </section>
+      <div hidden>
+      <div class="tools" id="appsOnlyRow" hidden>
+        <label class="check"><input type="checkbox" id="appsOnlyOn"> <span data-t="appsOnlyOn"></span></label>
+        <span class="hint" data-t="appsOnlyHint"></span>
+      </div>
+      <div class="tools">
+        <label class="check"><input type="checkbox" id="launchOn"> <span data-t="launchOn"></span></label>
+        <span class="hint" data-t="launchHint"></span>
+      </div>
+      <div class="tools" id="cleanRow" hidden>
+        <label class="check"><input type="checkbox" id="cleanOn"> <span data-t="cleanOn"></span></label>
+        <span class="hint" data-t="cleanHint"></span>
+      </div>
+      <div class="tools" id="cleanClockRow" hidden>
+        <label class="check"><input type="checkbox" id="cleanClock" checked> <span data-t="cleanClock"></span></label>
+        <span class="hint" data-t="cleanClockHint"></span>
+      </div>
+      <div class="tools" id="gplayRow">
+        <label class="check"><input type="checkbox" id="gplayOn"> <span data-t="gplayOn"></span></label>
+        <span class="hint" data-t="gplayHint"></span>
+      </div>
+      <div class="tools">
+        <label class="check"><span data-t="exitKey"></span> <select id="exitKey"></select></label>
+        <span class="hint" data-t="exitHint"></span>
+      </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="dTitle" aria-hidden="true" inert>
+  <header><h2 id="dTitle"></h2><button class="btn small" id="dClose" data-t="close"></button></header>
+  <div class="body">
+    <div id="dCharacterPreview" class="character-animation" hidden>
+      <canvas id="dCharacterImage" aria-label="Character animation"></canvas>
+      <div class="tools"><button class="btn small" id="dCharacterPlayback">Play</button><span id="dCharacterFrame"></span></div>
+    </div>
+    <div class="actions">
+      <button class="btn small" id="dDown" data-t="download"></button>
+      <button class="btn small" id="dUp" data-t="uploadOne"></button>
+      <button class="btn small" id="dReset" data-t="reset"></button>
+      <span class="zoom"><button class="btn small" data-z="1">1×</button><button class="btn small" data-z="2">2×</button><button class="btn small" data-z="3">3×</button></span>
+    </div>
+    <div class="sheetwrap"><canvas id="dCanvas"></canvas></div>
+    <details id="dEyes" hidden><summary>Adjust Eyes and Mouth</summary><div class="eyerow">
+      <div class="facecol">
+        <canvas id="dEyeCv" width="64" height="64"></canvas>
+        <div class="tools posebar"><button class="btn small" id="dPosePrev" aria-label="Previous pose">◀</button><span id="dPoseNr"></span><button class="btn small" id="dPoseNext" aria-label="Next pose">▶</button></div>
+        <div class="tools posebar"><button class="btn small" id="dFaceBig" data-t="faceBig"></button><button class="btn small" id="dFaceSmall" data-t="faceSmall"></button></div>
+      </div>
+      <div>
+        <b data-t="eyeMvT"></b>
+        <div class="tools"><button class="btn small" data-eye="-1,0" aria-label="Move eyes left">←</button><button class="btn small" data-eye="1,0" aria-label="Move eyes right">→</button><button class="btn small" data-eye="0,-1" aria-label="Move eyes up">↑</button><button class="btn small" data-eye="0,1" aria-label="Move eyes down">↓</button><button class="btn small" id="dEyeReset" aria-label="Reset eyes position">↺</button> <span id="dEyeVal"></span></div>
+        <div id="dMouthRow"><b data-t="mouthMvT"></b>
+        <div class="tools"><button class="btn small" data-mouth="-1,0" aria-label="Move mouth left">←</button><button class="btn small" data-mouth="1,0" aria-label="Move mouth right">→</button><button class="btn small" data-mouth="0,-1" aria-label="Move mouth up">↑</button><button class="btn small" data-mouth="0,1" aria-label="Move mouth down">↓</button><button class="btn small" id="dMouthReset" aria-label="Reset mouth position">↺</button> <span id="dMouthVal"></span></div></div>
+        <label class="check"><input type="checkbox" id="dPoseOnly"> <span data-t="poseOnly"></span></label>
+        <p class="hint" id="dFaceHint"></p>
+      </div>
+    </div>
+    </details>
+    <ul class="meta" id="dMeta"></ul>
+  </div>
+</aside>
+<div class="toast" id="toast" role="status"></div>
+<dialog class="loading-dialog" id="romLoading" aria-labelledby="romLoadingTitle" aria-describedby="romLoadingFile romLoadingStage">
+  <h2 id="romLoadingTitle">Opening ROM</h2>
+  <p id="romLoadingFile" dir="auto"></p>
+  <div class="rom-loading-track" aria-hidden="true"><i></i></div>
+  <p id="romLoadingStage" role="status"></p>
+</dialog>
+<dialog class="loading-dialog" id="busy" aria-labelledby="busyTitle">
+  <h2 id="busyTitle" aria-live="polite"></h2>
+  <div class="rom-loading-track" aria-hidden="true"><i></i></div>
+</dialog>
+<footer class="app-footer">
+  <div class="footer-inner">
+    <div class="footer-credit"><strong>ParaLab</strong> <span>__VERSION__</span> · x43x61x69 <span class="upstream">Based on work by mameise</span> · <a href="https://github.com/x43x61x69/ParaLab/tree/__PUBLIC_REF__">Source Code</a></div>
+    <details class="footer-notices" id="creditsNotices">
+      <summary>Credits &amp; Notices</summary>
+      <div class="notice-body">
+        <section id="license" tabindex="-1"><h2>License</h2>
+          <p data-t="licenseNotice"></p>
+          <p>Original ROM translation tools by <a href="https://github.com/sawaYch/tamagotchi-paradise-zh-patcher">sawaYch</a>. My Lab support comes from <a href="https://github.com/x43x61x69/tamagotchi-paradise-zh-patcher">x43x61x69’s fork</a>.</p>
+          <p>Dictionaries from <a href="https://github.com/BYVoid/OpenCC">OpenCC</a>. Glyphs from <a href="https://github.com/ACh-K/Cubic-11">Cubic 11</a> and <a href="https://github.com/TakWolf/fusion-pixel-font">Fusion Pixel Font</a>.</p>
+          <details><summary>Translation Licenses</summary>__ZH_LICENSES__</details>
+        </section>
+        <section><h2>Trademarks &amp; Game Content</h2><p data-t="trademarks"></p></section>
+        <section><h2>Device Use &amp; Warranty</h2><p data-t="disclaimer"></p></section>
+        __ANALYTICS_CONTROLS__
+      </div>
+    </details>
+  </div>
+</footer>
+
+<template id="labItemsTemplate">
+  <div class="lab-items-tools">
+    <p class="hint" data-lab-items-count role="status"></p>
+    <input type="search" placeholder="Find a Lab Item" aria-label="Find a Lab Item">
+  </div>
+  <ul class="lab-items-grid" aria-label="Lab Items"></ul>
+</template>
+<dialog class="lab-dialog lab-item-dialog" id="labItemDialog" aria-labelledby="labItemTitle">
+  <header>
+    <h2 id="labItemTitle"></h2>
+    <button class="btn small" id="labItemClose" type="button">Close</button>
+  </header>
+  <div class="lab-item-summary">
+
+    <dl>
+      <dt>Item ID</dt><dd id="labItemId"></dd>
+      <dt>Flash address</dt><dd id="labItemAddress"></dd>
+      <dt>Archive size</dt><dd id="labItemSize"></dd>
+      <dt>Checksum</dt><dd id="labItemChecksum"></dd>
+      <dt>Sprite entries</dt><dd id="labItemEntryCount"></dd>
+    </dl>
+  </div>
+  <h3>Images</h3>
+  <div id="labItemPreview" class="lab-item-gallery"></div>
+  <form id="labItemForm">
+    <details class="localized-section">
+      <summary>Localized Names</summary>
+      <div class="localized-inputs" id="labItemNames"></div>
+    </details>
+    <div class="lab-item-prices">
+      <label>Buy price (G)<input id="labItemBuy" type="number" min="0" max="65535" step="1" required></label>
+      <label>Sell price (G)<input id="labItemSell" type="number" min="0" max="65535" step="1" required></label>
+    </div>
+    <div class="lab-item-actions">
+      <button class="btn small" id="labItemPreset" type="button">Buy 0 / Sell 9999</button>
+      <button class="btn small" id="labItemSave" type="submit">Save Item Edits</button>
+      <button class="btn small primary" id="labItemExport" type="button">Export ARC2</button>
+    </div>
+    <p id="labItemStatus" class="hint" role="status"></p>
+  </form>
+</dialog>
+<script>
+__CORE__
+__LAB_ITEMS__
+</script>
+<script>
+__EMU__
+</script>
+<script>
+__SETTINGS__
+</script>
+<script>
+__HOME_MENU__
+__LAB_RELEASE__
+</script>
+<script>
+__FELD__
+</script>
+<script>
+__SIX__
+</script>
+<script>
+__LEGACY_LZ4__
+</script>
+<script>
+__NEON_TRANSPLANT__
+__SPECIAL_FOOD__
+</script>
+<script>
+__FLASH__
+</script>
+<script>
+__SAVES__
+</script>
+<script>
+__VISIT__
+</script>
+<script>
+__MYLAB__
+</script>
+<script>
+__MYLAB_MENU__
+</script>
+<script>
+__ZH_OPENCC__
+</script>
+<script>
+__ZH_CUBIC__
+</script>
+<script>
+__ZH_FUSION__
+</script>
+<script>
+__ZH_CONVERTER__
+</script>
+<script>
+__ROM_LOCALE__
+</script>
+<script>
+__I18N__
+</script>
+__ANALYTICS_SCRIPT__
+<script>
+__APP__
+</script>
+</body>
+</html>

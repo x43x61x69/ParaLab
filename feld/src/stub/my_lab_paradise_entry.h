@@ -1,0 +1,42 @@
+#ifndef MY_LAB_PARADISE_ENTRY_H
+#define MY_LAB_PARADISE_ENTRY_H
+
+/* One-shot request carried across the direct PRAM handoff. */
+#define MY_LAB_PARADISE_BOOT_BOX 0x20000FFC
+#define MY_LAB_PARADISE_FLASH_REQUEST 0x46584D50
+#define MY_LAB_PARADISE_MENU_REQUEST 0x4D584D50
+#define MY_LAB_PARADISE_MENU_SOURCE 0x60037000
+#define MY_LAB_PARADISE_LOADER_SOURCE 0x6018D000
+#define MY_LAB_PARADISE_LAUNCH_FROM_MENU 0x1003400D
+#define MY_LAB_PARADISE_LAUNCH_FROM_GAME 0x1008D00D
+#define MY_LAB_PARADISE_LAUNCH_FROM_FLASH 0x6004500D
+
+/* Boot milestones are retained in scratch RAM when the hardware allows it. */
+#define MY_LAB_PARADISE_TRACE_BOX 0x20000F80
+#define MY_LAB_PARADISE_TRACE_MAGIC 0x54524C50
+#define MY_LAB_TRACE_MENU_EXIT 1
+#define MY_LAB_TRACE_CLOCK 2
+#define MY_LAB_TRACE_COPY 3
+#define MY_LAB_TRACE_LOADER 4
+#define MY_LAB_TRACE_BOOT_LCD 5
+#define MY_LAB_TRACE_BOOT_LCD_READY 6
+#define MY_LAB_TRACE_BOOT_FRAME 7
+#define MY_LAB_TRACE_BOOT_DRAWN 8
+#define MY_LAB_TRACE_GAME_LCD 9
+#define MY_LAB_TRACE_GAME_LCD_READY 10
+#define MY_LAB_TRACE_GAME_FRAME 11
+#define MY_LAB_TRACE_GAME_DRAWN 12
+#define MY_LAB_TRACE_TX_INIT 1
+#define MY_LAB_TRACE_TX_CMD 2
+#define MY_LAB_TRACE_TX_ROW 3
+#define MY_LAB_TRACE_TX_FULL 1
+#define MY_LAB_TRACE_TX_BUSY 2
+/* Retained after a manual reset. Key bits use the order A, B, C. */
+#define MY_LAB_TRACE_FRAMES 0x20000F8C
+#define MY_LAB_TRACE_KEYS 0x20000F90
+
+/* Optional diagnostic sample from the standalone deep-power-down handler. */
+#define MY_LAB_DPD_TRACE_BOX 0x20000F60
+#define MY_LAB_DPD_TRACE_MAGIC 0x314B5744
+
+#endif

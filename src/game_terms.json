@@ -1,0 +1,307 @@
+{
+  "paradise": {
+    "connection": {
+      "ja": "ツーしん",
+      "en": "CONNECTION",
+      "fr": "CONNEXION",
+      "de": "VERBINDUNG",
+      "pt": "CONEXÃO",
+      "es": "CONEXIÓN",
+      "it": "CONNESSIONE",
+      "zh-Hans": "通讯",
+      "ko": "통신"
+    },
+    "playdate": {
+      "ja": "あそぶ",
+      "en": "PLAYDATE",
+      "fr": "S’AMUSER",
+      "de": "PLAYDATE",
+      "pt": "DIVERSÃO",
+      "es": "CITA JUGAR",
+      "it": "DIVERTIRSI",
+      "zh-Hans": "玩耍",
+      "ko": "놀기"
+    },
+    "gifts": {
+      "ja": "アイテムこうかん",
+      "en": "GIFTS",
+      "fr": "CADEAUX",
+      "de": "GESCHENKE",
+      "pt": "PRESENTES",
+      "es": "REGALOS",
+      "it": "REGALI",
+      "zh-Hans": "交换道具",
+      "ko": "아이템 교환"
+    },
+    "download": {
+      "ja": "ダウンロード",
+      "en": "DOWNLOAD",
+      "fr": "TÉLÉCH.",
+      "de": "DOWNLOAD",
+      "pt": "DOWNLOAD",
+      "es": "DESCARGAR",
+      "it": "SCARICA",
+      "zh-Hans": "下载",
+      "ko": "다운로드"
+    },
+    "settings": {
+      "ja": "せってい",
+      "en": "SETTINGS",
+      "fr": "RÉGLAGES",
+      "de": "OPTIONEN",
+      "pt": "CONFIG.",
+      "es": "AJUSTES",
+      "it": "PREFERENZE",
+      "zh-Hans": "设置",
+      "ko": "설정"
+    },
+    "tamaFile": {
+      "ja": "たまファイル",
+      "en": "TAMA FILE",
+      "fr": "FICHIER",
+      "de": "TAMA-DATEI",
+      "pt": "ARQV. TAMA",
+      "es": "TAMA ARCH.",
+      "it": "FILE TAMA",
+      "zh-Hans": "拓麻文件",
+      "ko": "다마 파일"
+    },
+    "labLog": {
+      "ja": "けんきゅうきろく",
+      "en": "LAB LOG",
+      "fr": "JOURNAL LAB",
+      "de": "PROTOKOLL",
+      "pt": "REGIST. LAB",
+      "es": "DIARIO LAB.",
+      "it": "REGIST. LAB",
+      "zh-Hans": "研究记录",
+      "ko": "연구 기록"
+    }
+  },
+  "neon": {
+    "specialFood": {
+      "ja": "スペシャルフード",
+      "en": "SPECIALFOOD",
+      "fr": "REPAS SPÉC.",
+      "de": "SPZ. ESSEN",
+      "pt": "COMIDA ESP.",
+      "es": "COMIDA ESP.",
+      "it": "CIBO SPEC.",
+      "zh-Hans": "特制食物",
+      "ko": "스페셜 음식"
+    },
+    "getFood": {
+      "ja": "フードをもらう",
+      "en": "GET FOOD",
+      "fr": "OBT. REPAS",
+      "de": "ESSEN",
+      "pt": "+ COMIDA",
+      "es": "OBT. COMIDA",
+      "it": "RICEVI CIBO",
+      "zh-Hans": "获取食物",
+      "ko": "음식 받기"
+    }
+  },
+  "my-lab": {
+    "connection": {
+      "ja": "ツーしん",
+      "en": "CONNECTION",
+      "fr": "CONNEXION",
+      "de": "VERBINDUNG",
+      "pt": "CONEXÃO",
+      "es": "CONEXIÓN",
+      "it": "CONNESSIONE",
+      "zh-Hans": "通讯",
+      "ko": "통신"
+    },
+    "playdate": {
+      "ja": "あそぶ",
+      "en": "PLAYDATE",
+      "fr": "S’AMUSER",
+      "de": "PLAYDATE",
+      "pt": "DIVERSÃO",
+      "es": "CITA JUGAR",
+      "it": "DIVERTIRSI",
+      "zh-Hans": "玩耍",
+      "ko": "놀기"
+    },
+    "labInvite": {
+      "ja": "マイラボによぶ",
+      "en": "LAB INVITE",
+      "fr": "INVIT. LABO",
+      "de": "LABOR-EINL.",
+      "pt": "CONVITE LAB",
+      "es": "INVIT. LAB.",
+      "it": "INVITO LAB",
+      "zh-Hans": "邀请到我的实验室",
+      "ko": "내 연구소 초대"
+    },
+    "garden": {
+      "ja": "おにわ",
+      "en": "GARDEN",
+      "fr": "JARDIN",
+      "de": "GARTEN",
+      "pt": "JARDIM",
+      "es": "JARDÍN",
+      "it": "GIARDINO",
+      "zh-Hans": "庭院",
+      "ko": "정원"
+    },
+    "computer": {
+      "ja": "パソコン",
+      "en": "COMPUTER",
+      "fr": "ORDINATEUR",
+      "de": "COMPUTER",
+      "pt": "COMPUTADOR",
+      "es": "ORDENADOR",
+      "it": "COMPUTER",
+      "zh-Hans": "电脑",
+      "ko": "컴퓨터"
+    },
+    "settings": {
+      "ja": "せってい",
+      "en": "SETTINGS",
+      "fr": "RÉGLAGES",
+      "de": "OPTIONEN",
+      "pt": "CONFIG.",
+      "es": "AJUSTES",
+      "it": "PREFERENZE",
+      "zh-Hans": "设置",
+      "ko": "설정"
+    },
+    "shop": {
+      "ja": "ショッピング",
+      "en": "SHOP",
+      "fr": "BOUTIQUE",
+      "de": "SHOP",
+      "pt": "LOJA",
+      "es": "TIENDA",
+      "it": "NEGOZIO",
+      "zh-Hans": "购物",
+      "ko": "쇼핑"
+    },
+    "labLog": {
+      "ja": "けんきゅーきろく",
+      "en": "LAB LOG",
+      "fr": "JOURNAL LAB",
+      "de": "LABORPROTOKOLL",
+      "pt": "REGIST. LAB",
+      "es": "DIARIO LAB.",
+      "it": "REGIST. LAB",
+      "zh-Hans": "研究记录",
+      "ko": "연구 기록"
+    },
+    "update": {
+      "ja": "アップデート",
+      "en": "UPDATE",
+      "fr": "M. À JOUR",
+      "de": "UPDATE",
+      "pt": "ATUALIZAR",
+      "es": "ACTUALIZAR",
+      "it": "NOVITÀ",
+      "zh-Hans": "更新",
+      "ko": "업데이트"
+    }
+  },
+  "fields": {
+    "1": {
+      "ja": "りく",
+      "en": "LAND",
+      "fr": "TERRE",
+      "de": "LAND",
+      "pt": "TERRA",
+      "es": "TIERRA",
+      "it": "TERRA",
+      "zh-Hans": "陆地",
+      "ko": "육지"
+    },
+    "2": {
+      "ja": "みず",
+      "en": "WATER",
+      "fr": "EAU",
+      "de": "WASSER",
+      "pt": "ÁGUA",
+      "es": "AGUA",
+      "it": "ACQUA",
+      "zh-Hans": "海洋",
+      "ko": "수중"
+    },
+    "3": {
+      "ja": "そら",
+      "en": "SKY",
+      "fr": "CIEL",
+      "de": "HIMMEL",
+      "pt": "CÉU",
+      "es": "CIELO",
+      "it": "CIELO",
+      "zh-Hans": "天空",
+      "ko": "하늘"
+    },
+    "4": {
+      "ja": "もり",
+      "en": "FOREST",
+      "fr": "FORÊT",
+      "de": "WALD",
+      "pt": "FLORESTA",
+      "es": "BOSQUE",
+      "it": "FORESTA",
+      "zh-Hans": "森林",
+      "ko": "숲"
+    },
+    "5": {
+      "ja": "なんごく",
+      "en": "TROPICAL",
+      "fr": "TROPICAL",
+      "de": "TROPISCH",
+      "pt": "TROPICAL",
+      "es": "TROPICAL",
+      "it": "TROPICALE",
+      "zh-Hans": "南方",
+      "ko": "트로피컬"
+    },
+    "6": {
+      "ja": "こおり",
+      "en": "ICE",
+      "fr": "GLACE",
+      "de": "EIS",
+      "pt": "GELO",
+      "es": "HIELO",
+      "it": "GHIACCIO",
+      "zh-Hans": "冰雪",
+      "ko": "얼음"
+    },
+    "7": {
+      "ja": "コズミック★",
+      "en": "COSMIC★",
+      "fr": "COSMIQUE★",
+      "de": "KOSMISCH★",
+      "pt": "CÓSMICO★",
+      "es": "CÓSMICO★",
+      "it": "COSMICO★",
+      "zh-Hans": "宇宙★",
+      "ko": "코스믹 ★"
+    },
+    "8": {
+      "ja": "にゅーたま★",
+      "en": "NEW TAMA★",
+      "fr": "NOUV.TAMA★",
+      "de": "TAMA NEU★",
+      "pt": "NOVOTAMA★",
+      "es": "N. TAMA★",
+      "it": "N. TAMA★",
+      "zh-Hans": "新拓麻星★",
+      "ko": "뉴 다마 ★"
+    },
+    "9": {
+      "ja": "たまごっち★",
+      "en": "TAMA★",
+      "fr": "TAMA★",
+      "de": "TAMA★",
+      "pt": "TAMA★",
+      "es": "TAMA★",
+      "it": "TAMA★",
+      "zh-Hans": "拓麻歌子★",
+      "ko": "다마고치 ★"
+    }
+  }
+}

@@ -1,0 +1,107 @@
+{
+  "en": {
+    "paradise": "Tamagotchi Paradise",
+    "land": "Pink Land",
+    "water": "Blue Water",
+    "sky": "Purple Sky",
+    "jade": "Jade Forest",
+    "tropics": "Orange Tropics",
+    "glacier": "White Glacier",
+    "neon": "Neon Planets",
+    "my-lab": "My Lab Tamagotchi"
+  },
+  "ja": {
+    "paradise": "たまごっちパラダイス",
+    "land": "Pink Land",
+    "water": "Blue Water",
+    "sky": "Purple Sky",
+    "jade": "Jade Forest",
+    "tropics": "Orange Tropics",
+    "glacier": "White Glacier",
+    "neon": "Neon Planets",
+    "my-lab": "My Lab Tamagotchi"
+  },
+  "fr": {
+    "land": "Terre rose",
+    "water": "Eau bleue",
+    "sky": "Ciel violet",
+    "jade": "Forêt de jade",
+    "tropics": "Tropiques orange",
+    "glacier": "Glacier blanc",
+    "neon": "Planètes fluos",
+    "my-lab": "My Lab Tamagotchi"
+  },
+  "de": {
+    "land": "Rosa Land",
+    "water": "Blaues Wasser",
+    "sky": "Violetter Himmel",
+    "jade": "Jadewald",
+    "tropics": "Orange Tropen",
+    "glacier": "Weißer Gletscher",
+    "neon": "Neon-Planeten",
+    "my-lab": "My Lab Tamagotchi"
+  },
+  "pt": {
+    "land": "Terra Rosa",
+    "water": "Água Azul",
+    "sky": "Céu Roxo",
+    "jade": "Floresta de Jade",
+    "tropics": "Trópicos Laranja",
+    "glacier": "Geleira Branca",
+    "neon": "Planetas Neon",
+    "my-lab": "My Lab Tamagotchi"
+  },
+  "es": {
+    "land": "Tierra rosa",
+    "water": "Agua azul",
+    "sky": "Cielo morado",
+    "jade": "Bosque de jade",
+    "tropics": "Trópico naranja",
+    "glacier": "Glaciar blanco",
+    "neon": "Planetas Neón",
+    "my-lab": "My Lab Tamagotchi"
+  },
+  "it": {
+    "land": "Terra Rosa",
+    "water": "Acqua Blu",
+    "sky": "Cielo viola",
+    "jade": "Foresta di Giada",
+    "tropics": "Tropici Arancioni",
+    "glacier": "Ghiacciaio bianco",
+    "neon": "Pianeti al neon",
+    "my-lab": "My Lab Tamagotchi"
+  },
+  "zh-Hans": {
+    "paradise": "拓麻歌子欢乐园",
+    "land": "陆地",
+    "water": "海洋",
+    "sky": "天空",
+    "jade": "翠林",
+    "tropics": "热带",
+    "glacier": "冰海",
+    "neon": "霓虹星球",
+    "my-lab": "巨型欢乐园拓麻歌子"
+  },
+  "zh-Hant": {
+    "paradise": "樂園塔麻歌子",
+    "land": "粉紅之地",
+    "water": "藍色水域",
+    "sky": "紫色天空",
+    "jade": "翡翠森林",
+    "tropics": "熱帶橙果",
+    "glacier": "極地冰雪",
+    "neon": "霓虹星球",
+    "my-lab": "巨型樂園塔麻歌子"
+  },
+  "ko": {
+    "paradise": "다마고치 파라다이스",
+    "land": "핑크랜드",
+    "water": "블루 워터",
+    "sky": "퍼플 스카이",
+    "jade": "제이드 포레스트",
+    "tropics": "오렌지 트로픽스",
+    "glacier": "화이트 글래시어",
+    "neon": "네온 플래닛츠",
+    "my-lab": "나의 랩 다마고치"
+  }
+}

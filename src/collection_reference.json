@@ -1,0 +1,993 @@
+{
+  "shopCodes": {
+    "5033": "63984717",
+    "5034": "56852210",
+    "5035": "95380547",
+    "5036": "75324651",
+    "5037": "19162952",
+    "5038": "81364378",
+    "5039": "02407725",
+    "5040": "92093485",
+    "5041": "02584861",
+    "5042": "85926587",
+    "5043": "76169252",
+    "5044": "72968763",
+    "5045": "50951756",
+    "5046": "97587690",
+    "5047": "74858354",
+    "5048": "53486788",
+    "5049": "96359340",
+    "5050": "39357133",
+    "5051": "70215275",
+    "5052": "29140743",
+    "5053": "36736895",
+    "5054": "53684743",
+    "5055": "54175498",
+    "5117": "09508651",
+    "6019": "17928690",
+    "6020": "75417953",
+    "6021": "17390274",
+    "6022": "68527046",
+    "6023": "10937314",
+    "6024": "69246521",
+    "6025": "57653319",
+    "6026": "25058016",
+    "6027": "47100986",
+    "6028": "30601026",
+    "6029": "29671239",
+    "6030": "75736382",
+    "6031": "02395469",
+    "6032": "98783729",
+    "6033": "65219015",
+    "6034": "28296085",
+    "6035": "98139310",
+    "6036": "47805804",
+    "6037": "52483361",
+    "6038": "68284514",
+    "6039": "69501027",
+    "6040": "45196041",
+    "6041": "80435034",
+    "6042": "75261293",
+    "6043": "67953812",
+    "6044": "36636746",
+    "6045": "41624803",
+    "6051": "54638572",
+    "6054": "29671239",
+    "7002": "21052853",
+    "7004": "65730795",
+    "7005": "45980305",
+    "7009": "17351549",
+    "7041": "05846935",
+    "7042": "82915952",
+    "7043": "41282659",
+    "7044": "47120784",
+    "7045": "48192569",
+    "7046": "38072809",
+    "7047": "13950475",
+    "7048": "34671317",
+    "7049": "05672512",
+    "7050": "17254563",
+    "7051": "07879620",
+    "7052": "45619639",
+    "7053": "15265021",
+    "7054": "49583258",
+    "7055": "63854658",
+    "7056": "97932010",
+    "7057": "04579676",
+    "7058": "74321867",
+    "7059": "75474286",
+    "7060": "35606107",
+    "7061": "28520716",
+    "7087": "12926847",
+    "8045": "04015149",
+    "8046": "43280105",
+    "8047": "53741858",
+    "8048": "50563689",
+    "8049": "68527158",
+    "8050": "05023839",
+    "8051": "37519184",
+    "8052": "64703405",
+    "8053": "10854756",
+    "8054": "78357605",
+    "8055": "94916269",
+    "8056": "94257857",
+    "8057": "56439089",
+    "8058": "20986445",
+    "8059": "50536071",
+    "8060": "91610708",
+    "8061": "46746507",
+    "8062": "14853045",
+    "8063": "59614767",
+    "8064": "42107325",
+    "8065": "73595649",
+    "8066": "26570348",
+    "8067": "09597972",
+    "8068": "78594810",
+    "8069": "48753308",
+    "8070": "93246348",
+    "8071": "40796739",
+    "8072": "36795645",
+    "8073": "62624154",
+    "8074": "17556258",
+    "8075": "95092619",
+    "8076": "83012792",
+    "8077": "37691894",
+    "8078": "73629358",
+    "8103": "64107201",
+    "8104": "47058763",
+    "8105": "29674697",
+    "8108": "45619639",
+    "8124": "95851016"
+  },
+  "characters": {
+    "4018": {
+      "code": "4RG89EWK",
+      "young": 3005,
+      "care": "0 mistakes + fill Hunger and Happy 5+ times each",
+      "names": [
+        "みゃおっち",
+        "Meowtchi",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "猫猫吉",
+        "미야오치"
+      ],
+      "official": 517,
+      "image": "https://tamagotchi-official.com/tamagotchi/jp/character/2025/05/07/2lNIYfe6Fr3pKTcC/18_%E3%81%BF%E3%82%83%E3%81%8A%E3%81%A3%E3%81%A1_LAND.png",
+      "editions": [
+        "land",
+        "water",
+        "sky",
+        "jade",
+        "tropics",
+        "glacier",
+        "neon"
+      ]
+    },
+    "4019": {
+      "code": "487V6CAU",
+      "young": 3005,
+      "care": "0-1 care mistakes",
+      "names": [
+        "ポチっち",
+        "Pochitchi",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "波吉",
+        "포치치"
+      ],
+      "official": 518,
+      "image": "https://tamagotchi-official.com/tamagotchi/us/character/2026/10/09/1WKb9l65OKJ6C4Si/%E3%81%BD%E3%81%A1%E3%81%A3%E3%81%A1.png",
+      "editions": [
+        "land",
+        "water",
+        "sky",
+        "jade",
+        "tropics",
+        "glacier",
+        "neon"
+      ]
+    },
+    "4022": {
+      "code": "K04B787H",
+      "young": 3006,
+      "care": "0 mistakes + fill Hunger and Happy 5+ times each",
+      "names": [
+        "まめっち",
+        "Mametchi",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "豆丁吉",
+        "마메치"
+      ],
+      "official": 521,
+      "image": "https://tamagotchi-official.com/tamagotchi/us/character/2026/10/09/b6QvXx6gbR21C2uJ/%E3%81%BE%E3%82%81%E3%81%A3%E3%81%A1.png",
+      "editions": [
+        "land",
+        "water",
+        "sky",
+        "jade",
+        "tropics",
+        "glacier",
+        "neon"
+      ]
+    },
+    "4023": {
+      "code": "L5B4RUHL",
+      "young": 3006,
+      "care": "0-1 care mistakes",
+      "names": [
+        "みみっち",
+        "Mimitchi",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "大耳吉",
+        "미미치"
+      ],
+      "official": 522,
+      "image": "https://tamagotchi-official.com/tamagotchi/us/character/2026/10/09/plbSsG2a38MBtLtn/%E3%81%BF%E3%81%BF%E3%81%A3%E3%81%A1.png",
+      "editions": [
+        "land",
+        "water",
+        "sky",
+        "jade",
+        "tropics",
+        "glacier",
+        "neon"
+      ]
+    },
+    "4030": {
+      "code": "1EWR12VQ",
+      "young": 3008,
+      "care": "0 mistakes + fill Hunger and Happy 5+ times each",
+      "names": [
+        "ふらわっち",
+        "Furawatchi",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "芙朵吉",
+        "플라워치"
+      ],
+      "official": 529,
+      "image": "https://tamagotchi-official.com/tamagotchi/us/character/2026/10/09/QxSGxhSlEapFlYv6/%E3%81%B5%E3%82%89%E3%82%8F%E3%81%A3%E3%81%A1.png",
+      "editions": [
+        "land",
+        "water",
+        "sky",
+        "jade",
+        "tropics",
+        "glacier",
+        "neon"
+      ]
+    },
+    "4034": {
+      "code": "XKGDC0FX",
+      "young": 3009,
+      "care": "0 mistakes + fill Hunger and Happy 5+ times each",
+      "names": [
+        "いるかっち",
+        "Irukatchi",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "海豚吉",
+        "이루카치"
+      ],
+      "official": 533,
+      "image": "https://tamagotchi-official.com/tamagotchi/jp/character/2025/05/07/3lgIUTgfN1oa1JPE/34_%E3%81%84%E3%82%8B%E3%81%8B%E3%81%A3%E3%81%A1_WATER.png",
+      "editions": [
+        "land",
+        "water",
+        "sky",
+        "jade",
+        "tropics",
+        "glacier",
+        "neon"
+      ]
+    },
+    "4038": {
+      "code": "LW5JHHDB",
+      "young": 3010,
+      "care": "0 mistakes + fill Hunger and Happy 5+ times each",
+      "names": [
+        "あほろぱっち",
+        "Axolopatchi",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "阿活洛帕吉",
+        "아홀로파치"
+      ],
+      "official": 537,
+      "image": "https://tamagotchi-official.com/tamagotchi/jp/character/2025/05/07/FhOV3XQVuoZNVFOQ/38_%E3%81%82%E3%81%BB%E3%82%8D%E3%81%B1%E3%81%A3%E3%81%A1_WATER.png",
+      "editions": [
+        "land",
+        "water",
+        "sky",
+        "jade",
+        "tropics",
+        "glacier",
+        "neon"
+      ]
+    },
+    "4040": {
+      "code": "8E6XEDXR",
+      "young": 3010,
+      "care": "2-5 care mistakes",
+      "names": [
+        "かわずっち",
+        "Kawazutchi",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "雨蛙吉",
+        "카와즈치"
+      ],
+      "official": 539,
+      "image": "https://tamagotchi-official.com/tamagotchi/jp/character/2025/05/07/B50wwCDIFcRQ3L5T/40_%E3%81%8B%E3%82%8F%E3%81%9A%E3%81%A3%E3%81%A1_WATER.png",
+      "editions": [
+        "land",
+        "water",
+        "sky",
+        "jade",
+        "tropics",
+        "glacier",
+        "neon"
+      ]
+    },
+    "4050": {
+      "code": "Y536U3WA",
+      "young": 3013,
+      "care": "0 mistakes + fill Hunger and Happy 5+ times each",
+      "names": [
+        "ほーほっち",
+        "Horhotchi",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "伙伙吉",
+        "호호치"
+      ],
+      "official": 549,
+      "image": "https://tamagotchi-official.com/tamagotchi/jp/character/2025/05/07/we5Yc497XcMID13K/50_%E3%81%BB%E3%83%BC%E3%81%BB%E3%81%A3%E3%81%A1_SKY.png",
+      "editions": [
+        "land",
+        "water",
+        "sky",
+        "jade",
+        "tropics",
+        "glacier",
+        "neon"
+      ]
+    },
+    "4051": {
+      "code": "4S4GL6QN",
+      "young": 3013,
+      "care": "0-1 care mistakes",
+      "names": [
+        "もんがっち",
+        "Mongatchi",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "飞鼠吉",
+        "몽가치"
+      ],
+      "official": 550,
+      "image": "https://tamagotchi-official.com/tamagotchi/jp/character/2025/05/07/hjPprHEKtNwQFehC/51_%E3%82%82%E3%82%93%E3%81%8C%E3%81%A3%E3%81%A1_SKY.png",
+      "editions": [
+        "land",
+        "water",
+        "sky",
+        "jade",
+        "tropics",
+        "glacier",
+        "neon"
+      ]
+    },
+    "4058": {
+      "code": "C1X9FUKR",
+      "young": 3014,
+      "care": "2-5 care mistakes",
+      "names": [
+        "くちぱっち",
+        "Kuchipatchi",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "大嘴吉",
+        "구치파치"
+      ],
+      "official": 557,
+      "image": "https://tamagotchi-official.com/tamagotchi/us/character/2026/10/09/orYQm676cDvDXh1s/%E3%81%8F%E3%81%A1%E3%81%B1%E3%81%A3%E3%81%A1.png"
+    },
+    "4079": {
+      "code": "4Y8ECKXP",
+      "names": [
+        "かのこっち",
+        "Kanokotchi",
+        "Kanokotchi",
+        "Kanokotchi",
+        "Kanokotchi",
+        "Kanokotchi",
+        "Kanokotchi",
+        "小鹿吉",
+        "카노코치"
+      ],
+      "official": 572,
+      "image": "https://tamagotchi-official.com/tamagotchi/jp/character/2025/10/09/vJIE4Vs6iuw6gPZ4/73_%E3%81%8B%E3%81%AE%E3%81%93%E3%81%A3%E3%81%A1_JADE.png",
+      "care": "0-1 care mistakes",
+      "editions": [
+        "jade",
+        "tropics",
+        "glacier"
+      ],
+      "young": 3071
+    },
+    "4083": {
+      "code": "02UXR90S",
+      "names": [
+        "ときぱっち",
+        "Tokipatchi",
+        "Tokipatchi",
+        "Tokipatchi",
+        "Tokipatchi",
+        "Tokipatchi",
+        "Tokipatchi",
+        "朱鹭吉",
+        "토키파치"
+      ],
+      "official": 576,
+      "image": "https://tamagotchi-official.com/tamagotchi/jp/character/2025/10/09/LP7e7ZlRlwbGb9M5/77_%E3%81%A8%E3%81%8D%E3%81%B1%E3%81%A3%E3%81%A1_JADE.png",
+      "care": "0-1 care mistakes",
+      "editions": [
+        "jade",
+        "tropics",
+        "glacier"
+      ],
+      "young": 3072
+    },
+    "4086": {
+      "code": "E1F79X8P",
+      "names": [
+        "しいたけっち",
+        "Shiitaketchi",
+        "Shiitaketchi",
+        "Shiitaketchi",
+        "Shiitaketchi",
+        "Shiitaketchi",
+        "Shiitaketchi",
+        "香菇吉",
+        "시이타케치"
+      ],
+      "official": 578,
+      "image": "https://tamagotchi-official.com/tamagotchi/jp/character/2025/10/09/YtA7Mt4rXDja3hdU/79_%E3%81%97%E3%81%84%E3%81%9F%E3%81%91%E3%81%A3%E3%81%A1_JADE.png",
+      "care": "0 mistakes + fill Hunger and Happy 5+ times each",
+      "editions": [
+        "jade",
+        "tropics",
+        "glacier"
+      ],
+      "young": 3073
+    },
+    "4096": {
+      "code": "4AEX49V8",
+      "names": [
+        "なんごくみゃおっち",
+        "Tropical Meowtchi",
+        "Tropical Meowtchi",
+        "Tropical Meowtchi",
+        "Tropical Meowtchi",
+        "Tropical Meowtchi",
+        "Tropical Meowtchi",
+        "南方猫猫吉",
+        "남국 미야오치"
+      ],
+      "official": 594,
+      "image": "https://tamagotchi-official.com/tamagotchi/jp/character/2026/05/11/8TryzO4iNej7zFio/%E3%81%AA%E3%82%93%E3%81%94%E3%81%8F%E3%81%BF%E3%82%83%E3%81%8A%E3%81%A3%E3%81%A1_TROPICS.png",
+      "care": "0 mistakes + fill Hunger and Happy 5+ times each",
+      "editions": [
+        "tropics",
+        "glacier"
+      ],
+      "young": 3092
+    },
+    "4101": {
+      "code": "WN9Q7X85",
+      "names": [
+        "ぱろろっち",
+        "Parorotchi",
+        "Parorotchi",
+        "Parorotchi",
+        "Parorotchi",
+        "Parorotchi",
+        "Parorotchi",
+        "鹦鹉吉",
+        "파로로치"
+      ],
+      "official": 599,
+      "image": "https://tamagotchi-official.com/tamagotchi/jp/character/2026/05/11/FStzHmeulfOajSxm/%E3%81%B1%E3%82%8D%E3%82%8D%E3%81%A3%E3%81%A1_TROPICS.png",
+      "editions": [
+        "tropics",
+        "glacier"
+      ],
+      "care": "0-1 care mistakes",
+      "young": 3093
+    },
+    "4105": {
+      "code": "2WBRUA3H",
+      "names": [
+        "ぽいずっち",
+        "Poizutchi",
+        "Poizutchi",
+        "Poizutchi",
+        "Poizutchi",
+        "Poizutchi",
+        "Poizutchi",
+        "箭蛙吉",
+        "포이즈치"
+      ],
+      "official": 603,
+      "image": "https://tamagotchi-official.com/tamagotchi/jp/character/2026/05/11/4yreBxCmHnATkGT7/%E3%81%BD%E3%81%84%E3%81%9A%E3%81%A3%E3%81%A1_TROPICS.png",
+      "editions": [
+        "tropics",
+        "glacier"
+      ],
+      "care": "0-1 care mistakes",
+      "young": 3094
+    },
+    "4119": {
+      "code": "V5A0EP28",
+      "names": [
+        "おこじょっち",
+        "Okojotchi",
+        "Okojotchi",
+        "Okojotchi",
+        "Okojotchi",
+        "Okojotchi",
+        "Okojotchi",
+        "雪貂吉",
+        "오코죠치"
+      ],
+      "official": 616,
+      "image": "https://tamagotchi-official.com/tamagotchi/jp/character/2026/05/13/54OhkYLXVwKNZwnv/%E3%81%8A%E3%81%93%E3%81%98%E3%82%87%E3%81%A3%E3%81%A1_GLACIER.png",
+      "editions": [
+        "tropics",
+        "glacier"
+      ],
+      "care": "0 mistakes + fill Hunger and Happy 5+ times each",
+      "young": 3114
+    },
+    "4122": {
+      "code": "TF8C4XG3",
+      "names": [
+        "シロいるかっち",
+        "Icy Irukatchi",
+        "Icy Irukatchi",
+        "Icy Irukatchi",
+        "Icy Irukatchi",
+        "Icy Irukatchi",
+        "Icy Irukatchi",
+        "白海豚吉",
+        "시로이루카치"
+      ],
+      "official": 619,
+      "image": "https://tamagotchi-official.com/tamagotchi/jp/character/2026/05/13/PZTB4gCiFuaWVnLH/%E3%82%B7%E3%83%AD%E3%81%84%E3%82%8B%E3%81%8B%E3%81%A3%E3%81%A1_GLACIER.png",
+      "care": "0 mistakes + fill Hunger and Happy 5+ times each",
+      "editions": [
+        "tropics",
+        "glacier"
+      ],
+      "young": 3116
+    },
+    "4123": {
+      "code": "HCF8K432",
+      "names": [
+        "ぎんじろっち",
+        "Ginjirotchi",
+        "Ginjirotchi",
+        "Ginjirotchi",
+        "Ginjirotchi",
+        "Ginjirotchi",
+        "Ginjirotchi",
+        "银次郎吉",
+        "긴지로치"
+      ],
+      "official": 620,
+      "image": "https://tamagotchi-official.com/tamagotchi/jp/character/2026/05/13/8HQcxiSpOx7qDcpG/%E3%81%8E%E3%82%93%E3%81%98%E3%82%8D%E3%81%A3%E3%81%A1_GLACIER.png",
+      "editions": [
+        "tropics",
+        "glacier"
+      ],
+      "care": "0-1 care mistakes",
+      "young": 3116
+    },
+    "4183": {
+      "code": "YDVCYU37",
+      "names": [
+        "めめっち",
+        "Memetchi",
+        "Memetchi",
+        "Memetchi",
+        "Memetchi",
+        "Memetchi",
+        "Memetchi",
+        "玫玫吉",
+        "메메치"
+      ],
+      "official": 659,
+      "image": "https://tamagotchi-official.com/tamagotchi/auz/character/2026/10/07/X3nEvNvcVsyW74Pg/%E3%82%81%E3%82%81%E3%81%A3%E3%81%A1_TAMAGOTCHI.png",
+      "editions": [
+        "neon"
+      ]
+    },
+    "4187": {
+      "code": "XGNEM8PH",
+      "names": [
+        "ラブリっち",
+        "Lovelitchi",
+        "Lovelitchi",
+        "Lovelitchi",
+        "Lovelitchi",
+        "Lovelitchi",
+        "Lovelitchi",
+        "甜心吉",
+        "러블리치"
+      ],
+      "official": 662,
+      "image": "https://tamagotchi-official.com/tamagotchi/auz/character/2026/10/07/aEsAGzDKj9nK6qMf/%E3%83%A9%E3%83%96%E3%83%AA%E3%81%A3%E3%81%A1_TAMAGOTCHI.png",
+      "editions": [
+        "neon"
+      ]
+    }
+  },
+  "unlockPortraits": {
+    "4066": "https://tamagotchi-official.com/tamagotchi/jp/character/2025/05/07/bX5v3lKPYL64sEtl/66_%E3%81%A1%E3%82%87%E3%81%93%E3%81%A9%E3%82%89%E3%81%A3%E3%81%A1_LAND.png",
+    "4067": "https://tamagotchi-official.com/tamagotchi/jp/character/2025/05/07/J0c9fEnOn3IbW82T/67_%E3%81%BE%E3%81%82%E3%81%BE%E3%82%8A%E3%82%93%E3%81%A3%E3%81%A1_WATER.png",
+    "4068": "https://tamagotchi-official.com/tamagotchi/jp/character/2025/05/07/t5uOiunpJXiTaUXh/68_%E3%82%84%E3%82%84%E3%81%93%E3%83%BC%E3%82%93%E3%81%A3%E3%81%A1_SKY.png",
+    "4090": "https://tamagotchi-official.com/tamagotchi/jp/character/2025/11/14/tZcV8I51wfWqhVxe/83_%E3%81%9F%E3%81%A4%E3%81%A3%E3%81%A1_JADE.png",
+    "4112": "https://tamagotchi-official.com/tamagotchi/jp/character/2026/08/03/xDQWkoe5Kmox0HJn/%E3%81%BE%E3%81%AA%E3%81%B1%E3%81%A3%E3%81%A1_TROPICS.png",
+    "4134": "https://tamagotchi-official.com/tamagotchi/jp/character/2026/08/03/a7InXPDICM5uiybH/%E3%81%BB%E3%81%BC%E3%81%BB%E3%83%BC%E3%82%93%E3%81%A3%E3%81%A1_GLACIER.png"
+  },
+  "names": {
+    "3005": [
+      "がおがおヤング",
+      "Roar Young",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "羔羔青年",
+      "으르렁 영"
+    ],
+    "3006": [
+      "とことこヤング",
+      "Toddle Young",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "特库特库青年",
+      "아장이 영"
+    ],
+    "3008": [
+      "にょきにょきヤング",
+      "Sprout Young",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "扭奇扭奇青年",
+      "쑥쑥이 영"
+    ],
+    "3009": [
+      "すいすいヤング",
+      "Glide Young",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "斯亦斯亦青年",
+      "쭉쭉이 영"
+    ],
+    "3010": [
+      "ぴょこぴょこヤング",
+      "Leap Young",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "拍拍青年",
+      "폴짝이 영"
+    ],
+    "3012": [
+      "ふよふよヤング",
+      "Float Young",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "浮游浮游青年",
+      "둥실이 영"
+    ],
+    "3013": [
+      "ぱたぱたヤング",
+      "Flap Young",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "帕塔帕塔青年",
+      "파닥이 영"
+    ],
+    "3014": [
+      "ぴよぴよヤング",
+      "Chirp Young",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "皮优皮优青年",
+      "삐약이 영"
+    ],
+    "3016": [
+      "かちかちヤング",
+      "Rocky Young",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "卡奇卡奇青年",
+      "딱딱이 영"
+    ],
+    "3071": [
+      "もりとこヤング",
+      "Forest Toddle Young",
+      "Forest Toddle Young",
+      "Forest Toddle Young",
+      "Forest Toddle Young",
+      "Forest Toddle Young",
+      "Forest Toddle Young",
+      "森林特库特库青年",
+      "숲의 아장이 영"
+    ],
+    "3072": [
+      "もりぴよヤング",
+      "Forest Chirp Young",
+      "Forest Chirp Young",
+      "Forest Chirp Young",
+      "Forest Chirp Young",
+      "Forest Chirp Young",
+      "Forest Chirp Young",
+      "森林皮优皮优青年",
+      "숲의 삐약이 영"
+    ],
+    "3073": [
+      "もりにょきヤング",
+      "Forest Sprout Young",
+      "Forest Sprout Young",
+      "Forest Sprout Young",
+      "Forest Sprout Young",
+      "Forest Sprout Young",
+      "Forest Sprout Young",
+      "森林扭奇扭奇青年",
+      "숲의 쑥쑥이 영"
+    ],
+    "3092": [
+      "なんごくがおヤング",
+      "Tropical Roar Young",
+      "Tropical Roar Young",
+      "Tropical Roar Young",
+      "Tropical Roar Young",
+      "Tropical Roar Young",
+      "Tropical Roar Young",
+      "南方羔羔青年",
+      "남국 으르렁 영"
+    ],
+    "3093": [
+      "なんごくとこヤング",
+      "Tropical Toddle Young",
+      "Tropical Toddle Young",
+      "Tropical Toddle Young",
+      "Tropical Toddle Young",
+      "Tropical Toddle Young",
+      "Tropical Toddle Young",
+      "南方特库特库青年",
+      "남국 아장이 영"
+    ],
+    "3094": [
+      "なんごくぺろヤング",
+      "Tropical Lick Young",
+      "Tropical Lick Young",
+      "Tropical Lick Young",
+      "Tropical Lick Young",
+      "Tropical Lick Young",
+      "Tropical Lick Young",
+      "南方佩洛佩洛青年",
+      "남국 날름이 영"
+    ],
+    "3095": [
+      "なんごくにょきヤング",
+      "Tropical Sprout Young",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "南方扭奇扭奇青年",
+      "남국 쑥쑥이 영"
+    ],
+    "3114": [
+      "こおりのがおヤング",
+      "Frozen Roar Young",
+      "Frozen Roar Young",
+      "Frozen Roar Young",
+      "Frozen Roar Young",
+      "Frozen Roar Young",
+      "Frozen Roar Young",
+      "冰原羔羔青年",
+      "얼음 으르렁 영"
+    ],
+    "3116": [
+      "こおりのすいヤング",
+      "Frozen Glide Young",
+      "Frozen Glide Young",
+      "Frozen Glide Young",
+      "Frozen Glide Young",
+      "Frozen Glide Young",
+      "Frozen Glide Young",
+      "冰原斯亦斯亦青年",
+      "얼음 쭉쭉이 영"
+    ],
+    "3117": [
+      "こおりのふよヤング",
+      "Frozen Float Young",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "冰原浮游浮游青年",
+      "얼음 둥실이 영"
+    ],
+    "4066": [
+      "ちょどらこっち",
+      "Chodracotchi",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "小龙吉",
+      "초도라코치"
+    ],
+    "4067": [
+      "まあまりんっち",
+      "Mermarintchi",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "人鱼吉",
+      "마마린치"
+    ],
+    "4068": [
+      "ややこーんっち",
+      "Yayacorntchi",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "独角吉",
+      "야야콘치"
+    ],
+    "4090": [
+      "たつっち",
+      "Tatsutchi",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "立龙吉",
+      "타츠치"
+    ],
+    "4112": [
+      "まなぱっち",
+      "Manapatchi",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "马纳叶吉",
+      "마나파치"
+    ],
+    "4134": [
+      "ほぼほーんっち",
+      "Hobohorntchi",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "独角鲸吉",
+      "호보혼치"
+    ]
+  },
+  "shopEditions": {
+    "5117": [
+      "neon"
+    ],
+    "6029": [
+      "land",
+      "water",
+      "sky",
+      "jade",
+      "tropics",
+      "glacier"
+    ],
+    "6051": [
+      "tropics",
+      "glacier"
+    ],
+    "6054": [
+      "neon"
+    ],
+    "7052": [
+      "land",
+      "water",
+      "sky",
+      "jade"
+    ],
+    "7087": [
+      "tropics",
+      "glacier"
+    ],
+    "8045": [
+      "land",
+      "water",
+      "sky",
+      "jade",
+      "tropics",
+      "glacier"
+    ],
+    "8103": [
+      "tropics",
+      "glacier"
+    ],
+    "8104": [
+      "tropics",
+      "glacier"
+    ],
+    "8105": [
+      "tropics",
+      "glacier"
+    ],
+    "8108": [
+      "tropics",
+      "glacier"
+    ],
+    "8124": [
+      "neon"
+    ]
+  }
+}
