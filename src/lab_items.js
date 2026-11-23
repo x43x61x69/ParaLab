@@ -213,20 +213,35 @@ function settingsAddresses(layout, saves) {
   return layout.neon ? saves.NEON_SETTINGS : [saves.SET_A, saves.SET_B];
 }
 
+function slotRegistration(layout, settings, saves) {
+  const addresses = settingsAddresses(layout, saves);
+  const ring = layout.neon ? saves.neonSettings(settings) : null;
+  const valid = layout.neon ? (ring ? [ring.page] : []) :
+    addresses.map(at => settings.get(at)).filter(page => page?.length === SECTOR && saves.settingsOk(page));
+  if (!valid.length) return null;
+  const occupied = new Set();
+  for (let slot = 0; slot < SLOT_COUNT; slot++) {
+    if (valid.some(page => page[layout.bitmap + (slot >> 3)] & (1 << (slot & 7)))) occupied.add(slot);
+  }
+  return { valid, ring, occupied };
+}
+
+function slotUsage(layout, settings, saves) {
+  const registration = slotRegistration(layout, settings, saves);
+  return registration && { used: registration.occupied.size, capacity: SLOT_COUNT };
+}
+
 function planInstall(layout, bytes, settings, selected, core, saves) {
   const addresses = settingsAddresses(layout, saves);
   if (bytes.length !== layout.end - layout.start || addresses.some(at => settings.get(at)?.length !== SECTOR))
     throw new Error('Could not read the Lab Item storage and settings.');
-  const ring = layout.neon ? saves.neonSettings(settings) : null;
-  const valid = layout.neon ? (ring ? [ring.page] : []) :
-    addresses.map(at => settings.get(at)).filter(page => saves.settingsOk(page));
-  if (!valid.length) throw new Error('Start the game and create a valid save before adding Lab Items.');
-
-  const active = slot => valid.some(page => page[layout.bitmap + (slot >> 3)] & (1 << (slot & 7)));
+  const registration = slotRegistration(layout, settings, saves);
+  if (!registration) throw new Error('Start the game and create a valid save before adding Lab Items.');
+  const { valid, ring, occupied } = registration;
   const slots = Array.from({ length: SLOT_COUNT }, (_, i) => bytes.subarray(i * SIZE, (i + 1) * SIZE));
   const installed = new Map();
   for (const [i, slot] of slots.entries()) {
-    if (active(i)) {
+    if (occupied.has(i)) {
       const item = forTransfer(slot, core);
       if (item) {
         if (!installed.has(item.id)) installed.set(item.id, []);
@@ -271,7 +286,7 @@ function planInstall(layout, bytes, settings, selected, core, saves) {
       continue;
     }
     if (item.replace) throw new Error('Lab Item storage changed. Try again.');
-    const available = (_, i) => !active(i) && !claimed.has(i);
+    const available = (_, i) => !occupied.has(i) && !claimed.has(i);
     // Reuse an unpublished copy after an interrupted write when every sector
     // is erased or already contains the selected archive's verified data.
     let free = slots.findIndex((slot, i) => available(slot, i) && !blank(slot) &&
@@ -385,10 +400,6 @@ function withPrices(item, buy, sell, core) {
   return { ...item, bytes, buy, sell, checksum: u32(b, 4) };
 }
 
-async function readDevice(device, start, end, core, progress, cancel) {
-  return scan(await device.readSparse(start, end, progress, cancel), start, core);
-}
-
-root.ParaLabItems = { SIZE, nameGlyph:visNameGlyph, withNames, parse, forTransfer, scan, downloadLayout, settingsAddresses, planInstall, picture, withPicture, thumbnail, withPrices, readDevice };
+root.ParaLabItems = { SIZE, nameGlyph:visNameGlyph, withNames, parse, forTransfer, scan, downloadLayout, settingsAddresses, slotUsage, planInstall, picture, withPicture, thumbnail, withPrices };
 if (typeof module !== 'undefined') module.exports = root.ParaLabItems;
 })(typeof window !== 'undefined' ? window : globalThis);

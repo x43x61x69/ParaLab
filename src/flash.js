@@ -96,7 +96,11 @@ const MSG = {
   appSilent: 'the flash app was sent but does not answer. Try again',
   unknownEd: 'unknown edition in the new ROM, untick "keep saves"',
   otherEd: 'the device is {d}, the new ROM is {r}. Untick "keep saves" to switch the edition',
-  slotMigration: 'Keep Saves could not preserve slot {f}. The write was cancelled before any flash changes.',
+  slotMigration: 'Keep Saves could not verify the contents of slot {f}. Nothing was written.',
+  slotLayout: 'Keep Saves cannot map slot {f} to a unique slot in the new ROM. Nothing was written.',
+  slotSpace: 'The new ROM does not have enough save space to preserve slot {f}. Nothing was written.',
+  slotResidentBankSpace: 'The separate field resident banks leave too little save space to preserve slot {f}. Nothing was written.',
+  slotResidentBanksRequired: 'This device already uses separate field resident storage. Use a ROM with the same resident storage to keep its saves. Nothing was written.',
   slotMenuRequired: 'Keep Saves cannot preserve stored slots without a save menu. The write was cancelled before any flash changes.',
   noteMoved: 'field {f} moved to the new slot',
   noteEdKept: 'the device is {d}, the new ROM is {r}: same firmware, the device keeps its save and its field ({d})',
@@ -1189,7 +1193,11 @@ function keepPlan(F, E, menu, opts = {}) {
     const ranges = mainOk ? [[ed.profile.idPage + (sameFam ? 0 : SECTOR), (F.isSix && F.isSix(img)) || launchImg || (NEON_HI && ed.profile.ring) ? 0xF00000 : FLASH_SIZE]] : [];   // NEON_HI: Neon's save ends at 0xF00000, programs may follow
     const residentBanks = root.ParamixResidentBanks;
     const targetResidents = mainOk && residentBanks?.inspect(img);
-    const sourceResidents = targetResidents && residentBanks.inspect(view);
+    if (mainOk && residentBanks) for (const s of residentBanks.hookPages) {
+      if (s < 0x90000 && changed.has(s)) view.set(await dev.read(s, SECTOR), s);
+    }
+    const sourceResidents = mainOk && residentBanks?.inspect(view);
+    if (sourceResidents && !targetResidents) throw fe('slotResidentBanksRequired');
     if (sourceResidents) ranges.push(...targetResidents.ranges);
     if (clean && dclean) { const ci = F.cleanInfo(img), cd = F.cleanInfo(view); if (ci && cd && ci.clock === cd.clock) ranges.push([ci.clock, ci.clock + SECTOR]); }
     // field slots
@@ -1208,11 +1216,14 @@ function keepPlan(F, E, menu, opts = {}) {
           try {
             s = await F.slotReadAsync((a, n) => dev.read(a, n), fd, i);
             if (s) F.slotPages(s);
-          } catch (_) { throw fe('slotMigration', { f: i + 1 }); }
+          } catch (error) {
+            if (error.code) throw error;
+            throw fe('slotMigration', { f: i + 1 });
+          }
           if (!s) continue;
           const idx = fd.version >= 3 ? s.field - 1 : i;
           if (idx < 0 || idx >= fi.nslots || slots.some(([j]) => j === idx))
-            throw fe('slotMigration', { f: i + 1 });
+            throw fe('slotLayout', { f: i + 1 });
           slots.push([idx, s]);
         }
         // the device's saves replace whatever the new image carries in the slots
@@ -1224,7 +1235,11 @@ function keepPlan(F, E, menu, opts = {}) {
             F.slotPlace(image, fi, idx, migrated, used);
             notes.push(note('noteMoved', { f: s.field }));
           }
-          catch (_) { throw fe('slotMigration', { f: s.field }); }
+          catch (error) {
+            if (error.code !== 'slotPoolFull') throw fe('slotMigration', { f: s.field });
+            const canDefer = targetResidents && !sourceResidents && residentBanks.needsInstall(view);
+            throw fe(canDefer ? 'slotResidentBankSpace' : 'slotSpace', { f: s.field });
+          }
         }
         for (const [from,to] of slotRanges(fi)) for (let a=from;a<to;a+=SECTOR) if (crc32(image,a,SECTOR)!==crc32(img,a,SECTOR)) changed.add(a);
       } else {

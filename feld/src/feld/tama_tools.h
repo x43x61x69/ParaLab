@@ -1,3 +1,6 @@
+#include "paradise_care.h"
+static const struct CareLayout *care_layout(void);
+
 /* Paradise pet offsets relative to Cfg.tama_off in the complete settings
  * page. The native SRAM view omits the first four CRC bytes. */
 static u32 t_word(u32 rel){ u32 o=g_cfg.tama_off+rel; return g_set[o]|(g_set[o+1]<<8); }
@@ -13,11 +16,14 @@ static void t_event_clear(u32 code){
 /* Bits: food, joy, heal, clean. Preserve unrelated event/condition bits. */
 static void t_care(u32 mask){
   u32 t=g_cfg.tama_off;
+  const struct CareLayout *layout=care_layout();
+  if(layout){
+    if(mask&4u) care_heal(g_set,layout);
+    if(mask&8u) care_set_dirt(g_set,layout,0);
+  }
   if(g_cfg.flags & F_NEON_TAMA){
     if(mask&1u) g_set[t+0x1Cu]=6;
     if(mask&2u) g_set[t+0x1Du]=20;
-    if(mask&4u) g_set[t+0x10u]=0;
-    if(mask&8u) g_set[t+0x14u]&=(u8)~0x10u;
     return;
   }
   if(mask&1u){
@@ -29,12 +35,6 @@ static void t_care(u32 mask){
     }
   }
   if(mask&2u){ g_set[t+0x1Du]=20; t_event_clear(0x12); }
-  if(mask&4u){
-    g_set[t+0x10u]=0; t_event_clear(0x0A); t_event_clear(0x0B);
-    u32 o=t==0x104u?0x180u:t==0x108u?0x184u:0x198u;
-    for(u32 i=0;i<4u;i++) g_set[o+i]=0;
-  }
-  if(mask&8u) g_set[t+0x14u]&=(u8)~0x10u;
 }
 static void t_stage_set(u32 stage){
   if(stage==t_stage()) return;

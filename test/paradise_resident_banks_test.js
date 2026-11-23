@@ -1,7 +1,11 @@
 'use strict';
 
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 const RB = require('../src/paradise_resident_banks.js');
+const F = require('../src/feld.js');
+const FL = require('../src/flash.js');
 require('../src/saves.js');
 const SV = globalThis.ParamixSaves;
 
@@ -86,4 +90,49 @@ stock[RB.address(1)] = 0x00;
 assert.throws(() => RB.apply(stock), /overlaps/);
 installed[RB.codePage(installed) + 36] ^= 0x01;
 assert.equal(RB.installed(installed), false);
-console.log('Paradise resident bank layout and migration verified');
+
+async function keepSavesCapacity() {
+  const stub = fs.readFileSync(path.join(__dirname, '../feld/stub_feld_tpl.bin'));
+  const slots = 0xC00000, menu = 0xB1000, cfg = menu + 0x140;
+  function setLayout(image, size) {
+    const pointer = stub.indexOf(Buffer.from([1, 0xEF, 0x89, 0x67]));
+    assert(pointer >= 0);
+    w32(image, 0xB0000 + pointer, 0x10000000 + menu - 0x11000);
+    for (const [offset, value] of [[0, 0x444C4546], [4, 11], [8, slots], [12, size], [16, 3], [36, F.F_FIELDS], [364, 0], [368, 0], [612, 0], [616, 0]])
+      w32(image, cfg + offset, value);
+    return F.feldFind(image, stub);
+  }
+  const old = baseline();
+  const oldLayout = setLayout(old, 0x6000);
+  const used = new Set();
+  let seed = 321;
+  for (const slot of [0, 2]) {
+    const pages = new Map();
+    for (let a = 0xD2A000; a < 0xD2D000; a += PAGE) {
+      const data = new Uint8Array(PAGE);
+      for (let i = 0; i < data.length; i++) {
+        seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5;
+        data[i] = seed;
+      }
+      pages.set(a, data);
+    }
+    F.slotPlace(old, oldLayout, slot, F.slotBuild(pages, slot, 0xD2A000, 0xF00000), used);
+  }
+  const target = RB.apply(baseline());
+  setLayout(target, 0x3000);
+  const keep = FL.keepPlan({ ...F, edition: () => ({ id: 5, profile: { idPage: 0xD29000, name: 'gen3' } }) }, {}, { stub });
+  const plan = (device, image) => {
+    const changed = new Set();
+    for (let a = 0; a < ROM_SIZE; a += PAGE) if (!device.subarray(a, a + PAGE).every((v, i) => v === image[a + i])) changed.add(a);
+    return keep({ info: { edition: 5 }, read: async (a, n) => device.subarray(a, a + n) }, image, changed);
+  };
+  await assert.rejects(plan(old, target), { code: 'slotResidentBankSpace', p: { f: 3 } });
+  const fallback = RB.strip(target);
+  setLayout(fallback, 0x5000);
+  const kept = await plan(old, fallback);
+  assert.deepEqual(F.feldSlots(kept.image, stub).map(s => [s.index, F.slotPages(s)]), F.feldSlots(old, stub).map(s => [s.index, F.slotPages(s)]));
+  await assert.rejects(plan(target, fallback), { code: 'slotResidentBanksRequired' });
+  console.log('Paradise resident bank layout, migration and Keep Saves capacity verified');
+}
+
+keepSavesCapacity().catch(error => { console.error(error); process.exitCode = 1; });

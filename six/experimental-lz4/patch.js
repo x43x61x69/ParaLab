@@ -112,6 +112,12 @@ function embedded(rom) {
   return typeof require === 'undefined' ? null : require('node:fs').readFileSync(__dirname + '/' + file + '.bin');
 }
 
+function updateNeeded(rom) {
+  if (!isInstalled(rom)) return false;
+  const helper = embedded(rom);
+  return !!helper && !same(rom.subarray(PROGRAM, PROGRAM + helper.length), helper);
+}
+
 function wrapSprite(entry, compact = false) {
   const sprite = C.spriteHeader(entry);
   if ((sprite.flags & 0xE8) !== 0xA0 || sprite.bpp > 3) return null;
@@ -245,6 +251,6 @@ if (typeof module !== 'undefined' && require.main === module) {
   }
 }
 
-root.ParamixLegacyLz4 = { patch, wrapSprite, embedded, isInstalled, refresh, helperPage: PROGRAM };
+root.ParamixLegacyLz4 = { patch, wrapSprite, embedded, isInstalled, refresh, updateNeeded, helperPage: PROGRAM };
 if (typeof module !== 'undefined') module.exports = root.ParamixLegacyLz4;
 })(typeof window !== 'undefined' ? window : globalThis);

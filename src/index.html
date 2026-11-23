@@ -1541,6 +1541,7 @@ __ANALYTICS_CARD__
         <h3 class="menu-heading" data-t="optionalRomPatches"></h3>
         <div class="menu-option"><label class="check"><input type="checkbox" id="autopilotOn" aria-describedby="autopilotHelp"> <span data-t="autopilotPatch"></span></label><p class="hint" id="autopilotHelp" data-t="autopilotPatchHelp"></p></div>
         <div class="menu-option"><label class="check"><input type="checkbox" id="infiniteFuelOn" aria-describedby="infiniteFuelHelp"> <span data-t="infiniteFuelPatch"></span></label><p class="hint" id="infiniteFuelHelp" data-t="infiniteFuelPatchHelp"></p></div>
+        <div class="menu-option"><label class="check"><input type="checkbox" id="keepAwakeOn" aria-describedby="keepAwakeHelp"> <span data-t="keepAwakePatch"></span></label><p class="hint" id="keepAwakeHelp" data-t="keepAwakePatchHelp"></p></div>
       </section>
       <section class="menu-group">
         <h3 class="menu-heading">Fields and Planets</h3>
@@ -1669,6 +1670,7 @@ __ANALYTICS_CARD__
 <template id="labItemsTemplate">
   <div class="lab-items-tools">
     <p class="hint" data-lab-items-count role="status"></p>
+    <p class="hint" data-lab-items-usage hidden></p>
     <input type="search" placeholder="Find a Lab Item" aria-label="Find a Lab Item">
   </div>
   <ul class="lab-items-grid" aria-label="Lab Items"></ul>
@@ -1680,6 +1682,7 @@ __ANALYTICS_CARD__
   </header>
   <div class="lab-items-tools">
     <p class="hint" id="labItemCatalogStatus" role="status"></p>
+    <p class="hint" id="labItemCatalogUsage" role="status" hidden></p>
     <input type="search" id="labItemCatalogSearch" placeholder="Find a Lab Item" aria-label="Find a Lab Item">
   </div>
   <ul class="lab-items-grid" id="labItemCatalogChoices" aria-label="Lab Items"></ul>
@@ -1697,6 +1700,10 @@ __ANALYTICS_CARD__
 <dialog class="lab-dialog lab-item-dialog" id="labItemConflictDialog" aria-labelledby="labItemConflictTitle">
   <h2 id="labItemConflictTitle">Lab Items Already Installed</h2>
   <form method="dialog">
+    <div class="lab-item-conflict-actions" id="labItemConflictActions" hidden>
+      <button class="btn small" id="labItemSkipAll" type="button" data-t="Skip All Lab Items">Skip All Lab Items</button>
+      <button class="btn small" id="labItemOverwriteAll" type="button" data-t="Overwrite All Lab Items">Overwrite All Lab Items</button>
+    </div>
     <div class="lab-item-conflicts" id="labItemConflicts"></div>
     <div class="device-dialog-actions">
       <button class="btn small" value="cancel">Cancel</button>

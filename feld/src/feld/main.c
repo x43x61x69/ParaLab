@@ -60,6 +60,9 @@
 #define F_BOOK6  0x100u             /* native six-region Tama File patch installed */
 #define F_APPS   0x200u             /* menu without legacy settings writes (Neon Planets) */
 #define F_NEON_EDIT 0x400u           /* Neon settings ring and its own editors */
+#define F_KEEP_AWAKE 0x8000u
+#define AWAKE_ON 0xA7u
+#define AWAKE_SAVE 0xFC0u
 #define F_NEON_TAMA 0x800u           /* verified Neon appearance rebuild support */
 #ifdef FELD_CLEAN
 #define F_NEON_SAVES 0u             /* launcher-only build has no native saves */
@@ -2184,42 +2187,22 @@ static void level_edit_at(u32 off,const char *title,int acknowledge){
   set_write("LEVEL SAVED");
 }
 static void level_edit(void){ level_edit_at(g_cfg.level_off,"PLANET LEVEL",0); }
-/* A cycles age step (1/10/100); B reviews, C cancels without writing. */
+#include "paradise_care_menu.h"
 static void tama_number(u32 kind){
-  u32 t=g_cfg.tama_off, old=kind==0?t_word(0xCu):kind==1?g_set[t+0x1Cu]:g_set[t+0x1Du];
-  u32 max=kind==0?999u:kind==1?6u:20u, v=old>max?max:old, step=1;
-  const char *title=kind==0?"AGE (DAYS)":kind==1?"FOOD":"HAPPINESS";
-  for(;;){
-    rect(0,0,FELD_SCREEN_W,FELD_SCREEN_H,BG); menu_title(10,title);
-    char str[16]; utoa_(v,str); ctext(39,str,WHITE,3);
-    if(kind==0){ text(22,78,"STEP",GREY,1); utoa_(step,str); text(67,78,str,GOLD,1); ctext(93,"A: CHANGE STEP",GREY,1); }
-    else ctext(83,"WHEEL / A: CHANGE",GREY,1);
-    ctext(112,"B REVIEW  C BACK",GREY,1); show(); wait_release();
-    int k=menu_key();
-    if(k==K_BACK) return;
-    if(k==K_A && kind==0){ step=step==100u?1u:step*10u; continue; }
-    if(k==1 || k==K_A){
-      if(kind==0){ int n=(int)v+(g_step>0?(int)step:-(int)step); v=n<0?max:(u32)n>max?0u:(u32)n; }
-      else v=wrap_step(v,k==K_A?1:g_step,0,max);
-      continue;
-    }
-    if(k!=K_OK || v==old){ if(k==K_OK) return; continue; }
-    rect(0,0,FELD_SCREEN_W,FELD_SCREEN_H,BG); ctext(24,title,WHITE,1); utoa_(v,str);
-    ctext(48,str,GOLD,2); ctext(94,"B SAVE  C CANCEL",WHITE,1); show();
-    if(!yes_no()) continue;
-    if(kind==0) t_put(0xCu,v);
-    else if(kind==1){ if(v==6u) t_care(1); else g_set[t+0x1Cu]=(u8)v; }
-    else { if(v==20u) t_care(2); else g_set[t+0x1Du]=(u8)v; }
-    set_write("TAMA SAVED"); return;
-  }
+  u8 *at=g_set+g_cfg.tama_off+0x1Bu+kind;
+  u32 max=kind==0u?999u:kind==1u?6u:20u;
+  const char *title=kind==0u?"AGE (DAYS)":kind==1u?"FOOD":"HAPPINESS";
+  int value=care_value_edit(title,kind?*at:t_word(0xCu),max,kind?0:2);
+  if(value<0) return;
+  if(!kind) t_put(0xCu,(u32)value);
+  else if((u32)value==max) t_care(kind);
+  else *at=(u8)value;
+  set_write("TAMA SAVED");
 }
 static void care_full(void){
-  rect(0,0,FELD_SCREEN_W,FELD_SCREEN_H,BG); ctext(24,"FULL CARE:",WHITE,1); ctext(40,"FED, HAPPY, HEALTHY",GOLD,1);
-  ctext(56,"CLEAN TAMA",GOLD,1); ctext(92,"B = YES",WHITE,1); ctext(106,"C = NO",GREY,1); show();
-  if(!yes_no()) return;
+  if(!care_confirm("FULL CARE?","FOOD JOY HEALTH CLEAN")) return;
   t_care(15); set_write("TAMA CARED FOR");
 }
-#include "paradise_care_menu.h"
 #ifndef FELD_CLEAN
 #include "paradise_residents_menu.h"
 #endif
@@ -2244,24 +2227,30 @@ static int care_row(u32 i,char *name,char *right,u16 *col){
       care_label(name,"TRAVEL FUEL"); utoa_(patches&CARE_FUEL_PATCH?CARE_FUEL_MAX:g_set[g_cfg.tama_off+0x1Bu],right);
       char *p=right; while(*p) p++; care_label(p,"/60"); return 1;
     }
+    if(i>=10u){
+      care_label(name,i==10u?"CLEANLINESS":"ILLNESS");
+      if(i==10u) utoa_(care_cleanliness(care_layout()),right);
+      else care_label(right,g_set[g_cfg.tama_off+0x10u]?"SICK":"HEALTHY");
+      return 1;
+    }
   }
   care_label(name,rows[i]);
   if(i>=3u && i<=6u) care_label(right,g_care_mask&care_once_bits[i-3u]?"ON":"OFF");
   *col=i==7u?GOLD:WHITE; return 1;
 }
 static int autopilot_row(u32 i,char *name,char *right,u16 *col){
-  static const char *const rows[]={"KEEP FULL","MAX HAPPINESS","PREVENT ILLNESS","POOP MODE"};
+  static const char *const rows[]={"KEEP FULL","MAX HAPPINESS","PREVENT ILLNESS","POOP MODE","KEEP CLEAN"};
   u32 mask=care_enabled(g_set);
   care_label(name,rows[i]);
   const char *value=i==3u?(mask&CARE_NO_POOP?"NONE":mask&CARE_AUTO_CLEAN?"AUTO":"OFF"):
-    mask&(1u<<i)?"ON":"OFF";
+    mask&(i==4u?CARE_BATHE:1u<<i)?"ON":"OFF";
   care_label(right,value); *col=WHITE; return 1;
 }
 static void autopilot_write(u32 mask,const char *label){
   if(!care_confirm("SAVE AUTOPILOT?",label)) return;
   g_set[CARE_SAVE]=CARE_MARK;
-  g_set[CARE_SAVE+1u]=(u8)mask;
-  if(t_alive()) t_care(mask&(CARE_FOOD|CARE_JOY|CARE_HEALTH));
+  g_set[CARE_SAVE+1u]=(u8)(CARE_EXPLICIT|mask);
+  if(t_alive()) t_care((mask&7u)|(mask&CARE_BATHE?8u:0u));
   if(mask&(CARE_AUTO_CLEAN|CARE_NO_POOP)) care_manage_poop(g_set,care_layout(),mask);
   set_write("AUTOPILOT SAVED");
 }
@@ -2274,7 +2263,7 @@ static void autopilot_menu(int master){
   static const char *const poop[]={"NORMAL","AUTO CLEAN TO FUEL","NO POOP"};
   u32 sel=0;
   for(;;){
-    int row=care_choose("AUTOPILOT OPTIONS",4u,sel,autopilot_row);
+    int row=care_choose("AUTOPILOT OPTIONS",5u,sel,autopilot_row);
     if(row<0) return;
     sel=(u32)row;
     u32 mask=care_enabled(g_set);
@@ -2283,7 +2272,7 @@ static void autopilot_menu(int master){
       mask=(mask&~(CARE_AUTO_CLEAN|CARE_NO_POOP))|(mode==1u?CARE_AUTO_CLEAN:mode==2u?CARE_NO_POOP:0u);
       autopilot_write(mask,poop[mode]);
     }else{
-      u32 bit=1u<<sel;
+      u32 bit=sel==4u?CARE_BATHE:1u<<sel;
       mask^=bit;
       autopilot_write(mask,mask&bit?"ENABLE OPTION":"DISABLE OPTION");
     }
@@ -2294,7 +2283,7 @@ static void care_menu(void){
   const struct CareLayout *layout=care_layout();
   u32 first=(care_patches()&CARE_AUTOPILOT_PATCH)?2u:0u;
   for(;;){
-    int row=care_choose("CARE",first+(layout?10u:8u),sel,care_row);
+    int row=care_choose("CARE",first+(layout?12u:8u),sel,care_row);
     if(row<0) return;
     sel=(u32)row;
     if(sel<first){ autopilot_menu(sel==0u); continue; }
@@ -2307,6 +2296,7 @@ static void care_menu(void){
     }
     if(layout && action==9u){ care_fuel_menu(); continue; }
     if(!t_alive()){ message("NO CURRENT TAMA","HATCH AN EGG FIRST",""); continue; }
+    if(action>=10u){ care_edit_condition(layout,action==11u); continue; }
     if(action==0u) care_full();
     else if(action<3u) tama_number(action);
     else if(action<7u) g_care_mask^=care_once_bits[action-3u];
@@ -2338,17 +2328,25 @@ static void tama_value(u32 i,char *out){
 static void tama_menu(void){
   if(set_check_msg()) return;
   if(!t_layout()){ message("TAMA SAVE FORMAT","NOT SUPPORTED",""); return; }
-  u32 n=care_layout()?5u:4u;
+  u32 edit_rows=tama_ok()?(care_layout()?5u:4u):0u;
 #ifndef FELD_CLEAN
-  if(nfields() && resident_layout()) n=6u;
+  if(edit_rows && nfields() && resident_layout()) edit_rows=6u;
 #endif
+  u32 n=edit_rows+!!(g_cfg.flags & F_KEEP_AWAKE);
   u32 sel=0;
   for(;;){
     rect(0,0,FELD_SCREEN_W,FELD_SCREEN_H,BG); menu_title(2,"TAMA");
     for(u32 i=0;i<n;i++){
-      int height=n==6u?17:20;
-      int y=12+(int)i*height; char value[24]; tama_value(i,value);
+      int height=n>6u?15:n==6u?17:20;
+      int y=12+(int)i*height;
       if(i==sel) rect(0,y,128,y+height,RGB(60,60,110));
+      if(i==edit_rows){
+        const char *labels=(const char*)fl(g_cfg.stub_off+0xF40u);
+        text(3,y,labels+(g_set[AWAKE_SAVE]==AWAKE_ON?0:10),WHITE,1);
+        text(9,y+7,labels+20,GREY,1);
+        continue;
+      }
+      char value[24]; tama_value(i,value);
       text(3,y,i==5u && (g_cfg.flags & F_NEON_EDIT)?"PLANET RESIDENTS":tama_rows[i],WHITE,1);
       if(i==0){
         int x=9; const char *s=value; u16 digits=RGB(120,240,140);
@@ -2366,6 +2364,12 @@ static void tama_menu(void){
     if(k==1 || k==K_A){ sel=wrap_step(sel,k==K_A?1:g_step,0,n-1u); continue; }
     if(k==K_BACK) return;
     if(k!=K_OK) continue;
+    if(sel==edit_rows){
+      g_set[AWAKE_SAVE]=g_set[AWAKE_SAVE]==AWAKE_ON?0u:AWAKE_ON;
+      g_set[g_cfg.tama_off-2u]&=(u8)~4u; /* End a baby nap already in progress. */
+      set_commit();
+      continue;
+    }
     if(sel==0u){ care_menu(); continue; }
     if(sel==4u){ stars_menu(); continue; }
 #ifndef FELD_CLEAN
@@ -2709,11 +2713,11 @@ static void main_menu(void){
   lab_main_menu();
 #else
   int fields = (g_cfg.flags & F_FIELDS) && g_cur>=0 && g_cfg.nfields>=2u;
-  u32 kinds[8], n=0;                   /* 0 field, 1 items, 2 points, 3 program, 4 Tama, 5 flash, 6 About, 7 Progress */
+  u32 kinds[8], n=0;
   if(fields || (g_cfg.flags & F_NEON_SAVES)) kinds[n++]=0;
   if(g_cfg.flags & F_BAG) kinds[n++]=1;
   if(g_cfg.flags & (F_BAG|F_NEON_EDIT)) kinds[n++]=2;
-  if(tama_ok()) kinds[n++]=4;
+  if(tama_ok() || (g_cfg.flags & F_KEEP_AWAKE)) kinds[n++]=4;
   if(tama_ok() || progress_neon_start() || (g_cfg.flags & F_NEON_EDIT)) kinds[n++]=7;
   if(g_napp) kinds[n++]=3;
   u32 sel = g_napp ? n-1u : 0u;       /* keep the installed program selected */
@@ -2763,7 +2767,9 @@ static void main_menu(void){
       }
       if(k==K_BACK) leave();
       if(k==K_OK){
-        switch(kinds[sel]){ case 0: if(g_cfg.flags & F_NEON_SAVES) neon_saves_menu(); else if(saves_mode()) saves_menu(0,0); else field_menu(0,0); break; case 1: items_menu(); break; case 2: points_menu(); break; case 4: tama_menu(); break; case 7: game_progress_menu(); break; case 5: flash_tool_menu(); break; case 6: about_menu(); break; default: if(g_napp>1u) apps_menu(0); else start_app_i(0); }
+        switch(kinds[sel]){ case 0: if(g_cfg.flags & F_NEON_SAVES) neon_saves_menu(); else if(saves_mode()) saves_menu(0,0); else field_menu(0,0); break; case 1: items_menu(); break; case 2: points_menu(); break; case 4: tama_menu(); break; case 7: game_progress_menu(); break; case 5: flash_tool_menu(); break; case 6: about_menu(); break;
+          default: if(g_napp>1u) apps_menu(0); else start_app_i(0);
+        }
         break;
       }
     }
@@ -2871,7 +2877,7 @@ static void run(void){
     while(!g_napp) message("NO PROGRAMS","IN THIS ROM","");
     apps_menu(1);
   }
-  if((g_cfg.flags & (F_BAG|F_TAMA)) || progress_neon_start()) main_menu();
+  if((g_cfg.flags & (F_BAG|F_TAMA|F_KEEP_AWAKE)) || progress_neon_start()) main_menu();
   if(fields){ if(saves_mode()) saves_menu(1,1); else field_menu(1,1); }
   if(g_napp>1u) apps_menu(1);
   if(g_napp) start_app_i(0);

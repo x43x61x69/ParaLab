@@ -534,6 +534,7 @@ button,input,select,textarea { font-family:inherit; }
 #labItemCatalogChoices button[aria-pressed="true"] { border-color:var(--sky); background:var(--check-b); }
 .lab-item-catalog-actions { display:grid; gap:12px; margin-block-start:16px; }
 .lab-item-catalog-actions .tools { justify-content:space-between; margin:0; }
+.lab-item-conflict-actions:not([hidden]) { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
 .lab-item-conflicts { display:grid; gap:10px; max-height:50vh; overflow:auto; margin-top:14px; }
 .lab-item-conflicts label { display:flex; justify-content:space-between; align-items:center; gap:10px; }
 .gift-catalog-image { display:block; width:32px; height:32px; background-image:var(--gift-atlas); background-repeat:no-repeat; image-rendering:pixelated; }
@@ -606,6 +607,7 @@ body:has(main[data-view="codes"]) .interface-language { margin-inline-start:auto
 .lab-item-dialog #labItemStatus { margin:0; }
 #deviceDialog:has(.send-review),#deviceDialog:has(#writeSummary:not([hidden])) { width:min(39rem,calc(100% - 2rem)); }
 .write-route { display:grid; grid-template-columns:minmax(0,1.4fr) auto minmax(0,1fr); align-items:center; gap:14px; padding:16px; margin:18px 0; background:var(--check-a); border-radius:8px; }
+.write-route > div { min-width:0; overflow-wrap:anywhere; }
 .write-route > span { color:var(--sky); font-size:1.5rem; }
 .write-route strong,.write-route small,.write-facts small { display:block; }
 .write-route small { margin-bottom:.35em; color:var(--soft); }
@@ -624,7 +626,7 @@ body:has(main[data-view="codes"]) .interface-language { margin-inline-start:auto
 #foodPreview canvas { width:80px; height:80px; object-fit:contain; image-rendering:pixelated; }
 .choice-count { font-variant-numeric:tabular-nums; color:var(--soft); }
 @media (max-width:460px) {
-  .write-route { grid-template-columns:1fr; gap:8px; }
+  .write-route { grid-template-columns:minmax(0,1fr); gap:8px; }
   .write-route > span { display:none; }
   .write-facts { grid-template-columns:1fr; }
   .write-facts dt { border:0; padding-bottom:0; font-size:.85em; }

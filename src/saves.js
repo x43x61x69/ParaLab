@@ -288,10 +288,7 @@ function neonProgressSet(save, changes) {
   if (changes.mission) neonMissionSet(page, changes.mission);
   if (changes.care) {
     if (!progress.canCare) throw new Error('the save has no active Tama to care for');
-    page[0x130] = 6;
-    page[0x131] = 20;
-    page[0x124] = 0;
-    page[0x128] &= ~0x10;
+    careForPet(page, PET.neon);
   }
   if (page.every((byte, index) => byte === current.page[index])) return save;
   if (current.generation === 0xFFFFFFFF) throw new Error('the Neon settings generation cannot be advanced');
@@ -304,7 +301,22 @@ function neonProgressSet(save, changes) {
 // ---------------------------------------------------------------- change a Paradise save (1.6.8)
 // The pet in the settings block: +4/+6 character, +0x10 sickness, +0x18 bits 2..4 stage, +0x1C hunger 0..6,
 // +0x1D happiness 0..20. Planet level: low nibble = level, high nibble = level already celebrated.
-const PET = { gen1: { tama: 0x104, level: 0x7C }, jade: { tama: 0x108, level: 0x7C }, gen3: { tama: 0x114, level: 0x88 }, neon: { tama: 0x114, level: 0x88 } };
+const PET = {
+  gen1: { tama: 0x104, level: 0x7C, dirt: 0x142, illnessTimers: 0x17C },
+  jade: { tama: 0x108, level: 0x7C, dirt: 0x146, illnessTimers: 0x180 },
+  gen3: { tama: 0x114, level: 0x88, dirt: 0x152, illnessTimers: 0x194 },
+  neon: { tama: 0x114, level: 0x88, dirt: 0x153, illnessTimers: 0x19C },
+};
+function careForPet(page, { tama, dirt, illnessTimers }) {
+  page[tama + 0x1C] = 6;
+  page[tama + 0x1D] = 20;
+  page[tama + 0x10] = 0;
+  page[tama + 0x14] &= ~0x10;
+  page[dirt] = 0;
+  page.fill(0, illnessTimers, illnessTimers + 8);
+  page[tama - 9] &= ~0x0C;
+  page[tama - 4] &= ~0x0C;
+}
 function paraSettings(save, edition) {
   if (family(edition) === 'neon') return neonSettings(save.pages)?.page || null;
   for (const a of [SET_A, SET_B]) {
@@ -348,10 +360,10 @@ function paraPetSet(save, edition, ch) {
   const p0 = neon ? ring?.page : paraSettings(save, edition), o = PET[family(edition)];
   const sets = neon ? NEON_SETTINGS : [SET_A, SET_B];
   if (!p0 || !o) throw new Error('the save has no settings block');
-  const t = o.tama, p = p0.slice(), pages = new Map(save.pages);
+  const t = o.tama, p = new Uint8Array(p0), pages = new Map(save.pages);
   if (ch.level !== undefined) { const v = Math.max(0, Math.min(10, ch.level | 0)), now = p[o.level] & 15; p[o.level] = v > now ? (p[o.level] & 0xF0) | v : (v << 4) | v; }
   if (ch.id) changePetIdentity(save, pages, p, t, sets, ch);
-  if (ch.care) { p[t + 0x1C] = 6; p[t + 0x1D] = 20; p[t + 0x10] = 0; }
+  if (ch.care) careForPet(p, o);
   if (neon) {
     if (ring.generation === 0xFFFFFFFF) throw new Error('Neon settings generation exhausted');
     w32(p, NEON_GENERATION, ring.generation + 1);

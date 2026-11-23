@@ -146,7 +146,8 @@ function strip(rom) {
 }
 const installed = rom => Boolean(inspect(rom));
 const codePage = rom => inspect(rom)?.page ?? null;
-const api = { address, markerAddress, committed, commitValue: MAGIC, ranges, inspect, installed, needsInstall, codePage, apply, install: apply, migrate, migrateSave, strip };
+const hookPages = [...new Set(hooks.map(([offset]) => offset & ~(PAGE - 1)))];
+const api = { address, markerAddress, committed, commitValue: MAGIC, ranges, hookPages, inspect, installed, needsInstall, codePage, apply, install: apply, migrate, migrateSave, strip };
 root.ParamixResidentBanks = api;
 if (typeof module !== 'undefined') module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : window);

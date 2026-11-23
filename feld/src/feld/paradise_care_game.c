@@ -19,12 +19,8 @@ unsigned care_game(unsigned char *save, unsigned version, unsigned before_fuel,u
     save[pet+0x42u]=save[pet+0x43u]=0;
     care_clear_event(save,pet,0x12u);
   }
-  if(mask&CARE_HEALTH){
-    save[pet+0x10u]=0;
-    for(unsigned i=0;i<4u;i++) save[layout->heal_timer+i]=0;
-    care_clear_event(save,pet,0xAu);
-    care_clear_event(save,pet,0xBu);
-  }
+  if(mask&CARE_HEALTH) care_heal(save,layout);
+  if(mask&CARE_BATHE) care_set_dirt(save,layout,0);
   if(before_fuel && (mask&(CARE_AUTO_CLEAN|CARE_NO_POOP))){
     care_manage_poop(save,layout,mask);
     /* Babies can add fuel directly from the care timer. */

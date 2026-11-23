@@ -27,6 +27,7 @@ const PH_RING = 0x77777771, PH_APP = 0x1234ABCD, PH_FELD = 0x6789EF01, PH_AUTO =
 const HOOK_OFF = [0x40, 0x46, 0x4C, 0x52];
 const F_FIELDS = 1, F_BAG = 2, F_TAMA = 4, F_SAVES = 8, F_LAUNCH = 16;
 const F_RESIDENT_BANKS = 0x4000;
+const F_KEEP_AWAKE = 0x8000;
 const F_RING = 0x80, F_NO_SHORTCUT = 0x2000; // persisted opt-out; the A+C menu remains enabled
 const F_BOOK6 = 256; // native Tama File has the three additional regions
 const F_APPS = 512;  // ordinary launcher menu without legacy Paradise save tools
@@ -73,6 +74,64 @@ function bw(from, to) {
   const imm11 = imm & 0x7FF, imm10 = (imm >>> 11) & 0x3FF, I2 = (imm >>> 21) & 1, I1 = (imm >>> 22) & 1;
   const J1 = (~I1 ^ S) & 1, J2 = (~I2 ^ S) & 1;
   return [0xF000 | (S << 10) | imm10, 0x9000 | (J1 << 13) | (J2 << 11) | imm11];
+}
+const AWAKE_HOOK = 0xF00, AWAKE_MAGIC = 0x314B5741, AWAKE_SAVE = 0xFC0;
+// Native sleep-window routine and the separate call that starts a baby nap.
+// Entries use offsets relative to the XIP window.
+const AWAKE_PROFILES = {
+  gen1: [0x6B854, 0xF00D9007, 0xEC16, 0x5BE10, 0xE035],
+  jade: [0x6F720, 0xF00E9007, 0xED20, 0x5F27C, 0xE035],
+  gen3: [0x7DC1C, 0xF0139007, 0x10812, 0x69218, 0xE043],
+  neon: [0x7D758, 0xF0159007, 0x1171C, 0x68158, 0xE043],
+};
+function linkedBranch(from, to) {
+  const [lo, hi] = bw(from, to);
+  return (lo | ((hi | 0x4000) << 16)) >>> 0;
+}
+function keepAwakePatch(rom, stub, profile, restore = false, probe = false) {
+  const at = stub + AWAKE_HOOK, entry = AWAKE_PROFILES[profile];
+  if (!entry && (!restore || probe)) return false;
+  if (!entry) throw new Error('Keep awake hook does not match this ROM');
+  const [window, windowTail, nap, setter, napTail] = entry;
+  const windowSite = XIP_DEC + window, napSite = XIP_DEC + nap;
+  const windowOriginal = 0xB088B580;
+  const [lo, hi] = bw(xip(windowSite), xip(at));
+  const windowBranch = (lo | (hi << 16)) >>> 0;
+  const napOriginal = linkedBranch(xip(napSite), 0x10000000 + setter);
+  const napBranch = linkedBranch(xip(napSite), xip(at + 0x14));
+  const matches = u32(rom, windowSite + 4) === windowTail &&
+    u16(rom, napSite - 2) === 0x201A && u16(rom, napSite + 4) === napTail &&
+    u32(rom, windowSite) === (restore ? windowBranch : windowOriginal) &&
+    u32(rom, napSite) === (restore ? napBranch : napOriginal);
+  const optionAddress = CARE_PROFILES[profile].settings + AWAKE_SAVE;
+  const setterAddress = (0x10000000 + setter) | 1;
+  const installed = matches && u32(rom, at + 0x24) === optionAddress &&
+    u32(rom, at + 0x28) === setterAddress && u32(rom, at + 0x2C) === AWAKE_MAGIC;
+  if (probe) return restore ? installed : matches;
+  if (restore) {
+    if (!installed) throw new Error('Keep awake hook does not match this ROM');
+  } else {
+    if (!matches || !isFF(rom, at, 0x63)) return false;
+    // The saved marker makes the normal sleep window return false and skips
+    // the baby-nap event setter. Without it, resume both original routines.
+    const code = [0x4908, 0x7809, 0x29A7, 0xD101, 0x2000, 0x4770, 0xB580, 0xB088, 0, 0,
+      0x4903, 0x7809, 0x29A7, 0xD001, 0x4902, 0x4708, 0x4770, 0xBF00];
+    code.forEach((halfword, i) => w16(rom, at + 2 * i, halfword));
+    bw(xip(at + 0x10), xip(windowSite + 4)).forEach((halfword, i) => w16(rom, at + 0x10 + 2 * i, halfword));
+    w32(rom, at + 0x24, optionAddress);
+    w32(rom, at + 0x28, setterAddress);
+    w32(rom, at + 0x2C, AWAKE_MAGIC);
+    // Fixed-width menu labels, read directly from the launcher flash page.
+    const labels = 'AWAKE ON\0\0AWAKE OFF\0AFFECTS GROWTH\0';
+    for (let i = 0; i < labels.length; i++) rom[at + 0x40 + i] = labels.charCodeAt(i);
+  }
+  w32(rom, windowSite, restore ? windowOriginal : windowBranch);
+  w32(rom, napSite, restore ? napOriginal : napBranch);
+  return true;
+}
+function keepAwakeSupport(rom, menu) {
+  return keepAwakePatch(rom, menu?.stubOff ?? 0, edition(rom)?.profile.name,
+    !!(menu?.flags & F_KEEP_AWAKE), true);
 }
 const CARE_OFFSET = 0xC00, CARE_RECORD = 0x40, CARE_MAGIC = 0x45524143, CARE_OPTIONS_MAGIC = 0x32524143;
 const CARE_AUTOPILOT_PATCH = 1, CARE_FUEL_PATCH = 2, CARE_FUEL_ENTRY = 0x68;
@@ -519,7 +578,11 @@ function slotPlace(out, f, i, s, used) {
     }
     if (found < 0) {
       for (let r = 0; r < n; r++) { const x = (own + r) % n; if (!used.has(x) && !added.has(x)) { found = x; break; } }
-      if (found < 0) throw new Error('the stored saves do not fit into the room for the fields');
+      if (found < 0) {
+        const error = new Error('the stored saves do not fit into the room for the fields');
+        error.code = 'slotPoolFull';
+        throw error;
+      }
       added.add(found); pending.set(found, pg);
     }
     pages.push(found);
@@ -1028,6 +1091,7 @@ function feldStrip(rom, emb, E) {
   if (Six) Six.sixBookStrip(out, f.stubOff);
   appearanceRebuild(out, false);
   careStrip(out, f.stubOff);
+  if (f.flags & F_KEEP_AWAKE) keepAwakePatch(out, f.stubOff, edition(out)?.profile.name, true);
   const tab = E.sceneTable(out);
   launchRestore(out, f.stubOff);   // start device: scene handlers back, trampolines gone (before the menu area is erased)
   const prev = f.stubOff === STUB_OFF ? E.installedOrigs(out, tab) : [0, 1, 2, 3].map((k) => u32(out, f.stubOff + 0x94 + 4 * k));
@@ -1142,15 +1206,17 @@ function feldApply(rom, opts, saved, emb, E) {
   if (!ed) throw new Error('edition not recognised');
   const P = profileOf(out, ed.profile);
   const launch = !!opts.launch;
+  const keepAwake = !launch && !opts.clean && !!opts.keepAwake;
   const care = launch || opts.clean ? 0 :
     (opts.autopilot ? CARE_AUTOPILOT_PATCH : 0) | (opts.infiniteFuel ? CARE_FUEL_PATCH : 0);
   const neonLaunch = P.ring && launch;
   const neonSaves = P.ring && !!opts.fields && !launch;
   const neonBag = P.ring && !!opts.bag && !launch;
-  const appsOnly = P.ring && !launch && (!!opts.appsOnly || neonSaves || neonBag || !!opts.neonTama || !!care);
+  const appsOnly = P.ring && !launch && (!!opts.appsOnly || neonSaves || neonBag || !!opts.neonTama || !!care || keepAwake);
   const save = (appsOnly || neonLaunch) && (root.ParamixSaves || (typeof require !== 'undefined' ? require('./saves.js') : null));
   const neonEdit = save && save.neonSaveLayout(out);
   const neonTama = appsOnly && !!opts.neonTama;
+  if (keepAwake && P.ring && !neonEdit) throw new Error('Neon Planets save layout does not match this firmware');
   if (neonTama && (!neonEdit || !neonAppearance(out))) throw new Error('Neon Planets appearance routine does not match this firmware');
   if (neonSaves && !neonEdit) throw new Error('Neon Planets save layout does not match this firmware');
   if (neonBag && (!neonEdit || !neonBagLayout(out))) throw new Error('Neon Planets item save layout does not match this firmware');
@@ -1161,7 +1227,7 @@ function feldApply(rom, opts, saved, emb, E) {
   if (book9) neonGrowth.fixLayerIndices(out);
   const gplay = GPLAY && !!opts.gplay && !launch && !opts.clean; const fields = !!opts.fields && !launch, bag = !!opts.bag && !launch, tama = !!opts.tama && v6 && !launch, saves = fields && v6 && opts.saves !== false;
   if (care & CARE_AUTOPILOT_PATCH && !(tama || neonTama)) throw new Error('Autopilot requires the Tama Editor');
-  if (!fields && !bag && !tama && !gplay && !launch && !appsOnly && !book9 && !care) throw new Error('nothing chosen');
+  if (!fields && !bag && !tama && !gplay && !launch && !appsOnly && !book9 && !care && !keepAwake) throw new Error('nothing chosen');
   if (launch && (u32(emb.stub, LAUNCH_ENTRY) !== 0x4C01B672 || (u32(emb.stub, LCHECK_ENTRY) & 0xF800) !== 0xF000)) throw new Error('launcher template does not fit');   // cpsid i; ldr r4, feld_src / b.w lcheck
   const tab = E.sceneTable(out);
   if (!tab.PSID_HOME) throw new Error('home screen not found');
@@ -1324,8 +1390,11 @@ function feldApply(rom, opts, saved, emb, E) {
     for (const s of saved || []) {
       const i = s.index;
       if (i < 0 || i >= nslots) continue;
-      try { slotPlace(out, g, i, s, used); } catch (e) {
-        throw new Error(neonSaves ? 'stored save ' + (i + 1) + ' does not fit here' : 'the stored save of ' + cap(P.names[i]) + ' does not fit here');
+      try { slotPlace(out, g, i, s, used); } catch (cause) {
+        const error = new Error(neonSaves ? 'stored save ' + (i + 1) + ' does not fit here' : 'the stored save of ' + cap(P.names[i]) + ' does not fit here', { cause });
+        error.code = cause.code;
+        error.p = { f: i + 1 };
+        throw error;
       }
     } }
   if (neonSaves) {
@@ -1350,6 +1419,11 @@ function feldApply(rom, opts, saved, emb, E) {
   else if (Six && Six.sixBookApply(out, stubOff)) w32(out, prog + ci + 36, u32(out, prog + ci + 36) | F_BOOK6);
   if (tama || neonTama) appearanceRebuild(out, true);
   if (care) careInstall(out, stubOff, P.name, care);
+  if (keepAwake) {
+    if (!keepAwakePatch(out, stubOff, P.name)) throw new Error('Keep awake hook does not match this ROM');
+    w32(out, prog + ci + 36, u32(out, prog + ci + 36) | F_KEEP_AWAKE);
+    w32(out, prog + ci + 492, P.tama);
+  }
   return shortcutPage === null ? out : H.apply(out, stubOff, shortcutPage);
 }
 
@@ -1452,6 +1526,6 @@ function embedded() {
 }
 
 function emuType(rom) { const m = u32(rom, APP_OFF + 0x140); return m === 0x37584D50 ? 't7' : m === 0x38584D50 ? 't18' : m === 0x31584D50 ? 'v1' : m === PMXC && appKind(rom) === 2 ? 'tama' : ''; }
-root.ParamixFeld = { poolCount, slotRanges, sixPoolTail, F_RING, F_RESIDENT_BANKS, F_NO_SHORTCUT, F_APPS, F_NEON_EDIT, F_NEON_TAMA, F_NEON_SAVES, CARE_AUTOPILOT_PATCH, CARE_FUEL_PATCH, careOptions, careSupport, neonSlotRange, neonActive, neonSwitchPending, neonAppearance, neonBagLayout, languagePatchPages, F_GPLAY, GPLAY, CLEAN_ROM, F_CLEAN, CLOCK_SEC, cleanReserved, cleanInfo, cleanBase, cleanApply, isClean, saveSlots, fieldOfSettings, lzPack, lzUnpack, slotPages, slotBuild, poolUsed, slotParse, FIELD_TEXT, characters, F_TAMA, F_SAVES, F_LAUNCH, isLaunch, launchRestore, emuType, familyOf, isSix, slotAddr, slotReadAsync, slotPlace, poolAddr, textTabelle, zeichenkette, edition, feldId, canFields, fieldNames, fieldNow, feldFind, feldSlots, feldStrip, feldApply, feldApps, appKind, itemCatalog, embedded, NAMES, F_FIELDS, F_BAG };
+root.ParamixFeld = { F_KEEP_AWAKE, keepAwakeSupport, poolCount, slotRanges, sixPoolTail, F_RING, F_RESIDENT_BANKS, F_NO_SHORTCUT, F_APPS, F_NEON_EDIT, F_NEON_TAMA, F_NEON_SAVES, CARE_AUTOPILOT_PATCH, CARE_FUEL_PATCH, careOptions, careSupport, neonSlotRange, neonActive, neonSwitchPending, neonAppearance, neonBagLayout, languagePatchPages, F_GPLAY, GPLAY, CLEAN_ROM, F_CLEAN, CLOCK_SEC, cleanReserved, cleanInfo, cleanBase, cleanApply, isClean, saveSlots, fieldOfSettings, lzPack, lzUnpack, slotPages, slotBuild, poolUsed, slotParse, FIELD_TEXT, characters, F_TAMA, F_SAVES, F_LAUNCH, isLaunch, launchRestore, emuType, familyOf, isSix, slotAddr, slotReadAsync, slotPlace, poolAddr, textTabelle, zeichenkette, edition, feldId, canFields, fieldNames, fieldNow, feldFind, feldSlots, feldStrip, feldApply, feldApps, appKind, itemCatalog, embedded, NAMES, F_FIELDS, F_BAG };
 if (typeof module !== 'undefined') module.exports = root.ParamixFeld;
 })(typeof window !== 'undefined' ? window : globalThis);

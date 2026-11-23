@@ -36,21 +36,29 @@ static int care_choose(const char *title,u32 n,u32 sel,int (*row)(u32,char *,cha
   }
 }
 static int care_value_edit(const char *title,u32 old,u32 max,int mode){
-  u32 value=old>max?max:old;
+  u32 value=old>max?max:old,step=1u;
   for(;;){
     rect(0,0,FELD_SCREEN_W,FELD_SCREEN_H,BG); menu_title(16,title);
     char str[8]; utoa_(value,str); ctext(38,str,WHITE,3);
-    ctext(75,mode>0?"A: FILL / CHANGE":"WHEEL / A: CHANGE",GREY,1);
+    if(mode==2){ ctext(74,"A: CHANGE STEP",GREY,1); utoa_(step,str); ctext(88,str,GOLD,1); }
+    else ctext(75,mode==1?"A: FILL / CHANGE":"WHEEL / A: CHANGE",GREY,1);
     ctext(103,mode<0?"B NEXT  C BACK":"B REVIEW  C BACK",GREY,1); show(); wait_release();
     int k=menu_key();
     if(k==K_BACK) return -1;
     if(k==K_A || k==1){
-      value=k==K_A && mode>0 && value<max?max:wrap_step(value,k==K_A?1:g_step,0,max);
+      if(k==K_A && mode==2) step=step==100u?1u:step*10u;
+      else if(mode==2){
+        int next=(int)value+(g_step>0?(int)step:-(int)step);
+        value=next<0?max:(u32)next>max?0u:(u32)next;
+      }
+      else if(k==K_A && mode==1 && value<max) value=max;
+      else value=wrap_step(value,k==K_A?1:g_step,0,max);
       continue;
     }
     if(k==K_OK){
       if(mode<0) return (int)value;
       if(value==old) return -1;
+      utoa_(value,str);
       if(care_confirm(title,str)) return (int)value;
     }
   }
@@ -61,6 +69,22 @@ static void care_fuel_menu(void){
   int value=care_value_edit("TRAVEL FUEL",g_set[at],CARE_FUEL_MAX,1);
   if(value<0) return;
   g_set[at]=(u8)value; set_write("FUEL SAVED");
+}
+static u32 care_cleanliness(const struct CareLayout *layout){
+  if(g_set[layout->pet+0x14u]&0x10u) return 0;
+  u32 dirt=g_set[layout->dirt];
+  return dirt<3u?3u-dirt:0u;
+}
+static void care_edit_condition(const struct CareLayout *layout,int illness){
+  u8 *health=g_set+layout->pet+0x10u;
+  int value=care_value_edit(illness?"ILLNESS (0-1)":"CLEANLINESS (0-3)",
+      illness?*health!=0:care_cleanliness(layout),illness?1u:3u,0);
+  if(value<0) return;
+  if(illness){
+    care_heal(g_set,layout);
+    if(value) *health=2; /* Ordinary sickness in the native game. */
+  }else care_set_dirt(g_set,layout,3u-(u32)value);
+  set_write("CARE SAVED");
 }
 static u32 star_offset(u32 i){ return care_layout()->stars+4u*i; }
 static u32 star_word(u32 i){
