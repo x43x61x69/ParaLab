@@ -11,6 +11,10 @@ assert(fs.readFileSync(path.join(root,'feld/feldc.bin')).includes(Buffer.from('P
 assert(fs.readFileSync(path.join(root,'feld/feld-mylab.bin')).includes(Buffer.from('PMXVER:'+version+'\0')),'My Lab menu binary is stale');
 assert(fs.readFileSync(path.join(root,'feld/feld-mylab-paradise.bin')).includes(Buffer.from('PMXVER:'+version+'\0')),'My Lab on Paradise menu binary is stale');
 assert(!fs.readFileSync(path.join(root,'flash/flashapp.bin')).includes(Buffer.from('PMXVER:')),'version label belongs in the menu, not Flash-Tool');
+const hybridMenu = fs.readFileSync(path.join(root, 'feld/feld-mylab-paradise.bin'));
+for (const label of ['GAME BOOT DIAGNOSTIC', 'BOOT STEP', 'SLEEP ENTRY', 'SLEEP WAKE TRACE']) {
+  assert(!hybridMenu.includes(Buffer.from(label)), 'release menu contains ' + label);
+}
 const mismatch={...fs,readFileSync(file,...args){return path.resolve(file)===path.join(root,'VERSION')?'0.0.0-plus.999\n':fs.readFileSync(file,...args);},mkdirSync(){throw Error('unexpected output');},writeFileSync(){throw Error('unexpected output');}};
 assert.throws(()=>vm.runInNewContext(fs.readFileSync(path.join(root,'build.js'),'utf8'),{__dirname:root,Buffer,console,require:(name)=>name==='fs'?mismatch:require(name)}),/feld\/feld-mylab\.bin does not match VERSION/);
 console.log('PASS: menu version, standard/clean binary consistency, plain Flash-Tool, stale-build rejection');

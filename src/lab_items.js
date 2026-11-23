@@ -3,6 +3,7 @@
 'use strict';
 
 const SECTOR = 0x1000, SIZE = 0x4000, MAGIC = 0x32435241;
+const SLOT_COUNT = 40;
 const BUY = 0xD2, SELL = 0xD4, ITEM_TABLE_WORDS = 46;
 const view = bytes => new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
 const u32 = (b, o) => b.getUint32(o, true);
@@ -192,6 +193,116 @@ function scan(bytes, base, core) {
   return items;
 }
 
+// The native downloader uses 40 ARC2 slots after its receive buffer. Match
+// both the slot address calculation and the settings bitmap load in XIP.
+function downloadLayout(xip, edition) {
+  if (!Number.isInteger(edition) || edition < 1 || edition > 8) return null;
+  const neon = edition === 8, gen3 = edition >= 5 && !neon;
+  const bank = neon ? 0xda : gen3 ? 0xd2 : 0xd4;
+  const slotCode = neon ? 0xc5c : gen3 ? 0xb30 : 0xb2c;
+  const bitmapCode = neon ? 0xb12 : gen3 ? 0x9e6 : 0x9e2;
+  const bitmap = neon ? 0xac0 : gen3 ? 0xaac : edition === 4 ? 0xa80 : 0xa78;
+  const matches = (offset, bytes) => bytes.every((byte, i) => xip[offset + i] === byte);
+  if (!matches(slotCode, [0x4e, 0xf2, 0, 0, 0xc6, 0xf2, bank, 0, 0, 0xeb, 0x81, 0x30]) ||
+      !matches(bitmapCode, [0xd1, 0xf8, bitmap & 0xff, 0x0a])) return null;
+  const start = (bank << 16) + 0xe000;
+  return { neon, start, end: start + SLOT_COUNT * SIZE, bitmap: bitmap + 4 };
+}
+
+function settingsAddresses(layout, saves) {
+  return layout.neon ? saves.NEON_SETTINGS : [saves.SET_A, saves.SET_B];
+}
+
+function planInstall(layout, bytes, settings, selected, core, saves) {
+  const addresses = settingsAddresses(layout, saves);
+  if (bytes.length !== layout.end - layout.start || addresses.some(at => settings.get(at)?.length !== SECTOR))
+    throw new Error('Could not read the Lab Item storage and settings.');
+  const ring = layout.neon ? saves.neonSettings(settings) : null;
+  const valid = layout.neon ? (ring ? [ring.page] : []) :
+    addresses.map(at => settings.get(at)).filter(page => saves.settingsOk(page));
+  if (!valid.length) throw new Error('Start the game and create a valid save before adding Lab Items.');
+
+  const active = slot => valid.some(page => page[layout.bitmap + (slot >> 3)] & (1 << (slot & 7)));
+  const slots = Array.from({ length: SLOT_COUNT }, (_, i) => bytes.subarray(i * SIZE, (i + 1) * SIZE));
+  const installed = new Map();
+  for (const [i, slot] of slots.entries()) {
+    if (active(i)) {
+      const item = forTransfer(slot, core);
+      if (item) {
+        if (!installed.has(item.id)) installed.set(item.id, []);
+        installed.get(item.id).push({ address: layout.start + i * SIZE, bytes: slot });
+      }
+    }
+  }
+  const dataWrites = new Map(), settingsWrites = new Map(), additions = [], replacements = [], conflicts = [], skipped = [];
+  const plan = { dataWrites, settingsWrites, additions, replacements, conflicts, skipped };
+  const claimed = new Set();
+  const seen = new Set();
+  const blank = sector => sector.every(byte => byte === 0xff);
+  const sectors = slot => Array.from({ length: SIZE / SECTOR }, (_, i) =>
+    slot.subarray(i * SECTOR, (i + 1) * SECTOR));
+  const same = (a, b) => a.length === b.length && a.every((byte, i) => byte === b[i]);
+  for (const item of selected) {
+    if (item.bytes.length !== SIZE) throw new Error('The Lab Item must contain a 16 KiB ARC2 archive.');
+    if (seen.has(item.id)) { skipped.push(item); continue; }
+    seen.add(item.id);
+    const payloads = sectors(item.bytes);
+    const matches = (sector, index) => same(sector, payloads[index]);
+    const writeChanges = (address, slot) => {
+      for (const [index, sector] of sectors(slot).entries())
+        if (!matches(sector, index)) dataWrites.set(address + index * SECTOR, payloads[index]);
+    };
+    const existing = installed.get(item.id);
+    if (existing) {
+      if (item.replace?.length !== existing.length || existing.some((slot, i) =>
+          slot.address !== item.replace[i].address || !same(slot.bytes, item.replace[i].bytes))) {
+        conflicts.push({ item, existing });
+        skipped.push(item);
+        continue;
+      }
+      let changed = false;
+      for (const slot of existing) {
+        if (same(slot.bytes, item.bytes)) continue;
+        writeChanges(slot.address, slot.bytes);
+        replacements.push({ ...item, address: slot.address });
+        changed = true;
+      }
+      if (!changed) skipped.push(item);
+      continue;
+    }
+    if (item.replace) throw new Error('Lab Item storage changed. Try again.');
+    const available = (_, i) => !active(i) && !claimed.has(i);
+    // Reuse an unpublished copy after an interrupted write when every sector
+    // is erased or already contains the selected archive's verified data.
+    let free = slots.findIndex((slot, i) => available(slot, i) && !blank(slot) &&
+      sectors(slot).every((sector, index) => blank(sector) || matches(sector, index)));
+    if (free < 0) free = slots.findIndex((slot, i) => available(slot, i) && blank(slot));
+    if (free < 0) throw new Error('There are not enough empty Lab Item slots.');
+    const address = layout.start + free * SIZE;
+    writeChanges(address, slots[free]);
+    claimed.add(free);
+    additions.push({ ...item, address });
+  }
+  if (!additions.length) return plan;
+  const register = page => {
+    for (const slot of claimed) page[layout.bitmap + (slot >> 3)] |= 1 << (slot & 7);
+    saves.sealSettings(page);
+    return page;
+  };
+  if (layout.neon) {
+    if (ring.generation === 0xffffffff) throw new Error('The Neon settings generation cannot be advanced.');
+    const next = new Uint8Array(ring.page);
+    view(next).setUint32(saves.NEON_GENERATION, ring.generation + 1, true);
+    settingsWrites.set(addresses[(ring.index + 1) % addresses.length], register(next));
+  } else {
+    for (const at of addresses) {
+      const page = settings.get(at);
+      if (valid.includes(page)) settingsWrites.set(at, register(new Uint8Array(page)));
+    }
+  }
+  return plan;
+}
+
 function picture(entry, core, index = 0, includeBlank = false) {
   const h = core.spriteHeader(entry);
   const w = h.sw * Math.max(1, h.iw), height = h.sh * Math.max(1, h.ih);
@@ -275,17 +386,9 @@ function withPrices(item, buy, sell, core) {
 }
 
 async function readDevice(device, start, end, core, progress, cancel) {
-  const sectors = await device.usedSectors(start, end, progress, cancel);
-  const bytes = new Uint8Array(end - start).fill(0xFF);
-  for (const [index, address] of sectors.entries()) {
-    if (cancel()) throw new Error('Cancelled.');
-    bytes.set(await device.read(address, SECTOR), address - start);
-    progress('read', (index + 1) * SECTOR, sectors.length * SECTOR);
-  }
-  if (cancel()) throw new Error('Cancelled.');
-  return scan(bytes, start, core);
+  return scan(await device.readSparse(start, end, progress, cancel), start, core);
 }
 
-root.ParaLabItems = { SIZE, nameGlyph:visNameGlyph, withNames, parse, forTransfer, scan, picture, withPicture, thumbnail, withPrices, readDevice };
+root.ParaLabItems = { SIZE, nameGlyph:visNameGlyph, withNames, parse, forTransfer, scan, downloadLayout, settingsAddresses, planInstall, picture, withPicture, thumbnail, withPrices, readDevice };
 if (typeof module !== 'undefined') module.exports = root.ParaLabItems;
 })(typeof window !== 'undefined' ? window : globalThis);

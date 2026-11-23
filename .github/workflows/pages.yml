@@ -28,8 +28,6 @@ jobs:
         if: github.repository == 'x43x61x69/ParaLab'
         run: python3 tools/check_wiki_codes.py --warn-unavailable
       - name: Build the site
-        env:
-          PARALAB_PUBLIC_SHA: ${{ github.sha }}
         run: node build.js --web _site/index.html
       - uses: actions/upload-pages-artifact@v3
         with:

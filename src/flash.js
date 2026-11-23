@@ -40,6 +40,7 @@ const FIRST_USER = 0x111000;   // write order starts here
 const CLOCK_READ = 14, CLOCK_SET = 15, RESET_CONTROL = 16;
 const DISPLAY_PROGRESS = 17;
 const DISPLAY_PHASE = { read: 0, compare: 1, write: 2, check: 3 };
+const DISPLAY_SAMPLE_BATTERY = 1, BATTERY_SAMPLE_INTERVAL_MS = 3000;
 const HELLO = 1, READ = 5, CRC = 6, WRITE_TEST = 8, WRITE_BEGIN = 9, WRITE_DATA = 10, WRITE_COMMIT = 11, WRITE_FINISH = 12, WRITE_STATE = 13;
 const WRITE_ALLOW_LOW_BATTERY = 1;
 // App loading: constants of the device's download protocol (needed to load our
@@ -451,13 +452,24 @@ function t18MovesFinish(image, moves) {
 class Paradise {
   constructor(link) { this.link = link; this.info = null; }
   get block() { const b = this.info.maxBlock; return b === 1024 || b === 2048 || b === 4096 ? b : 1024; }
+  updateBattery(millivolts, percent) {
+    if (!millivolts || millivolts > 6000 || percent > 100) return;
+    const previous = this.info.battery;
+    if (previous?.millivolts === millivolts && previous.percent === percent) return;
+    this.info.battery = { millivolts, percent };
+    this.onBatteryChange?.();
+  }
   async hello(ms = 6000) {
     const r = await this.link.request(HELLO, 0, undefined, ms);
     const p = r.payload; if (p.length !== 44) throw fe('hello');
     const capabilities = u32(p, 40);
     this.info = { edition: p[8], wave: p[9], maxBlock: p[10] | (p[11] << 8), jedec: u32(p, 24), capacity: u32(p, 32), flashError: u32(p, 36),
       resetControl: !!(capabilities & 1), readOnly: !!(capabilities & 2), rescueBootstrap: !!(capabilities & 4),
-      batteryOverride: !!(capabilities & 8), displayProgress: !!(capabilities & 16) };
+      batteryOverride: !!(capabilities & 8), displayProgress: !!(capabilities & 16), batteryStatus: !!(capabilities & 32) };
+    if (this.info.batteryStatus) {
+      this.updateBattery(u32(p, 12), u32(p, 20));
+      this.batterySampleAt = performance.now();
+    }
     if (this.info.edition === 0xFE || this.info.edition === MY_LAB_ON_PARADISE) {
       this.info.name = this.info.edition === MY_LAB_ON_PARADISE ? 'My Lab on Paradise' : 'My Lab';
       return this.info;
@@ -542,13 +554,20 @@ class Paradise {
     notify?.(phase, done, total);
     if (!this.info?.displayProgress || !total) return;
     const step = Math.floor(done * 24 / total);
-    if (done && this.displayPhase === phase && this.displayStep === step) return;
+    const now = performance.now();
+    const sample = phase === 'read' && this.info.batteryStatus && now - this.batterySampleAt >= BATTERY_SAMPLE_INTERVAL_MS;
+    if (done && this.displayPhase === phase && this.displayStep === step && !sample) return;
     this.displayPhase = phase;
     this.displayStep = step;
     const data = new Uint8Array(8);
     w32(data, 0, done);
     w32(data, 4, total);
-    try { await this.link.request(DISPLAY_PROGRESS, DISPLAY_PHASE[phase], data, 1200); }
+    try {
+      if (sample) this.batterySampleAt = now;
+      const reply = await this.link.request(DISPLAY_PROGRESS, DISPLAY_PHASE[phase], data, 1200, sample ? DISPLAY_SAMPLE_BATTERY : 0);
+      if (sample && !reply.status && reply.payload.length === 8)
+        this.updateBattery(u32(reply.payload, 0), u32(reply.payload, 4));
+    }
     catch (e) { if (!(e instanceof TimeoutError)) throw e; }
   }
   /** Seconds counter of the Paradise (1.3.0 flash app). null if the app is older. */
@@ -563,16 +582,49 @@ class Paradise {
     catch (e) { if (!(e instanceof TimeoutError)) throw e; }
     return false;
   }
+  /** Identify non-erased sectors by CRC, one block at a time. */
+  async *usedSectorBlocks(from, to, cancel) {
+    const ff = new Uint8Array(BLOCK64).fill(0xFF);
+    const blockCrc = crc32(ff), sectorCrc = crc32(ff, 0, SECTOR);
+    for (let off = from & ~(BLOCK64 - 1); off < to; off += BLOCK64) {
+      if (cancel?.()) throw fe('cancelled');
+      const addresses = [], end = Math.min(off + BLOCK64, to);
+      if (await this.crc(off, BLOCK64) !== blockCrc) {
+        for (let sector = off; sector < end; sector += SECTOR) {
+          if (sector < from) continue;
+          if (cancel?.()) throw fe('cancelled');
+          if (await this.crc(sector, SECTOR) !== sectorCrc) addresses.push(sector);
+        }
+      }
+      yield { addresses, end };
+    }
+  }
+
   /** Which 4 KB sectors in [from, to) are not empty (0xFF)? Uses the CRC, reads nothing. */
   async usedSectors(from, to, progress, cancel) {
-    const ff = new Uint8Array(BLOCK64).fill(0xFF), cB = crc32(ff, 0, BLOCK64), cS = crc32(ff, 0, SECTOR), out = [];
+    const out = [];
     await this.reportProgress('compare', 0, to - from, progress);
-    for (let off = from & ~(BLOCK64 - 1); off < to; off += BLOCK64) {
-      if (cancel && cancel()) throw fe('cancelled');
-      if (await this.crc(off, BLOCK64) !== cB) for (let s = off; s < off + BLOCK64; s += SECTOR) if (s >= from && s < to && await this.crc(s, SECTOR) !== cS) out.push(s);
-      await this.reportProgress('compare', Math.min(off + BLOCK64, to) - from, to - from, progress);
+    for await (const { addresses, end } of this.usedSectorBlocks(from, to, cancel)) {
+      out.push(...addresses);
+      await this.reportProgress('compare', end - from, to - from, progress);
     }
     return out;
+  }
+
+  /** Read a sector-aligned region, skipping erased sectors and reporting coverage. */
+  async readSparse(from, to, progress, cancel) {
+    this.ready();
+    const image = new Uint8Array(to - from).fill(0xFF);
+    await this.reportProgress('read', 0, image.length, progress);
+    for await (const { addresses, end } of this.usedSectorBlocks(from, to, cancel)) {
+      for (const address of addresses) {
+        if (cancel?.()) throw fe('cancelled');
+        image.set(await this.read(address, SECTOR), address - from);
+      }
+      if (cancel?.()) throw fe('cancelled');
+      await this.reportProgress('read', end - from, image.length, progress);
+    }
+    return image;
   }
   /** Writer state; asked again a few times, then a ping (1.5.6: a lost answer here broke the write). */
   async writeState() {
@@ -598,12 +650,14 @@ class Paradise {
     if (reply.status) throw fe('notReady');
     return reply;
   }
-  /** Write single 4 KB sectors (Map address -> data), checked one by one. */
-  async writeSectors(map, progress, cancel, guard, finishCheck) {
+  /** Write and verify 4 KB sectors. Publish referenced data before its settings. */
+  async writeSectors(map, progress, cancel, guard, finishCheck, publishLast) {
     this.ready();
     if (this.info.readOnly) throw new Error('The connected Flash Tool is read-only');
     const myLabSave = this.info.edition === 0xFE || this.info.edition === MY_LAB_ON_PARADISE;
-    let jobs = [...map.keys()].sort((a, b) => a - b).map((s) => [s, map.get(s)]), extra = 0;
+    let jobs = [...map.keys()].sort((a, b) =>
+      (Number(publishLast?.has(a) ?? false) - Number(publishLast?.has(b) ?? false)) || a - b)
+      .map((s) => [s, map.get(s)]), extra = 0;
     if (myLabSave) {
       const ML = root.ParamixMyLab || require('./mylab.js');
       if (jobs.some(([s, data]) => !Number.isInteger(s) || s % SECTOR || s < ML.DEVICE_SAVE_FIRST ||
@@ -699,9 +753,7 @@ class Paradise {
       if (await this.crc(RESCUE_OFF, BLOCK64) !== crc32(block)) throw fe('rescueFail');
     });
   }
-  /** First UART installation: write the rescue body and its load table last.
-   * The original boot table stays intact until the whole rescue verifies. */
-  async bootstrapMyLabRescue(image, progress, cancel) {
+  async planMyLabRescue(image) {
     if (this.info.edition !== 0xFE || !this.info.rescueBootstrap || this.info.readOnly)
       throw new Error('A writable My Lab UART bootstrap is required');
     const target = image.subarray(RESCUE_OFF, FLASH_SIZE);
@@ -717,28 +769,41 @@ class Paradise {
         u32(table, 0x14) !== RESCUE_CODE ||
         u32(table, 0x24) !== crc32(target, 0, RESCUE_CODE))
       throw new Error('Invalid My Lab rescue image');
+    const body = [];
+    const differs = off => image.subarray(off, off + SECTOR)
+      .some((byte, index) => byte !== existing[off - RESCUE_OFF + index]);
+    for (let off = RESCUE_OFF; off < FLASH_SIZE; off += SECTOR)
+      if (off !== RESCUE_TAB && differs(off)) body.push(off);
+    return { body, writeTable: differs(RESCUE_TAB), target, table };
+  }
+
+  /** Write and verify the rescue body before publishing its load table. */
+  async bootstrapMyLabRescue(image, progress, cancel, plan) {
+    const { body, writeTable, target, table } = plan || await this.planMyLabRescue(image);
+    const total = body.length + Number(writeTable);
+    if (!total) return;
     const st = await this.writeState();
     if (!(st.payload.length >= 16 && u32(st.payload, 12)))
       await this.link.request(WRITE_TEST, 0, undefined, 15000);
     const begin = new Uint8Array(40);
     begin.set(await sha256(image));
     w32(begin, 32, crc32(image));
-    w32(begin, 36, BLOCK64 / SECTOR);
+    w32(begin, 36, total);
+    if (cancel?.()) throw fe('cancelled');
     await this.beginWrite(begin);
-    await this.reportProgress('write', 0, BLOCK64 / SECTOR, progress);
+    await this.reportProgress('write', 0, total, progress);
     let done = 0;
-    for (let off = RESCUE_OFF; off < FLASH_SIZE; off += SECTOR) {
-      if (off === RESCUE_TAB) continue;
+    for (const off of body) {
       if (cancel?.()) throw fe('cancelledWrite');
-      if (await this.crc(off, SECTOR) !== crc32(image, off, SECTOR))
-        await this.putSector(off, image.subarray(off, off + SECTOR));
-      await this.reportProgress('write', ++done, BLOCK64 / SECTOR, progress);
+      await this.putSector(off, image.subarray(off, off + SECTOR));
+      await this.reportProgress('write', ++done, total, progress);
     }
     if (await this.crc(RESCUE_OFF, RESCUE_CODE) !== u32(table, 0x24)) throw fe('rescueFail');
     if (cancel?.()) throw fe('cancelledWrite');
-    if (await this.crc(RESCUE_TAB, SECTOR) !== crc32(table))
+    if (writeTable) {
       await this.putSector(RESCUE_TAB, table);
-    await this.reportProgress('write', ++done, BLOCK64 / SECTOR, progress);
+      await this.reportProgress('write', ++done, total, progress);
+    }
     await this.reportProgress('check', 0, 1, progress);
     if (await this.crc(RESCUE_OFF, BLOCK64) !== crc32(target)) throw fe('rescueFail');
     await this.reportProgress('check', 1, 1, progress);
@@ -778,21 +843,21 @@ class Paradise {
     return img;
   }
   /** Sectors (4 KB offsets) where the device differs from img, in [from, to). */
-  async changed(img, progress, cancel, from = 0, to = FLASH_SIZE) {
+  async changed(img, progress, cancel, from = 0, to = FLASH_SIZE, phase = 'compare') {
     const out = new Set();
-    await this.reportProgress('compare', 0, to - from, progress);
+    await this.reportProgress(phase, 0, to - from, progress);
     for (let off = from; off < to; off += BLOCK64) {
       if (cancel && cancel()) throw fe('cancelled');
       if (await this.crc(off, BLOCK64) !== crc32(img, off, BLOCK64)) {
         for (let s = off; s < off + BLOCK64; s += SECTOR) if (await this.crc(s, SECTOR) !== crc32(img, s, SECTOR)) out.add(s);
       }
-      await this.reportProgress('compare', Math.min(off + BLOCK64, to) - from, to - from, progress);
+      await this.reportProgress(phase, Math.min(off + BLOCK64, to) - from, to - from, progress);
     }
     return out;
   }
   /**
-   * Write img. opts: { onlyChanged, keep (function from keepPlan or null), keepMyLabSaves, confirmParadiseBackupReplacement }.
-   * Returns { written, kept, notes, image } (image = what the device holds now).
+   * Write img. confirmWrite(count) optionally reviews the final 4 KiB write count before any write commands.
+   * Returns the final image and counts. committed includes temporary boot-sector writes.
    */
   async write(img, opts, progress, cancel) {
     if (img.length !== FLASH_SIZE) throw fe('size');
@@ -919,13 +984,6 @@ class Paradise {
         if (changed.has(off)) throw new Error('My Lab rescue changed during preflight');
       }
     }
-    if (bootstrapRescue) {
-      if (opts.onImage) await opts.onImage(image);
-      await this.bootstrapMyLabRescue(image, progress, cancel);
-      for (let off = RESCUE_OFF; off < FLASH_SIZE; off += SECTOR) changed.delete(off);
-    }
-    const st = await this.writeState();
-    if (!(st.payload.length >= 16 && u32(st.payload, 12))) { if (progress) progress('prepare', 0, 1); await this.link.request(WRITE_TEST, 0, undefined, 15000); }
     let order = sectorOrder().filter(s => !keepSaveSector(s));
     if (restoreParadise) {
       // Keep the working rescue until the primary ROM and its boot table have
@@ -936,7 +994,6 @@ class Paradise {
     } else if (rescue) order = order.filter((s) => s >= RESCUE_OFF).concat(order.filter((s) => s < RESCUE_OFF));
     if (opts.onlyChanged) {
       order = order.filter((s) => changed.has(s));
-      if (!order.length) { await this.link.request(WRITE_FINISH, 0, undefined, 15000); return { written: 0, kept, notes, image, rescue }; }
     } else if (changed && !portUpdate) order = order.filter((s) => s >= 0x11000 || s === 0 || changed.has(s));   // test15: the firmware at 0x1000 only when it differs
     // RESCUE_FIRST: the device's table off while the rest is written (the ROM starts the rescue then), back at the end
     const clear0 = (opts.rescueFirst !== undefined ? opts.rescueFirst : RESCUE_FIRST) && rescue && order.some((s) => s && s < RESCUE_OFF);
@@ -950,19 +1007,39 @@ class Paradise {
     const pre = moves ? await this.t18Pre(image, moves) : [];
     const preDone = new Set(); { const last = new Map(); for (const [a, d] of pre) last.set(a, d); for (const [a, d] of last) if (crc32(d) === crc32(image, a, SECTOR)) preDone.add(a); }
     order = order.filter((s) => !preDone.has(s));
+    const bootstrap = bootstrapRescue ? await this.planMyLabRescue(image) : null;
+    const rescueWrites = bootstrap ? bootstrap.body.length + Number(bootstrap.writeTable) : 0;
+    const total = rescueWrites + pre.length + order.length + Number(clear0);
+    const cancelled = { written: 0, kept, notes, image, rescue, cancelled: true };
+    if (cancel?.() || (total && opts.confirmWrite && !await opts.confirmWrite(total)) || cancel?.()) return cancelled;
+    if (rescueWrites) {
+      if (opts.onImage) await opts.onImage(image);
+      await this.bootstrapMyLabRescue(image, progress, cancel, bootstrap);
+    }
+    if (!order.length && !pre.length) {
+      if (!rescueWrites) await this.link.request(WRITE_FINISH, 0, undefined, 15000);
+      return { written: rescueWrites, committed: rescueWrites, kept, notes, image, rescue };
+    }
+    const st = await this.writeState();
+    if (!(st.payload.length >= 16 && u32(st.payload, 12))) { if (progress) progress('prepare', 0, 1); await this.link.request(WRITE_TEST, 0, undefined, 15000); }
     const nRes = order.filter((s) => s >= RESCUE_OFF).length;
     const begin = new Uint8Array(myLab ? 40 : 36);
     begin.set(await sha256(image));
     w32(begin, 32, crc32(image));
     if (myLab) w32(begin, 36, order.length + Number(clear0));
+    if (cancel?.()) {
+      if (rescueWrites) throw fe('cancelledWrite');
+      return cancelled;
+    }
     const pos = await this.beginWrite(begin);
-    if (!bootstrapRescue && opts.onImage) await opts.onImage(image);
-    let start = !myLab && !opts.onlyChanged && pos.payload.length >= 4 ? u32(pos.payload, 0) : 0;
+    if (!rescueWrites && opts.onImage) await opts.onImage(image);
+    // A confirmed full write uses the reviewed order from the first sector.
+    let start = !opts.confirmWrite && !myLab && !opts.onlyChanged && pos.payload.length >= 4 ? u32(pos.payload, 0) : 0;
     if (start >= order.length) start = 0;
     const writeTotal = pre.length + order.length - start + Number(clear0);
     let completedWrites = 0;
     await this.reportProgress('write', completedWrites, writeTotal, progress);
-    let written = 0;
+    let written = rescueWrites;
     for (const [a, d] of pre) {
       if (cancel && cancel()) throw fe('cancelledWrite');
       await this.putSector(a, d);
@@ -995,7 +1072,7 @@ class Paradise {
       await this.reportProgress('check', off + BLOCK64, FLASH_SIZE, progress);
     }
     await this.link.request(WRITE_FINISH, 0, undefined, 15000);
-    return { written, kept, notes, image, rescue };
+    return { written, committed: rescueWrites + completedWrites, kept, notes, image, rescue };
   }
 }
 const u32le = (v) => { const b = new Uint8Array(4); w32(b, 0, v); return b; };

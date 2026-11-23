@@ -104,15 +104,25 @@ static u32 reset_boot_valid(void){
 #ifdef FLASH_MY_LAB_SD
 /* The installed My Lab hook has a direct game-to-menu launcher at +0x70.
  * It runs from uncached flash, so it can replace this tool's PRAM image. */
-static void return_to_menu(void){
-  if(!g_reset->writing &&
+static int can_return_to_menu(void){
+  return !g_reset->writing &&
      REG(0x6019D070u)==0x4818B672u &&
      REG(0x6019D100u)==0x4C4D5850u &&
-     REG(0x60037140u)==0x444C4546u){
+     REG(0x60037140u)==0x444C4546u;
+}
+static void return_to_menu(void){
+  if(can_return_to_menu()){
     __asm__ volatile("cpsid i":::"memory");
     ((void(*)(void))0x6019D071u)();
   }
   reset_system();
+}
+#elif defined(FLASH_MY_LAB_ON_PARADISE)
+static int can_return_to_menu(void){
+  return !*g_written_image && REG(0x60000010u)==MY_LAB_PARADISE_MENU_SOURCE &&
+       REG(0x60037140u)==0x444C4546u &&
+       REG(0x6019D100u)==0x4C4D5850u && REG(0x6019D104u)==0x31504241u &&
+       (REG(MY_LAB_PARADISE_LAUNCH_FROM_FLASH-1u)&0xD000F800u)==0x9000F000u;
 }
 #endif
 
@@ -542,19 +552,11 @@ static void paint_battery(u32 mv){
   paint_text(SCR_W-3u-6u*n,1,label,bat_flash_low(mv)?UI_ORANGE:UI_GREY);
 }
 static void paint_reset_hint(u32 mode){
-#ifdef FLASH_MY_LAB_SD
-  paint_mask(111,menu_hint_bits[mode],7,mode==2u?UI_ORANGE:UI_GREY);
-#else
-#ifdef FLASH_MY_LAB_ON_PARADISE
-  if(mode==1u){
-    for(u32 y=111;y<118u;y++)
-      for(u32 x=0;x<SCR_W;x++) fb[fb_index(x,y)]=UI_BG;
-    if(*g_written_image) paint_text((SCR_W-60u)/2u,111,"C: RESTART",UI_GREY);
-    else paint_text((SCR_W-90u)/2u,111,"C: BACK TO MENU",UI_GREY);
-  }else
+  const u8 *hint=reset_hint_bits[mode];
+#if defined(FLASH_MY_LAB_SD) || defined(FLASH_MY_LAB_ON_PARADISE)
+  if(can_return_to_menu()) hint=menu_hint_bits[mode];
 #endif
-  paint_mask(111,reset_hint_bits[mode],7,mode==2u?UI_ORANGE:UI_GREY);
-#endif
+  paint_mask(111,hint,7,mode==2u?UI_ORANGE:UI_GREY);
   g_reset->ui=mode;
 }
 static void paint_progress(const u8 *status,u32 num,u32 den){
@@ -631,28 +633,22 @@ static void reset_ui_update(void){
 static void reset_poll_hw(void){
   if(!g_reset->allowed) return;
 #ifdef FLASH_MY_LAB
-  if(rp_poll(g_reset,(REG(GPIO1)&(1u<<13))==0,REG(0x45000304u)) && reset_boot_valid()){
+  u32 pressed=(REG(GPIO1)&(1u<<13))==0;
+#else
+  u32 pressed=(REG(GPIO0)&0x400u)==0;
+#endif
+  if(rp_poll(g_reset,pressed,REG(0x45000304u)) && reset_boot_valid()){
 #ifdef FLASH_MY_LAB_SD
     return_to_menu();
 #else
-    reset_system();
-#endif
-  }
-#elif defined(FLASH_MY_LAB_ON_PARADISE)
-  if(rp_poll_after(g_reset,(REG(GPIO0)&0x400u)==0,0,0) && reset_boot_valid()){
-    // After a verified write, boot the installed image from the boot ROM.
-    // The menu and its XIP launcher can both have been replaced.
-    if(!*g_written_image && REG(0x60000010u)==MY_LAB_PARADISE_MENU_SOURCE &&
-       REG(0x60037140u)==0x444C4546u &&
-       REG(0x6019D100u)==0x4C4D5850u && REG(0x6019D104u)==0x31504241u &&
-       (REG(MY_LAB_PARADISE_LAUNCH_FROM_FLASH-1u)&0xD000F800u)==0x9000F000u){
+#ifdef FLASH_MY_LAB_ON_PARADISE
+    if(can_return_to_menu()){
       ((void(*)(u32))MY_LAB_PARADISE_LAUNCH_FROM_FLASH)(MY_LAB_PARADISE_MENU_SOURCE);
     }
-    reset_system();
-  }
-#else
-  if(rp_poll(g_reset,(REG(GPIO0)&0x400u)==0,REG(0x45000304u)) && reset_boot_valid()) reset_system();
 #endif
+    reset_system();
+#endif
+  }
   reset_ui_update();
 }
 
@@ -747,21 +743,35 @@ static void handle(const u8* f, u32 flen){
   rp_packet(g_reset,type);
   reset_ui_update();
   if(type==16){ /* RESET_CONTROL: explicit whole-job boundary from the host */
-    u32 ok=off==0u && plen==4u && rd32(pl)<=1u && rp_idle(g_reset,rd32(pl),reset_boot_valid());
-    if(ok) *g_host_progress=0;
+    u32 valid=off==0u && plen==4u && rd32(pl)<=1u;
+    u32 ok=valid && rp_idle(g_reset,rd32(pl),reset_boot_valid());
+    if(valid && (!rd32(pl) || !g_reset->writing)){
+#if ANZEIGE && HALTBILD
+      if(rd32(pl) && *g_host_progress) draw_live(st_done,1,1);
+#endif
+      *g_host_progress=0;
+    }
     reset_ui_update(); reply_head(16,seq,off,ok?0:1,0); send_frame(28); return;
   }
   if(type==17){ /* DISPLAY_PROGRESS: phase in offset, completed and total in payload */
     const u8 *const stages[]={st_reading,st_comparing,st_writing,st_verifying};
     u32 total=plen==8u?rd32(pl+4):0;
     u32 ok=off<4u && total && total<=FLASH_SIZE && rd32(pl)<=total;
+    u32 sample=ok && off==0u && (f[7]&1u);
+    u32 mv=sample?bat_mv():0;
     if(ok){
       *g_host_progress=1;
 #if ANZEIGE && HALTBILD
+      if(mv) paint_battery(mv);
       draw_live(stages[off],rd32(pl),total);
+#ifndef FLASH_MY_LAB
+      if(mv) push_rows(1,8);
+#endif
 #endif
     }
-    reply_head(type,seq,off,ok?0:1,0); send_frame(28); return;
+    u8 *p=reply_head(type,seq,off,ok?0:1,sample?8:0);
+    if(sample){ wr32(p,mv); wr32(p+4,bat_pct(mv)); }
+    send_frame(sample?36:28); return;
   }
 
 
@@ -784,18 +794,21 @@ static void handle(const u8* f, u32 flen){
 #endif
     p[9]=1;                  /* wave */
     wr16(p+10, (u16)MAXP);   /* maxBlock */
+    u32 mv=bat_mv();
+    wr32(p+12, mv);
     wr32(p+16, 460800u);     /* baud */
+    wr32(p+20, bat_pct(mv));
 #ifndef FLASH_MY_LAB
     wr32(p+24, 0x00C22018u); /* jedecId MX25L12833F */
 #endif
     wr32(p+32, FLASH_SIZE);  /* capacity */
     wr32(p+36, 0);           /* flashError */
 #ifdef FLASH_READ_ONLY
-    wr32(p+40, 19);          /* RESET_CONTROL | READ_ONLY | DISPLAY_PROGRESS */
+    wr32(p+40, 19 | 32);     /* RESET_CONTROL | READ_ONLY | DISPLAY_PROGRESS | BATTERY_STATUS */
 #elif defined(FLASH_UART_BOOTSTRAP)
-    wr32(p+40, 29);          /* RESET_CONTROL | RESCUE_BOOTSTRAP | BATTERY_OVERRIDE | DISPLAY_PROGRESS */
+    wr32(p+40, 29 | 32);     /* RESET_CONTROL | RESCUE_BOOTSTRAP | BATTERY_OVERRIDE | DISPLAY_PROGRESS | BATTERY_STATUS */
 #else
-    wr32(p+40, 25);          /* RESET_CONTROL | BATTERY_OVERRIDE | DISPLAY_PROGRESS */
+    wr32(p+40, 25 | 32);     /* RESET_CONTROL | BATTERY_OVERRIDE | DISPLAY_PROGRESS | BATTERY_STATUS */
 #endif
     send_frame(28+44); return;
   }
@@ -945,6 +958,7 @@ static void handle(const u8* f, u32 flen){
   }
   if(type==12){ /* WRITE_FINISH */
     *g_write_approved=0;
+    *g_host_progress=0;
 #if ANZEIGE && HALTBILD
     draw_live(st_done, 1, 1);
 #endif

@@ -241,6 +241,11 @@ summary { cursor:pointer; font-weight:680; }
 .connection-bar { justify-content:space-between; row-gap:16px; }
 .connection-actions { margin-inline-start:auto; }
 .connection-bar .connected-device { min-width:0; overflow-wrap:anywhere; }
+.device-status { display:grid; gap:4px; }
+.device-battery { display:inline-flex; align-items:center; gap:8px; color:var(--soft); font-size:.85rem; font-variant-numeric:tabular-nums; }
+.battery-icon { position:relative; box-sizing:border-box; width:19px; height:11px; flex:none; margin-right:2px; border:1px solid currentColor; border-radius:3px; }
+.battery-icon::before { content:""; position:absolute; inset:1px; border-radius:1px; background:currentColor; clip-path:inset(0 calc(100% - var(--charge)) 0 0); }
+.battery-icon::after { content:""; position:absolute; inset:2px auto 2px 100%; width:3px; border-radius:0 1px 1px 0; background:currentColor; }
 .connection-card + .connection-steps { margin-top:20px; }
 .connection-card .emustat { margin:10px 0 0; color:var(--soft); font-size:.9rem; }
 
@@ -524,6 +529,13 @@ button,input,select,textarea { font-family:inherit; }
 .catalog-count { color:var(--soft); font-size:.8rem; font-weight:600; vertical-align:middle; }
 .transfer-catalog { max-height:clamp(26rem,70vh,52rem); overflow:auto; padding:3px; }
 .transfer-catalog button[aria-pressed="true"] { border-color:var(--sky); background:var(--check-b); }
+#labItemCatalogDialog { box-sizing:border-box; padding:clamp(16px,4vw,24px); }
+#labItemCatalogChoices { max-height:50vh; overflow:auto; padding:3px; }
+#labItemCatalogChoices button[aria-pressed="true"] { border-color:var(--sky); background:var(--check-b); }
+.lab-item-catalog-actions { display:grid; gap:12px; margin-block-start:16px; }
+.lab-item-catalog-actions .tools { justify-content:space-between; margin:0; }
+.lab-item-conflicts { display:grid; gap:10px; max-height:50vh; overflow:auto; margin-top:14px; }
+.lab-item-conflicts label { display:flex; justify-content:space-between; align-items:center; gap:10px; }
 .gift-catalog-image { display:block; width:32px; height:32px; background-image:var(--gift-atlas); background-repeat:no-repeat; image-rendering:pixelated; }
 .lab-catalog-image { display:block; background-image:var(--lab-atlas); background-repeat:no-repeat; image-rendering:pixelated; }
 .lab-item-dialog header { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }

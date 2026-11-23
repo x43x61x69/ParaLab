@@ -40,7 +40,7 @@ Serve the entire `dist/web/` directory, including the versioned catalog. To choo
 | Tool | What you can do |
 | --- | --- |
 | 🎨 **Characters · All Sprites** | Browse sprites and exchange PNG sheets as ZIP files. My Lab packages the Main and Boot archives together. Keep the PNG paths and dimensions, then use **Save ROM** to export the applied edits. |
-| 🎁 **Lab Items** | Browse downloaded Lab Items in a Paradise ROM, preview their sprites, edit prices, and export an ARC2 file or an updated ROM. |
+| 🎁 **Lab Items** | Browse downloaded Lab Items in a Paradise ROM, edit or export them, or queue built-in items to include when saving the ROM. |
 | 🛠️ **Menu · Garden · Field** | Prepare on-device menu changes for either device, edit My Lab Garden characters, or use Paradise field tools. |
 | 💾 **Names · Saves** | Edit names and saved data in the loaded ROM. |
 | 🌐 **Translate** | Convert supported ROM text to Traditional Chinese. Choose Taiwan, Hong Kong, or Standard Traditional and a glyph font. Open the exported ROM in Workspace before writing it to a device. |
@@ -66,7 +66,7 @@ To update an existing v0.1.89 port, open its exported ROM in ParaLab v0.2.1 or l
 | --- | --- |
 | 🔌 **ROM Transfer** | Connect with a USB-UART adapter. Use **Read ROM** to save a backup or **Review and Write…** to check the prepared image and target before writing. |
 | 💾 **Save Backup & Restore** | Read or restore supported saves over UART. |
-| 📦 **Downloaded Lab Items** | Use **Read Lab Items** on a connected Paradise to preview saved items, edit prices, or export individual ARC2 files. |
+| 📦 **Downloaded Lab Items** | Use **Read Lab Items** to preview, edit, or export items. Choose **Add from Lab Item Catalog…** to install selected items directly through a connected Flash Tool. |
 | 🤝 **Playdate** | Choose a ROM character, import a character file, or reuse a visitor saved in your browser. Use the hidden-character presets to track visits from different editions. Select an adult visitor to try a breeding Playdate. |
 | 🎁 **Send Gift · Send Lab Item** | Browse gifts by Paradise edition or preview Lab Items and edit their prices before sending. |
 
@@ -82,6 +82,10 @@ Choose a gift for your Paradise edition. Gift Details lists the Shop Code and pu
 Choose a catalog card, open a 16 KiB `.arc2` or ARC2-format `.bin`, or load a folder of items. Edit the nine device-language names and the prices individually or apply **Buy 0 / Sell 9999**. To change the artwork, select a frame and choose **Export PNG** or **Replace PNG…**. Use the original dimensions and fully opaque or transparent pixels. **Download ARC2 Copy** exports the edited item with its updated checksum.
 
 To send the item, open **Connect → Download → Download** on Paradise. Review the preview and prices in ParaLab, then select **Send Lab Item**.
+
+To install several built-in items through Flash Tool, open **Device Console → UART → Downloaded Lab Items → Add from Lab Item Catalog…**. Select the items and choose **Write with Flash Tool**. For an item ID already installed, choose whether to overwrite its original slot or skip it. New items go into empty download slots in the active save. Restart the device when the write finishes.
+
+For a ROM file, use **Workspace → Lab Items → Add from Lab Item Catalog…**, then choose **Save ROM**. The installed items are part of the ROM's save data. If you write with **Keep saves**, use **Downloaded Lab Items** to add the same items to the live save.
 
 <details>
 <summary>How the built-in catalogs are loaded</summary>

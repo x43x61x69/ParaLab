@@ -880,10 +880,7 @@ static int auto_go(void){
 #endif
 #if defined(FELD_MY_LAB_ON_PARADISE) && !defined(HOST)
 static void launch_paradise_game(void){
-    REG(MY_LAB_PARADISE_TRACE_BOX+4u)=MY_LAB_TRACE_MENU_EXIT;
-    REG(MY_LAB_PARADISE_TRACE_BOX+8u)=0;
-    REG(MY_LAB_TRACE_FRAMES)=REG(MY_LAB_TRACE_KEYS)=0;
-    REG(MY_LAB_PARADISE_TRACE_BOX)=MY_LAB_PARADISE_TRACE_MAGIC;
+    REG(MY_LAB_PARADISE_TRACE_BOX)=0;
     wait_release();
     ((void(*)(u32))MY_LAB_PARADISE_LAUNCH_FROM_MENU)(MY_LAB_PARADISE_LOADER_SOURCE);
 }
@@ -2660,94 +2657,6 @@ static void main_menu(void){
 #endif
 }
 
-#if defined(FELD_MY_LAB_ON_PARADISE) && !defined(HOST)
-#ifdef PARA_SLEEP_DIAGNOSTIC
-static const u32 sleep_diag_registers[]={
-  0x45000300u, 0x45000304u, 0x45000230u, 0x45000234u,
-  0x45000208u, 0x45000210u, 0x20000F00u,
-};
-static u32 sleep_diag_values[8];
-
-static void report_sleep_boot(void){
-  const char *const labels[]={"PMU", "NOW", "ALARM", "RTC", "KEYS", "LATCH", "SAMPLE", "PIN"};
-  rect(0,0,FELD_SCREEN_W,FELD_SCREEN_H,BG);
-  ctext(7,"SLEEP WAKE TRACE",GOLD,1);
-  for(unsigned i=0;i<sizeof labels/sizeof labels[0];i++){
-    char hex[9];
-    hex4(hex,sleep_diag_values[i]>>16);
-    hex4(hex+4,sleep_diag_values[i]);
-    hex[8]=0;
-    text(12,21+11*i,labels[i],WHITE,1);
-    text(62,21+11*i,hex,WHITE,1);
-  }
-  ctext(114,"B CONTINUE",GREY,1);
-  show(); wait_release();
-  while(input()!=K_OK) { hw_wdt_feed(); }
-  wait_release();
-}
-#endif
-static void report_sleep_route(void){
-  const u32 callers[]={0x1001C2F7u,0x1001C32Du,0x1001C411u,0x1001C4ABu,0x1001C4FFu};
-  const u32 caller=REG(MY_LAB_PARADISE_TRACE_BOX+8u);
-  for(unsigned i=0;i<sizeof callers/sizeof callers[0];i++){
-    if(caller!=callers[i]) continue;
-    char route[]="SLEEP ENTRY 1", now[]="NOW 00000000", alarm[]="ALARM 00000000";
-    route[12]=(char)('1'+i);
-    u32 n=REG(MY_LAB_TRACE_FRAMES), a=REG(MY_LAB_TRACE_KEYS);
-    hex4(now+4,n>>16); hex4(now+8,n);
-    hex4(alarm+6,a>>16); hex4(alarm+10,a);
-    REG(MY_LAB_PARADISE_TRACE_BOX+8u)=0;
-    message(route,now,alarm);
-    break;
-  }
-}
-static void report_game_boot_trace(void){
-  if(REG(MY_LAB_PARADISE_TRACE_BOX)!=MY_LAB_PARADISE_TRACE_MAGIC) return;
-  u32 stage=REG(MY_LAB_PARADISE_TRACE_BOX+4u);
-  u32 tx=REG(MY_LAB_PARADISE_TRACE_BOX+8u);
-  u32 frames=REG(MY_LAB_TRACE_FRAMES), keys=REG(MY_LAB_TRACE_KEYS);
-  REG(MY_LAB_PARADISE_TRACE_BOX)=0;
-  if(stage==MY_LAB_TRACE_GAME_DRAWN && !tx) return;
-  const char *const stages[]={
-    "", "LEAVING MENU", "CLOCK SWITCH", "COPYING LOADER", "LOADER STARTED",
-    "LOADER LCD INIT", "LOADER LCD READY", "LOADER FRAME", "LOADER FRAME DRAWN",
-    "GAME LCD INIT", "GAME LCD READY", "GAME FRAME", "GAME FRAME DRAWN"
-  };
-  if(!stage || stage>=sizeof stages/sizeof stages[0]) return;
-  char line[]="BOOT STEP 00";
-  utoa_(stage,line+10);
-  const char *detail=stages[stage];
-  char row[19]="TX ROW 000";
-  const int full=((tx>>8)&0xFFu)==MY_LAB_TRACE_TX_FULL;
-  switch(tx&0xFFu){
-    case MY_LAB_TRACE_TX_INIT: detail=full?"INIT SPI FULL":"INIT SPI BUSY"; break;
-    case MY_LAB_TRACE_TX_CMD: detail=full?"CMD SPI FULL":"CMD SPI BUSY"; break;
-    case MY_LAB_TRACE_TX_ROW: {
-      utoa_((tx>>16)&0xFFu,row+7);
-      unsigned end=7;
-      while(row[end]) end++;
-      const char *suffix=full?" FULL":" BUSY";
-      for(unsigned i=0;i<6;i++) row[end+i]=suffix[i];
-      detail=row;
-      break;
-    }
-  }
-  if(stage<MY_LAB_TRACE_GAME_FRAME || tx){
-    message("GAME BOOT DIAGNOSTIC",line,detail);
-  }
-  if(stage>=MY_LAB_TRACE_GAME_FRAME){
-    char count[18]="FRAMES ";
-    utoa_(frames,count+7);
-    char history[]="A:- B:- C:-";
-    for(unsigned i=0;i<3;i++){
-      const int down=(keys>>i)&1u, up=(keys>>(i+4u))&1u;
-      history[i*4u+2u]=down ? (up?'Y':'!') : (up?'.':'-');
-    }
-    message(line,count,keys?history:"KEYS NO SCAN");
-  }
-}
-#endif
-
 static void run(void){
 #if defined(FELD_MY_LAB_ON_PARADISE) && !defined(HOST)
   const u32 request=REG(MY_LAB_PARADISE_BOOT_BOX);
@@ -2767,24 +2676,14 @@ static void run(void){
 #if defined(FELD_MY_LAB_ON_PARADISE) && !defined(HOST)
   app_detect();
   apps_detect();
-  if(request!=MY_LAB_PARADISE_FLASH_REQUEST) report_sleep_route();
   if(!recovery && request==MY_LAB_PARADISE_FLASH_REQUEST){
     u32 base=flash_tool_checked();
     if(base){ wait_release(); flash_tool_launch(base); }
   }
   if(!recovery && request!=MY_LAB_PARADISE_MENU_REQUEST &&
      request!=MY_LAB_PARADISE_FLASH_REQUEST && g_napp && g_appsrc[0]){
-#ifdef PARA_SLEEP_DIAGNOSTIC
-    report_sleep_boot();
-#endif
     start_app_i(0);
   }
-#ifdef PARA_SLEEP_DIAGNOSTIC
-  // Some wake paths go straight to the loader. A later in-game Menu handoff
-  // can still display the sample captured by the standalone DPD handler.
-  if(sleep_diag_values[7]!=0xFFFFFFFFu) report_sleep_boot();
-#endif
-  report_game_boot_trace();
   main_menu();
 #else
   app_detect();
@@ -2877,18 +2776,6 @@ void host_main(void){
 extern u32 __bss_start, __bss_end;
 void Reset_Handler(void){
   __asm__ volatile("cpsid i");
-#if defined(FELD_MY_LAB_ON_PARADISE) && defined(PARA_SLEEP_DIAGNOSTIC)
-  // Capture retained power state before the display initialization changes it.
-  u32 wake[sizeof sleep_diag_values/sizeof sleep_diag_values[0]];
-  for(unsigned i=0;i<sizeof sleep_diag_registers/sizeof sleep_diag_registers[0];i++) wake[i]=REG(sleep_diag_registers[i]);
-  wake[7]=0xFFFFFFFFu;
-  if(REG(MY_LAB_DPD_TRACE_BOX)==MY_LAB_DPD_TRACE_MAGIC){
-    wake[7]=REG(MY_LAB_DPD_TRACE_BOX+4u);
-    wake[6]=REG(MY_LAB_DPD_TRACE_BOX+8u);
-    wake[5]=REG(MY_LAB_DPD_TRACE_BOX+12u);
-    REG(MY_LAB_DPD_TRACE_BOX)=0;
-  }
-#endif
 #if defined(FELD_MY_LAB) && !defined(FELD_MY_LAB_ON_PARADISE)
   // The stock game can enter with WDT0 running. Reload before using SRAM.
   hw_wdt_feed();
@@ -2914,13 +2801,9 @@ void Reset_Handler(void){
   }
   __asm__ volatile("" ::: "memory");
   for(u32* p=&__bss_start; p<&__bss_end; p++) *p=0;
-#if defined(FELD_MY_LAB_ON_PARADISE) && defined(PARA_SLEEP_DIAGNOSTIC)
-  for(unsigned i=0;i<sizeof wake/sizeof wake[0];i++) sleep_diag_values[i]=wake[i];
-#endif
   for(u32 i=0;i<PAGE;i++) g_ff[i]=0xFF;
 #ifdef FELD_MY_LAB_ON_PARADISE
   hw_init_game_boot();
-#ifndef PARA_SLEEP_DIAGNOSTIC
   const u32 request=REG(MY_LAB_PARADISE_BOOT_BOX);
   if(request!=MY_LAB_PARADISE_MENU_REQUEST && request!=MY_LAB_PARADISE_FLASH_REQUEST &&
      !(hw_buttons()&BTN_C)){
@@ -2930,7 +2813,6 @@ void Reset_Handler(void){
       launch_paradise_game();
     }
   }
-#endif
 #endif
   hw_init();
 #ifdef PARA_FLASH_LATE

@@ -18,17 +18,16 @@ static int rp_idle(ResetPolicy *s,u32 allow,u32 valid){
   if(s->writing || !valid) return 0;
   s->allowed=1; return 1;
 }
-static int rp_poll_after(ResetPolicy *s,u32 pressed,u32 now,u32 hold){
+static int rp_poll(ResetPolicy *s,u32 pressed,u32 now){
   if(!s->allowed || s->writing){ s->phase=0; s->release=1; return 0; }
   if(!pressed){
     if(s->phase==2u){ rp_activity(s); return 1; }
     s->release=0; s->phase=0; return 0;
   }
   if(s->release) return 0;
-  if(!s->phase){ s->phase=hold?1u:2u; s->start=now; }
-  else if(s->phase==1u && now-s->start>=hold) s->phase=2;
+  if(!s->phase){ s->phase=1u; s->start=now; }
+  else if(s->phase==1u && now-s->start>=3u) s->phase=2;
   return 0;
 }
-static int rp_poll(ResetPolicy *s,u32 pressed,u32 now){ return rp_poll_after(s,pressed,now,3u); }
 static u32 rp_hint(const ResetPolicy *s){ return !s->allowed || s->writing ? 0u : s->phase==2u ? 2u : 1u; }
 #endif

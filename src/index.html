@@ -548,7 +548,13 @@ __ANALYTICS_CARD__
             <div class="connection-bar">
               <div class="connected-device">
                 <span id="connectedDeviceArt" class="device-art" aria-hidden="true" hidden></span>
-                <span class="devinfo" id="devInfo" role="status"></span>
+                <div class="device-status">
+                  <span class="devinfo" id="devInfo" role="status"></span>
+                  <span class="device-battery" id="devBattery" role="status" hidden>
+                    <span class="battery-icon" aria-hidden="true"></span>
+                    <span id="devBatteryReading"></span>
+                  </span>
+                </div>
               </div>
               <div class="connection-actions">
                 <button class="btn small" id="btnDevStop" data-t="devStop" hidden></button>
@@ -656,7 +662,10 @@ __ANALYTICS_CARD__
           </section>
           <section id="uartLabItems" role="tabpanel" aria-labelledby="deviceLabItemsTitle" hidden>
             <p data-t="Read and export Lab Items stored on the connected {editionParadise}.">Read and export Lab Items stored on the connected Paradise.</p>
-            <button class="btn small" id="btnReadLabItems" type="button" disabled>Read Lab Items</button>
+            <div class="tools">
+              <button class="btn small" id="btnReadLabItems" type="button" disabled>Read Lab Items</button>
+              <button class="btn small" id="btnInstallDeviceLabItems" type="button" disabled>Add from Lab Item Catalog…</button>
+            </div>
             <p class="hint" id="deviceLabItemsStatus" role="status" hidden></p>
             <div id="deviceLabItems" hidden></div>
           </section>
@@ -1273,6 +1282,11 @@ __ANALYTICS_CARD__
     <h1 class="tool-heading" id="paradiseHeading">Characters</h1>
     <section class="pane" id="pane-lab-items" hidden>
       <p>Preview and export downloaded ARC2 files stored in this ROM. Saved name and price edits are included when you export a new ROM.</p>
+      <button class="btn small" id="btnInstallRomLabItems" type="button">Add from Lab Item Catalog…</button>
+      <section id="romLabItemQueue" hidden>
+        <p class="hint">These Lab Items will be included when you save the ROM.</p>
+        <ul class="lab-items-grid" id="romLabItemQueueList"></ul>
+      </section>
       <div id="romLabItems"></div>
     </section>
     <div class="pane" id="pane-figs">
@@ -1599,7 +1613,7 @@ __ANALYTICS_CARD__
 </dialog>
 <footer class="app-footer">
   <div class="footer-inner">
-    <div class="footer-credit"><strong>ParaLab</strong> <span>__VERSION__</span> · x43x61x69 <span class="upstream">Based on work by mameise</span> · <a href="https://github.com/x43x61x69/ParaLab/tree/__PUBLIC_REF__">Source Code</a> __ANALYTICS_SETTINGS__</div>
+    <div class="footer-credit"><strong>ParaLab</strong> <span>__VERSION__</span> · x43x61x69 <span class="upstream">Based on work by mameise</span> __ANALYTICS_SETTINGS__</div>
     <details class="footer-notices" id="creditsNotices">
       <summary>Credits &amp; Notices</summary>
       <div class="notice-body">
@@ -1623,6 +1637,37 @@ __ANALYTICS_CARD__
   </div>
   <ul class="lab-items-grid" aria-label="Lab Items"></ul>
 </template>
+<dialog class="lab-dialog lab-item-dialog" id="labItemCatalogDialog" aria-labelledby="labItemCatalogTitle">
+  <header>
+    <h2 id="labItemCatalogTitle">Add from Lab Item Catalog…</h2>
+    <button class="btn small" id="labItemCatalogClose" type="button">Close</button>
+  </header>
+  <div class="lab-items-tools">
+    <p class="hint" id="labItemCatalogStatus" role="status"></p>
+    <input type="search" id="labItemCatalogSearch" placeholder="Find a Lab Item" aria-label="Find a Lab Item">
+  </div>
+  <ul class="lab-items-grid" id="labItemCatalogChoices" aria-label="Lab Items"></ul>
+  <div class="lab-item-catalog-actions">
+    <label class="check">
+      <input type="checkbox" id="labItemCatalogPricePreset">
+      <span>Buy 0 / Sell 9999</span>
+    </label>
+    <div class="tools">
+      <span class="hint" id="labItemCatalogCount" role="status"></span>
+      <button class="btn primary" id="labItemCatalogApply" type="button" disabled>Queue for ROM</button>
+    </div>
+  </div>
+</dialog>
+<dialog class="lab-dialog lab-item-dialog" id="labItemConflictDialog" aria-labelledby="labItemConflictTitle">
+  <h2 id="labItemConflictTitle">Lab Items Already Installed</h2>
+  <form method="dialog">
+    <div class="lab-item-conflicts" id="labItemConflicts"></div>
+    <div class="device-dialog-actions">
+      <button class="btn small" value="cancel">Cancel</button>
+      <button class="btn primary" value="apply">Continue</button>
+    </div>
+  </form>
+</dialog>
 <dialog class="lab-dialog lab-item-dialog" id="labItemDialog" aria-labelledby="labItemTitle">
   <header>
     <h2 id="labItemTitle"></h2>

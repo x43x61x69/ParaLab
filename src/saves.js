@@ -393,7 +393,7 @@ async function emuGuestAsync(read, cfg, progress) {
     if (k === 0xFF) continue;
     if (k === 0xFE) k = b;
     out.set(new Uint8Array(await read(cfg.guestOff + (k << 16), 0x10000)), b << 16);
-    if (progress) progress('read', ++done, todo);
+    if (progress) await progress('read', ++done, todo);
   }
   // 1.7.3 GUEST_LZ: the packed cold blocks (LZ4 parts of 1 KB, see emu.js lzPack)
   if (cfg.lzOff) {
@@ -470,6 +470,6 @@ function t7SaveIn(img, save, base = 0xC0000) {
   return out;
 }
 
-root.ParamixSaves = { paraPet, paraPetSet, neonSaveLayout, neonSettings, neonProgress, neonProgressSet, paraClear, paraWrite, t7SaveOut, t7SaveIn, t7SaveCheck, T7_EE, idPage, region, family, settingsOk, crc16arc, paraFromImage, paraEncode, paraDecode, paraCheck, paraClock, emuCfg, emuGuestAsync, lzGoneApply, KINDS };
+root.ParamixSaves = { paraPet, paraPetSet, neonSaveLayout, neonSettings, neonProgress, neonProgressSet, paraClear, paraWrite, t7SaveOut, t7SaveIn, t7SaveCheck, T7_EE, idPage, region, family, settingsOk, sealSettings, crc16arc, paraFromImage, paraEncode, paraDecode, paraCheck, paraClock, emuCfg, emuGuestAsync, lzGoneApply, KINDS, NEON_SETTINGS, NEON_GENERATION, SET_A, SET_B };
 if (typeof module !== 'undefined') module.exports = root.ParamixSaves;
 })(typeof window !== 'undefined' ? window : globalThis);

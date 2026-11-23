@@ -385,10 +385,10 @@ function neonActive(rom, f) {
   return u32(rom, at) === NEON_ACTIVE_MAGIC && u32(rom, at + 4) === (~NEON_ACTIVE_MAGIC >>> 0)
     && slot < f.nslots && u32(rom, at + 12) === (~slot >>> 0) ? slot : -1;
 }
-function neonSwitchPending(rom, f) {
-  const magic = SWITCH_JOURNAL_MAGIC, at = f.slotOff - 0x2000, slot = u32(rom, at + 16);
+function neonSwitchPending(rom, f, base = 0) {
+  const magic = SWITCH_JOURNAL_MAGIC, address = f.slotOff - 0x2000, at = address - base, slot = u32(rom, at + 16);
   return u32(rom, at) === magic && u32(rom, at + 4) === (~magic >>> 0) &&
-    u32(rom, at + 8) === at && u32(rom, at + 12) === (~at >>> 0) &&
+    u32(rom, at + 8) === address && u32(rom, at + 12) === (~address >>> 0) &&
     slot < f.nslots && u32(rom, at + 20) === (~slot >>> 0);
 }
 /** Read slot i with read(addr, len) (sync, or async with slotReadAsync). { head, field, bytes, stream } or null. */

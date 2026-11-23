@@ -393,6 +393,7 @@ function applyLang() {
   if (!deviceItems.hidden) deviceItems.querySelector('input')?.oninput();
   if (deviceCatalogs.gift.data) renderGiftChoices();
   if (deviceCatalogs.lab.data || itemTransfer.files.length) renderLabItemCatalog();
+  if ($('labItemCatalogDialog').open) renderInstallCatalog();
   if (itemTransfer.item) renderTransferItemName(itemTransfer.namedItem || itemTransfer.item);
   for (const button of document.querySelectorAll('.lab-item-frame')) renderLabItemFrameLabel(button);
   if ($('visSavedStatus').dataset.message) savedVisitorStatus($('visSavedStatus').dataset.message);
@@ -561,6 +562,7 @@ const labItemIcons = new WeakMap();
 let labItemSelection;
 const labItemAddress = address => '0x' + address.toString(16).toUpperCase();
 const labItemName = item => itemDisplayName(item) || t('Lab Item at {address}', { address: labItemAddress(item.address) });
+const LAB_ITEM_PRICE_PRESET = [0, 9999];
 const matchingBytes = (image, item) => item.address + item.bytes.length <= image.length &&
   item.bytes.every((byte, i) => image[item.address + i] === byte);
 
@@ -733,7 +735,7 @@ function labItemFromForm() {
 }
 
 $('labItemClose').onclick = () => $('labItemDialog').close();
-$('labItemPreset').onclick = () => setLabItemPrices('labItemBuy', 'labItemSell', 0, 9999);
+$('labItemPreset').onclick = () => setLabItemPrices('labItemBuy', 'labItemSell', ...LAB_ITEM_PRICE_PRESET);
 $('labItemDialog').onclose = () => {
   $('labItemPreview').replaceChildren();
   labItemSelection?.button.focus();
@@ -766,6 +768,8 @@ $('labItemExport').onclick = () => {
 
 function renderRomLabItems(resetSearch) {
   const ctx = state.ctx;
+  $('btnInstallRomLabItems').disabled = !romLabItemLayout(ctx.rom, ctx.editionId);
+  renderRomLabItemQueue();
   if (state.labItemScan?.rom !== ctx.rom) {
     const [start, end] = SV.region(ctx.editionId);
     state.labItemScan = { rom: ctx.rom, items: LI.scan(ctx.rom.subarray(start, end), start, C) };
@@ -782,6 +786,37 @@ function renderRomLabItems(resetSearch) {
       devRender();
     }, button);
   }, resetSearch, original => state.labItemEdits.get(original.address)?.edited || original);
+}
+
+const romLabItemLayout = (rom, edition) => LI.downloadLayout(rom.subarray(0x11000, 0x12000), edition);
+
+function planRomLabItems(rom, edition, items, pendingEdits) {
+  const layout = romLabItemLayout(rom, edition);
+  if (!layout) throw new Error('This firmware uses an unsupported Lab Item storage layout.');
+  if (layout.neon) {
+    const [journal] = F.neonSlotRange();
+    if (F.neonSwitchPending(rom, { slotOff: journal + 0x2000, nslots: 3 })) throw new Error('paraClearPending');
+  }
+  const settings = new Map(LI.settingsAddresses(layout, SV).map(at => [at, rom.subarray(at, at + 0x1000)]));
+  let storage = rom.subarray(layout.start, layout.end);
+  if (pendingEdits?.size) {
+    storage = new Uint8Array(storage);
+    for (const { edited } of pendingEdits.values())
+      if (edited.address >= layout.start && edited.address + edited.bytes.length <= layout.end)
+        storage.set(edited.bytes, edited.address - layout.start);
+  }
+  return LI.planInstall(layout, storage, settings, items, C, SV);
+}
+
+function renderRomLabItemQueue() {
+  const items = [...state.labItemQueue.values()];
+  $('romLabItemQueue').hidden = !items.length;
+  $('romLabItemQueueList').replaceChildren(...items.map(item =>
+    itemPreviewCard(labItemName(item), t('Remove from ROM queue'), icon => labItemThumbnail(icon, item), () => {
+      state.labItemQueue.delete(item.id);
+      renderRomLabItemQueue();
+      devRender();
+    })));
 }
 
 // ------------------------------------------------------------- loading
@@ -1604,7 +1639,7 @@ function showMyLabRom(ctx, name) {
   });
   state.ctx = null;
   state.changed.clear();
-  state.labItemScan = state.labItemEdits = null;
+  state.labItemScan = state.labItemEdits = state.labItemQueue = null;
   state.launchMap = state.poseSource = state.poseLayers = state.poseCache = null;
   $('myLabPortBackup').value = $('myLabPortKey').value = '';
   renderMyLabPort();
@@ -1696,7 +1731,7 @@ async function openRomWorkspace(buf, filename, stayOnDevice) {
   $('btnPetClose').onclick();
   clearDecodedSprites();
   Object.assign(state, { ctx, name: filename, changed: new Map(), open: null, eyeOffsets: new Map(),
-    labItemScan: null, labItemEdits: new Map() });
+    labItemScan: null, labItemEdits: new Map(), labItemQueue: new Map() });
   // 1.7.3 test21 SPR_ALIGN: own Tama pictures of older versions with an odd length are padded (playdates failed at 90 %)
   if (!clean) for (const g of ctx.groups) for (let k = 0; k < 6; k++) { const f = C.spriteAlign(ctx.entries[g + k]); if (f) state.changed.set(g + k, f); }
   $('namesFind').value = '';
@@ -4307,7 +4342,7 @@ async function composeClean() {
 }
 async function composeRom() {
   const prepared = await composeBaseRom();
-  if (!prepared || !state.labItemEdits?.size) return prepared;
+  if (!prepared || (!state.labItemEdits?.size && !state.labItemQueue?.size)) return prepared;
   const image = new Uint8Array(prepared.rom);
   for (const { original, edited } of state.labItemEdits.values()) {
     if (!matchingBytes(image, original)) {
@@ -4315,6 +4350,17 @@ async function composeRom() {
       return null;
     }
     image.set(edited.bytes, edited.address);
+  }
+  if (state.labItemQueue?.size) {
+    try {
+      const plan = planRomLabItems(image, state.ctx.editionId, state.labItemQueue.values());
+      if (plan.conflicts.length) throw new Error('Lab Item storage changed. Try again.');
+      for (const writes of [plan.dataWrites, plan.settingsWrites])
+        for (const [address, bytes] of writes) image.set(bytes, address);
+    } catch (error) {
+      toast(t(em(error)), true);
+      return null;
+    }
   }
   return { ...prepared, rom: image, name: prepared.name.replace(/(?:\.bin)?$/i, '_lab-items.bin'), same: false };
 }
@@ -4558,7 +4604,7 @@ function paradiseExportFeatures() {
     features.push('sprites');
   if (state.texts?.size) features.push('names');
   if (state.paraCleared || state.petDirty || state.saveIn) features.push('save');
-  if (state.labItemEdits?.size) features.push('lab-items');
+  if (state.labItemEdits?.size || state.labItemQueue?.size) features.push('lab-items');
   if (state.feld !== state.feldInit || state.saves !== state.savesInit) features.push('save-slots');
   if (state.bag !== state.bagInit) features.push('items');
   if (state.tama !== state.tamaInit) features.push('tama-editor');
@@ -4724,7 +4770,7 @@ function deviceWritePlan() {
     if (state.petDirty || state.paraCleared || state.saveIn) content.push(t("Save data"));
     if (state.specialFood) content.push(t("Special food"));
     if (state.labRelease) content.push(t("My Lab release"));
-    if (state.labItemEdits?.size) content.push(keep ? t("Lab Item edits excluded to keep device saves") : t("Lab Item edits"));
+    if (state.labItemEdits?.size || state.labItemQueue?.size) content.push(keep ? t("Lab Item edits excluded to keep device saves") : t("Lab Item edits"));
   }
   if (device && source && !canWrite && (!myLabRom || labImage)) content.push(t("Incompatible with this target."));
   const name = myLabRom?.name || (state.ctx && state.name);
@@ -4786,6 +4832,11 @@ function confirmFlashOperation(message, title = t("Confirm Device Write"), actio
   return deviceDialog(message, title, action, false, 'write');
 }
 
+function confirmFlashWriteCount(count) {
+  const formatted = new Intl.NumberFormat(locale()).format(count);
+  return confirmFlashOperation(t('Write {count} flash blocks of 4 KiB each?', { count: formatted }));
+}
+
 function warnDeviceWrite() {
   if (!dv.writing) return false;
   void deviceDialog(t("Keep this page open and the device connected until the write finishes."),
@@ -4814,7 +4865,7 @@ function confirmDeviceWrite(plan, image) {
   $('reviewSaves').classList.toggle('replace-saves', !plan.keep);
   $('reviewMode').textContent = plan.onlyChanged ? t("Only changed sectors") : t("Full write");
   $('reviewBytes').textContent = t("{v1} bytes", { v1: changed.toLocaleString(locale()) });
-  return deviceDialog('', t("Review Device Write"), t("Write to {v1}", { v1: plan.target }), false, 'review');
+  return deviceDialog('', t("Review Device Write"), t("Continue"), false, 'review');
 }
 
 // The combined Tropical/Glacier ID and My Lab on Paradise do not identify a shell edition.
@@ -4830,6 +4881,18 @@ function renderDeviceConnection() {
     (device.info.readOnly ? ' · ' + t('devReadOnly') : '') :
     dv.opening ? t("Choose a USB port…") : dv.run ? t("Connecting…") : t('devNone');
   markDeviceEdition(info, device);
+  renderDeviceBattery();
+}
+
+function renderDeviceBattery() {
+  const badge = $('devBattery'), battery = dv.d?.info.battery;
+  badge.hidden = !battery;
+  if (!battery) return;
+  const percent = new Intl.NumberFormat(locale(), { style: 'percent' }).format(battery.percent / 100);
+  const volts = new Intl.NumberFormat(locale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(battery.millivolts / 1000);
+  const reading = t('Battery {percent} · {volts} V', { percent, volts });
+  if ($('devBatteryReading').textContent !== reading) $('devBatteryReading').textContent = reading;
+  badge.style.setProperty('--charge', battery.percent + '%');
 }
 
 function devRender(msg) {
@@ -4848,6 +4911,7 @@ function devRender(msg) {
   $('btnSaveRead').disabled = !dv.d || dv.run;
   $('btnSaveWrite').disabled = !dv.d || dv.run || readOnly;
   $('btnReadLabItems').disabled = dv.opening || dv.run || !canReadLabItems(dv.d);
+  $('btnInstallDeviceLabItems').disabled = dv.opening || dv.run || !canReadLabItems(dv.d) || readOnly || dv.rescue;
   $('btnParaIn').disabled = !dv.d || dv.run || readOnly || myLab || paradiseBridge;
   const saveHint = !dv.d ? 'deviceSaveFormats' : paradiseBridge && readOnly ? 'portSaveBackup' : myLab || paradiseBridge ? 'myLabDeviceSaveHint' : 'devSaveHint';
   $('devSaveHint').dataset.t = saveHint;
@@ -6586,25 +6650,29 @@ function parseTransferItem(bytes, filename, source) {
   return item ? { ...item, filename, source } : null;
 }
 
+function labCatalogIcon(icon, item) {
+  if (item.bytes) { labItemThumbnail(icon, item); return; }
+  if (item.tile === null) { icon.textContent = '◇'; return; }
+  const { cell, columns } = deviceCatalogs.lab.data;
+  const image = document.createElement('span');
+  image.className = 'lab-catalog-image';
+  image.style.width = image.style.height = cell + 'px';
+  image.style.backgroundPosition = (-cell * (item.tile % columns)) + 'px ' + (-cell * Math.floor(item.tile / columns)) + 'px';
+  icon.append(image);
+}
+
+function labCatalogMatches(item, query) {
+  return [itemDisplayName(item), item.filename, String(item.id), ...(item.names || [])]
+    .some(value => value?.toLocaleLowerCase(locale()).includes(query));
+}
+
 function renderLabItemCatalog() {
   const catalog = $('itemCatalog'), query = $('itemSearch').value.trim().toLowerCase();
   const items = [...(deviceCatalogs.lab.data?.items || []), ...itemTransfer.files];
-  const visible = query ? items.filter(item => [itemDisplayName(item), item.filename, String(item.id), ...(item.names || [])]
-    .some(value => value?.toLocaleLowerCase(locale()).includes(query))) : items;
+  const visible = query ? items.filter(item => labCatalogMatches(item, query)) : items;
   $('itemCount').textContent = query ? visible.length + ' / ' + items.length : items.length;
   catalog.replaceChildren(...visible.map(item => {
-    const card = itemPreviewCard(itemDisplayName(item), '#' + item.id, icon => {
-      if (item.bytes) labItemThumbnail(icon, item);
-      else if (item.tile === null) icon.textContent = '◇';
-      else {
-        const { cell, columns } = deviceCatalogs.lab.data;
-        const image = document.createElement('span');
-        image.className = 'lab-catalog-image';
-        image.style.width = image.style.height = cell + 'px';
-        image.style.backgroundPosition = (-cell * (item.tile % columns)) + 'px ' + (-cell * Math.floor(item.tile / columns)) + 'px';
-        icon.append(image);
-      }
-    }, button => {
+    const card = itemPreviewCard(itemDisplayName(item), '#' + item.id, icon => labCatalogIcon(icon, item), button => {
       selectTransferCard(catalog, button);
       void loadTransferItem(item);
     });
@@ -6629,6 +6697,129 @@ async function readCatalogLabItem(source) {
     throw new Error('The Lab Item file does not match the catalog.');
   return item;
 }
+
+let installCatalog;
+function syncInstallCatalogSelection() {
+  const count = installCatalog.selected.size;
+  $('labItemCatalogCount').textContent = t('{count} selected', { count });
+  const apply = $('labItemCatalogApply');
+  apply.textContent = t(installCatalog.device ? 'Write with Flash Tool…' : 'Queue for ROM');
+  apply.disabled = !count || installCatalog.loading;
+  $('labItemCatalogPricePreset').disabled = installCatalog.loading || !deviceCatalogs.lab.data?.items.length;
+}
+
+function renderInstallCatalog() {
+  const grid = $('labItemCatalogChoices'), search = $('labItemCatalogSearch');
+  const query = search.value.trim().toLocaleLowerCase(locale());
+  search.disabled = installCatalog.loading;
+  const items = deviceCatalogs.lab.data?.items || [];
+  const cards = [];
+  for (const item of items) {
+    if (query && !labCatalogMatches(item, query)) continue;
+    const card = itemPreviewCard(itemDisplayName(item), '#' + item.id, icon => labCatalogIcon(icon, item), button => {
+      const previous = installCatalog.selected.get(item.id);
+      if (previous === item) installCatalog.selected.delete(item.id);
+      else installCatalog.selected.set(item.id, item);
+      for (const choice of grid.querySelectorAll('button[data-item-id="' + item.id + '"]'))
+        choice.setAttribute('aria-pressed', String(choice === button && previous !== item));
+      syncInstallCatalogSelection();
+    });
+    const button = card.firstElementChild;
+    button.dataset.itemId = item.id;
+    button.disabled = installCatalog.loading || !!(installCatalog.rom && state.labItemQueue?.has(item.id));
+    button.setAttribute('aria-pressed', String(installCatalog.selected.get(item.id) === item));
+    cards.push(card);
+  }
+  grid.replaceChildren(...cards);
+  syncInstallCatalogSelection();
+}
+
+async function openInstallCatalog(device) {
+  const dialog = $('labItemCatalogDialog');
+  const picker = { device, rom: device ? null : state.ctx, selected: new Map(), loading: true };
+  installCatalog = picker;
+  $('labItemCatalogSearch').value = '';
+  $('labItemCatalogPricePreset').checked = false;
+  $('labItemCatalogStatus').textContent = t('Loading catalog…');
+  renderInstallCatalog();
+  dialog.showModal();
+  await loadDeviceCatalog('lab');
+  if (!dialog.open || installCatalog !== picker) return;
+  picker.loading = false;
+  const items = deviceCatalogs.lab.data?.items;
+  $('labItemCatalogStatus').textContent = items?.length ? '' :
+    t(items ? 'No built-in Lab Items are available.' : 'Could not load the catalog.');
+  renderInstallCatalog();
+  $('labItemCatalogSearch').focus();
+}
+
+$('btnInstallRomLabItems').onclick = () => openInstallCatalog(null);
+$('btnInstallDeviceLabItems').onclick = () => openInstallCatalog(dv.d);
+$('labItemCatalogClose').onclick = () => $('labItemCatalogDialog').close();
+$('labItemCatalogDialog').onclose = () => {
+  if (!$('labItemCatalogDialog').open) installCatalog = null;
+};
+$('labItemCatalogSearch').oninput = renderInstallCatalog;
+
+function resolveLabItemConflicts(items, conflicts) {
+  if (!conflicts.length) return items;
+  const dialog = $('labItemConflictDialog'), choices = new Map();
+  $('labItemConflicts').replaceChildren(...conflicts.map(({ item, existing }) => {
+    const row = document.createElement('label'), name = document.createElement('span'), select = document.createElement('select');
+    name.textContent = labItemName(item) + ' · #' + item.id;
+    select.add(new Option(t('Skip Lab Item'), 'skip'));
+    select.add(new Option(t('Overwrite Lab Item'), 'overwrite'));
+    choices.set(item.id, { select, existing });
+    row.append(name, select);
+    return row;
+  }));
+  dialog.returnValue = '';
+  return new Promise(resolve => {
+    dialog.addEventListener('close', () => {
+      if (dialog.returnValue !== 'apply') { resolve(null); return; }
+      resolve(items.map(item => {
+        const choice = choices.get(item.id);
+        return choice?.select.value === 'overwrite' ? { ...item, replace: choice.existing } : item;
+      }));
+    }, { once: true });
+    dialog.showModal();
+  });
+}
+
+$('labItemCatalogApply').onclick = async () => {
+  const picker = installCatalog, dialog = $('labItemCatalogDialog');
+  const pricePreset = $('labItemCatalogPricePreset').checked;
+  picker.loading = true;
+  $('labItemCatalogStatus').textContent = t('Reading selected Lab Items…');
+  renderInstallCatalog();
+  try {
+    let items = await Promise.all([...picker.selected.values()].map(readCatalogLabItem));
+    if (!dialog.open || installCatalog !== picker) return;
+    if (pricePreset) items = items.map(item => LI.withPrices(item, ...LAB_ITEM_PRICE_PRESET, C));
+    if (picker.device) {
+      dialog.close();
+      await installDeviceLabItems(picker.device, items, pricePreset);
+    } else if (state.ctx === picker.rom) {
+      const initial = planRomLabItems(state.ctx.rom, state.ctx.editionId, [...state.labItemQueue.values(), ...items], state.labItemEdits);
+      dialog.close();
+      items = await resolveLabItemConflicts(items, initial.conflicts.filter(({ item }) => !state.labItemQueue.has(item.id)));
+      if (!items || state.ctx !== picker.rom) return;
+      const plan = planRomLabItems(state.ctx.rom, state.ctx.editionId, [...state.labItemQueue.values(), ...items], state.labItemEdits);
+      const changed = new Set([...plan.additions, ...plan.replacements].map(item => item.id));
+      for (const item of items)
+        if (changed.has(item.id)) state.labItemQueue.set(item.id, item);
+      if (plan.skipped.length) toast(t('{count} Lab Items are already installed.', { count: plan.skipped.length }));
+      renderRomLabItemQueue();
+      devRender();
+    } else dialog.close();
+  } catch (error) {
+    if (dialog.open && installCatalog === picker) $('labItemCatalogStatus').textContent = t(em(error));
+    else toast(t(em(error)), true);
+  } finally {
+    picker.loading = false;
+    if (dialog.open && installCatalog === picker) renderInstallCatalog();
+  }
+};
 
 function renderItemNameInputs(container, item) {
   container.replaceChildren(...VIS_LANGUAGES.map(([locale, label], i) => {
@@ -6881,7 +7072,7 @@ $('itemBuy').oninput = $('itemSell').oninput = () => {
   visRender();
 };
 $('btnItemPreset').onclick = () => {
-  setLabItemPrices('itemBuy', 'itemSell', 0, 9999);
+  setLabItemPrices('itemBuy', 'itemSell', ...LAB_ITEM_PRICE_PRESET);
   $('itemBuy').oninput();
 };
 $('btnItemReset').onclick = () => {
@@ -6923,6 +7114,7 @@ $('btnConn').onclick = async () => {
           t("Low Battery"), t("Write Anyway"), false, 'write');
         return accepted && !dv.cancel;
       };
+      dev.onBatteryChange = () => { if (dv.d === dev) renderDeviceBattery(); };
       dv.d = dev; dv.loaded = loaded;
       devRender(t('devReady'));
       if (dev.info.edition === 0xFE) {
@@ -7038,12 +7230,12 @@ $('btnWrite').onclick = async () => {
     await devWriteTask(async () => {
       const confirmParadiseBackupReplacement = () => confirmFlashOperation(t('myLabPortReplacePairingHelp'),
         t('myLabPortReplacePairingTitle'), t('myLabPortReplacePairingWrite'));
-      const result = await device.write(image, { onlyChanged, keepMyLabSaves, confirmParadiseBackupReplacement }, devProg, () => dv.cancel);
+      const result = await device.write(image, { onlyChanged, keepMyLabSaves, confirmParadiseBackupReplacement, confirmWrite: confirmFlashWriteCount }, devProg, () => dv.cancel);
       if (result.cancelled) { devRender(t('devCancelled')); return; }
       const kept = result.kept ? t('devKept', { k: result.kept }) : '';
       dv.restartNeeded = result.written > 0;
       if (result.written) measure('operation', 'write_rom', romEditionKey(device.info.edition));
-      devRender(result.written ? t('devDone', { w: result.written, k: kept }) : t('devSame'));
+      devRender(result.written ? t('devDone', { w: result.committed, k: kept }) : t('devSame'));
     });
     return;
   }
@@ -7121,12 +7313,13 @@ $('btnWrite').onclick = async () => {
     if (!cleanNew && F.emuType(img) === 't7') { const ck = await dv.d.clockRead(); if (ck && (ck.ctrl & 0x80)) img = E.t7Wall(img, ck.counter, new Date()); }
     if (!cleanNew && F.emuType(img) === 't18') { const ck = await dv.d.clockRead(); if (ck && (ck.ctrl & 0x80)) img = E.t18Wall(img, ck.counter, new Date()); }   // T18Emu: local time for the first start   // T7Emu: local time for the first time setting
     let r;
-    try { r = await device.write(img, { onlyChanged, keep: plan, rescueApp: FL.embedded(), t18Bases: t18Bases(img, fe), onImage: (x) => stashPut(x) }, devProg, () => dv.cancel); }
+    try { r = await device.write(img, { onlyChanged, keep: plan, rescueApp: FL.embedded(), t18Bases: t18Bases(img, fe), onImage: (x) => stashPut(x), confirmWrite: confirmFlashWriteCount }, devProg, () => dv.cancel); }
     catch (e) { if (e && e.code === 'noRescueRoom') await deviceDialog(t('fl_noRescueRoom'), t("Write Stopped"), t("Close"), true); else if (e && e.code === 'cancelledWrite') await rescueCheck(); throw e; }
+    if (r.cancelled) { devRender(t('devCancelled')); return; }
     await stashDel();
     dv.restartNeeded = r.written > 0;
     if (r.written) measure('operation', 'write_rom', romEditionKey(device.info.edition));
-    let m = r.written ? t('devDone', { w: r.written, k: r.kept ? t('devKept', { k: r.kept }) : '' }) : t('devSame');
+    let m = r.written ? t('devDone', { w: r.committed, k: r.kept ? t('devKept', { k: r.kept }) : '' }) : t('devSame');
     if (r.rescue) m += '\n' + t('resOn');
     if (r.notes.length) m += '\n' + r.notes.map(flMsg).join('\n');
     devRender(m);
@@ -7174,11 +7367,12 @@ async function rescueCheck(signal) {
   if (k) { devRender(t(k)); await deviceDialog(t(k), t("Device Recovery"), t("Close"), true); }
 }
 $('btnResume').onclick = () => devWriteTask(async () => {
-  if (!dv.stash || !await confirmFlashOperation(t("Continue writing the saved recovery image to this device?"), t("Resume Device Write"), t("Resume Write"))) return;
-  const r = await dv.d.write(dv.stash, { onlyChanged: true, keep: null, rescueApp: FL.embedded() }, devProg, () => dv.cancel);
+  if (!dv.stash) return;
+  const r = await dv.d.write(dv.stash, { onlyChanged: true, keep: null, rescueApp: FL.embedded(), confirmWrite: confirmFlashWriteCount }, devProg, () => dv.cancel);
+  if (r.cancelled) { devRender(t('devCancelled')); return; }
   await stashDel(); dv.rescue = false; dv.stash = null; $('rescueResume').hidden = true;
   dv.restartNeeded = true;
-  devRender(t('resResumed', { w: r.written }));
+  devRender(t('resResumed', { w: r.committed }));
 });
 
 /* 1.6.13 test13: test of the rescue start on the device (only with #rettung in the address, see flash.js) */
@@ -7354,6 +7548,7 @@ $('btnParaClear').onclick = () => {
   if (!confirm(t('paraClearAsk'))) return;
   state.ctx.rom = SV.paraClear(rom, editionId);
   state.labItemEdits.clear();
+  state.labItemQueue.clear();
   state.paraCleared = true;
   if (petFromRom) $('btnPetClose').click();
   renderSave(); renderFeld();
@@ -7740,14 +7935,7 @@ async function backupMyLabDevice(d, cancel) {
   const port = d.info.edition === FL.MY_LAB_ON_PARADISE;
   await checkMyLabSaveRecovery(d);
   const first = ML.DEVICE_SAVE_FIRST, end = ML.DEVICE_SAVE_END;
-  const region = new Uint8Array(end - first).fill(0xFF);
-  const used = await d.usedSectors(first, end, devProg, cancel);
-  let n = 0;
-  for (const off of used) {
-    if (cancel()) throw new Error('cancelled');
-    region.set(await d.read(off, 0x1000), off - first);
-    devProg('read', ++n * 0x1000, used.length * 0x1000);
-  }
+  const region = await d.readSparse(first, end, devProg, cancel);
   const clock = await d.clockRead();
   const name = (port ? 'my-lab-on-paradise-' : 'my-lab-') + stamp() + MY_LAB_SAVE_EXT;
   download(ML.deviceSaveBackup(region, (clock?.ctrl & 0x80) ? clock.counter : null, C, VIS), name);
@@ -7774,10 +7962,74 @@ async function writeMyLabDeviceSave(d, save, cancel) {
   if (w || clock) measure('operation', 'restore_save', romEditionKey(d.info.edition));
   devRender(t('devSaveDone', { w, c: t(clock ? 'devSaveClock' : 'devSaveClockNo') }));
 }
+
+function showDeviceLabItems(device, items) {
+  const holder = $('deviceLabItems'), status = $('deviceLabItemsStatus'), edits = new Map();
+  renderLabItems(holder, items, (original, button) => {
+    openLabItem(edits.get(original.address) || original, edited => {
+      edits.set(edited.address, edited);
+    }, button);
+  }, true, original => edits.get(original.address) || original);
+  holder.hidden = status.hidden = false;
+  status.textContent = t("Last scan: {v1}", { v1: connectedEdition(device) });
+}
+
+async function installDeviceLabItems(device, items, pricePreset) {
+  if (dv.d !== device || $('btnInstallDeviceLabItems').disabled) return;
+  const details = items.map(labItemName).join(listSeparator());
+  const message = [
+    t('Write {count} selected Lab Items to {device}?', { count: items.length, device: connectedEdition(device) }),
+    details,
+    pricePreset ? t('Buy 0 / Sell 9999') : '',
+  ].filter(Boolean).join('\n\n');
+  if (!await confirmFlashOperation(message, t('Add Lab Items'), t('Write with Flash Tool'))) return;
+  await devWriteTask(async () => {
+    device.ready();
+    const cancel = () => dv.cancel;
+    const layout = LI.downloadLayout(await device.read(0x11000, 0x1000), device.info.edition);
+    if (!layout) throw new Error(t('This firmware uses an unsupported Lab Item storage layout.'));
+    if (layout.neon) {
+      const [journal] = F.neonSlotRange();
+      if (F.neonSwitchPending(await device.read(journal, 0x1000), { slotOff: journal + 0x2000, nslots: 3 }, journal))
+        throw new Error(t('paraClearPending'));
+    }
+    const settings = new Map();
+    for (const at of LI.settingsAddresses(layout, SV)) {
+      if (cancel()) throw new Error('Cancelled.');
+      settings.set(at, await device.read(at, 0x1000));
+    }
+    const storage = await device.readSparse(layout.start, layout.end, devProg, cancel);
+    const initial = LI.planInstall(layout, storage, settings, items, C, SV);
+    const approved = await resolveLabItemConflicts(items, initial.conflicts);
+    if (!approved) { devRender(t('devCancelled')); return; }
+    const plan = initial.conflicts.length ? LI.planInstall(layout, storage, settings, approved, C, SV) : initial;
+    const changed = [...plan.additions, ...plan.replacements];
+    if (changed.length) {
+      const publishLast = new Set(plan.settingsWrites.keys());
+      const writes = new Map([...plan.dataWrites, ...plan.settingsWrites]);
+      // Recheck each destination before opening the write session.
+      for (const item of changed) {
+        if (cancel()) throw new Error('Cancelled.');
+        const existing = await device.read(item.address, LI.SIZE);
+        if (!matchingBytes(storage, { address: item.address - layout.start, bytes: existing }))
+          throw new Error(t('Lab Item storage changed. Try again.'));
+      }
+      await device.writeSectors(writes, devProg, cancel, null, null, publishLast);
+      for (const item of changed) storage.set(item.bytes, item.address - layout.start);
+      dv.restartNeeded = true;
+    }
+    showDeviceLabItems(device, LI.scan(storage, layout.start, C));
+    const added = t('Added {count} Lab Items.', { count: plan.additions.length });
+    const replaced = t('Overwrote {count} Lab Items.', { count: new Set(plan.replacements.map(item => item.id)).size });
+    const skipped = t('{count} Lab Items are already installed.', { count: plan.skipped.length });
+    devRender([plan.additions.length ? added : '', plan.replacements.length ? replaced : '', plan.skipped.length ? skipped : ''].filter(Boolean).join(' '));
+  });
+}
+
 $('btnReadLabItems').onclick = () => {
   const device = dv.d;
   if (dv.opening || dv.run || !canReadLabItems(device)) return;
-  const status = $('deviceLabItemsStatus'), holder = $('deviceLabItems');
+  const status = $('deviceLabItemsStatus');
   status.hidden = false;
   status.textContent = t("Reading Lab Items from {v1}…", { v1: connectedEdition(device) });
   return devTask(async () => {
@@ -7790,14 +8042,7 @@ $('btnReadLabItems').onclick = () => {
       status.textContent = dv.cancel ? t('devCancelled') : t('devErr', { e: flMsg(error) });
       throw error;
     }
-    const edits = new Map();
-    renderLabItems(holder, items, (original, button) => {
-      openLabItem(edits.get(original.address) || original, edited => {
-        edits.set(edited.address, edited);
-      }, button);
-    }, true, original => edits.get(original.address) || original);
-    holder.hidden = false;
-    status.textContent = t("Last scan: {v1}", { v1: connectedEdition(device) });
+    showDeviceLabItems(device, items);
     measure('operation', 'read_lab_items', romEditionKey(device.info.edition));
     devRender(items.length ? t("Read Lab Items from {v1}.", { v1: connectedEdition(device) }) : t("No downloaded Lab Items found on {v1}.", { v1: connectedEdition(device) }));
   });
@@ -7808,11 +8053,9 @@ $('btnSaveRead').onclick = () => devTask(async () => {
   const d = dv.d, ed = d.info.edition, cancel = () => dv.cancel;
   if (usesMyLabDeviceSave(d)) { await backupMyLabDevice(d, cancel); return; }
   const [a, b] = SV.region(ed);
-  const used = await d.usedSectors(a, b, devProg, cancel);
-  const pages = new Map(), ff = new Uint8Array(0x1000).fill(0xFF);
-  for (let p = a; p < b; p += 0x1000) pages.set(p, ff);
-  let n = 0;
-  for (const s of used) { if (cancel()) throw new Error('cancelled'); pages.set(s, await d.read(s, 0x1000)); devProg('read', ++n * 0x1000, used.length * 0x1000); }
+  const region = await d.readSparse(a, b, devProg, cancel);
+  const pages = new Map();
+  for (let p = a; p < b; p += 0x1000) pages.set(p, region.subarray(p - a, p - a + 0x1000));
   const clock = await d.clockRead();
   const names = [edSlug(ed) + '-' + stamp() + '.tamasave'];
   download(SV.paraEncode(pages, ed, clock && (clock.ctrl & 0x80) ? clock : null), names[0]);
@@ -7843,12 +8086,20 @@ $('btnSaveRead').onclick = () => devTask(async () => {
     const rc = state.ctx && romEmuCfg(state.ctx.rom);
     if (rc && rc.guestOff === cfg.guestOff && rc.guestSize === cfg.guestSize && rc.kind === cfg.kind && rc.map.every((v, i) => v === cfg.map[i])) {
       const end = Math.max(cfg.spareEnd || 0, (cfg.guestOff + cfg.guestSize + 0xFFFF) & ~0xFFFF);
-      const diff = await d.changed(state.ctx.rom, devProg, cancel, cfg.guestOff & ~0xFFFF, Math.min(end, 0x1000000));
+      const diff = await d.changed(state.ctx.rom, devProg, cancel, cfg.guestOff & ~0xFFFF, Math.min(end, 0x1000000), 'read');
       base = new Uint8Array(state.ctx.rom);
-      for (const s of diff) base.set(await d.read(s, 0x1000), s);
+      const total = diff.size * 0x1000;
+      if (total) await d.reportProgress('read', 0, total, devProg);
+      let done = 0;
+      for (const s of diff) {
+        if (cancel()) throw new Error('cancelled');
+        base.set(await d.read(s, 0x1000), s);
+        await d.reportProgress('read', ++done * 0x1000, total, devProg);
+      }
     }
     const read = base ? (x, k) => base.subarray(x, x + k) : (x, k) => d.read(x, k);
-    const g = await SV.emuGuestAsync(read, cfg, base ? null : devProg);
+    const guestProgress = (phase, done, total) => d.reportProgress(phase, done * 0x10000, total * 0x10000, devProg);
+    const g = await SV.emuGuestAsync(read, cfg, base ? null : guestProgress);
     names.push(cfg.app + '-' + stamp() + '.sav');
     download(g, names[1]);
   }

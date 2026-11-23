@@ -1076,7 +1076,7 @@ function installParadiseSleep(image, hasParkHook = false, hasWheelWakeHook = fal
   patchBytes(image, snapshot, hasWheelWakeHook ? wheelWake : '00f0cbff', wheelWake);
 }
 
-function updateParadiseImage(rom, { feld, gamePort, stub }) {
+function updateParadiseImage(rom, { feld, gamePort, stub, flashApp }) {
   if (!M.isParadiseFlashImage(rom, C) || !gamePort.length || gamePort.length > 0x1000)
     throw new Error('Invalid Paradise boot or rescue layout');
   // Upgrade earlier cameras before checking the boot and game adapters.
@@ -1132,6 +1132,14 @@ function updateParadiseImage(rom, { feld, gamePort, stub }) {
   w32(image, size, 0x14);
   w32(image, C.crc32(image.subarray(MENU, MENU + size)), 0x24);
   tableSum(image, 0);
+  if (flashApp) {
+    const rescue = FL.rescueBlock(flashApp, image.subarray(0, 0x1000));
+    if (!flashApp.length || !rescue) throw new Error('Invalid Paradise Flash Tool');
+    const table = 0xFFE000;
+    image.set(rescue.subarray(0, table - FL.RESCUE_OFF), FL.RESCUE_OFF);
+    w32(image, C.crc32(image.subarray(FL.RESCUE_OFF, table)), table + 0x24);
+    tableSum(image, table);
+  }
   if (!M.isParadiseFlashImage(image, C)) throw new Error('Invalid Paradise boot or rescue layout');
   return image;
 }
