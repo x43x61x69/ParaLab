@@ -15,8 +15,13 @@ def main():
         '/* Generated from VERSION by gen_version.py. */\n'
         '#ifndef PARAMIX_VERSION_H\n#define PARAMIX_VERSION_H\n'
         f'#define PARAMIX_VERSION "{version}"\n'
-        f'static const char paramix_version_tag[] __attribute__((used)) = "PMXVER:{version}";\n'
-        '#endif\n')
+        '#ifndef HOST\n'
+        '#ifdef __ELF__\n'
+        '#define PARAMIX_VERSION_SECTION __attribute__((section(".pmxversion")))\n'
+        '#else\n#define PARAMIX_VERSION_SECTION\n#endif\n'
+        f'static const char paramix_version_tag[] __attribute__((used)) PARAMIX_VERSION_SECTION = "PMXVER:{version}";\n'
+        '#undef PARAMIX_VERSION_SECTION\n'
+        '#endif\n#endif\n')
 
 if __name__ == '__main__':
     main()

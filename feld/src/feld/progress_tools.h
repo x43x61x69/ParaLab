@@ -468,7 +468,7 @@ static void neon_planet_menu(void){
 }
 
 static int neon_progress_root_row(u32 i,char *name,char *right,u16 *col){
-  static const char *const names[]={"GALAXY LEVEL","MISSIONS","TAMA FILE","CURRENT PLANET","PLANET ACCESS"};
+  static const char *const names[]={"GALAXY LEVEL","MISSIONS","TAMA FILE","CURRENT PLANET","PLANET ACCESS","PLANET RESIDENTS"};
   const char *s=names[i]; while((*name++=*s++)){}
   if(i==0u) utoa_(g_set[NEON_LEVEL_OFF]&15u,right);
   else right[0]=0;
@@ -478,14 +478,15 @@ static void neon_progress_menu(void){
   if(set_check_msg()) return;
   u32 sel=0;
   for(;;){
-    int action=progress_choose("PROGRESS",5u,sel,neon_progress_root_row);
+    int action=progress_choose("PROGRESS",6u,sel,neon_progress_root_row);
     if(action<0) return;
     sel=(u32)action;
     if(sel==0u) level_edit_at(NEON_LEVEL_OFF,"GALAXY LEVEL",1);
     else if(sel==1u) neon_missions_menu();
     else if(sel==2u) progress_files_menu();
     else if(sel==3u) neon_planet_menu();
-    else neon_planet_access_menu();
+    else if(sel==4u) neon_planet_access_menu();
+    else residents_menu();
   }
 }
 #endif

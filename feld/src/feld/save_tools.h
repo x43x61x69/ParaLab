@@ -3,7 +3,7 @@
 static int save_page(u32 src,u32 i,u32 *addr){
   if((int)src==g_act){
     u32 j=0;
-    for(u32 a=g_cfg.user_start;a<g_cfg.user_end;a+=PAGE) if(!page_ff(a)){
+    for(u32 a=save_first();a<save_end();a=save_next(a)) if(!page_ff(a)){
       if(j++==i){ *addr=a; flash_read(a,g_page,PAGE); return 0; }
     }
     return 1;
@@ -21,7 +21,7 @@ static int source_check(u32 src,u32 *np){
   *np=0;
   if((int)src==g_act){
     flash_read(SET_A,g_page,PAGE); if(!set_ok(g_page)) return 1;
-    for(u32 a=g_cfg.user_start;a<g_cfg.user_end;a+=PAGE) if(!page_ff(a)) (*np)++;
+    for(u32 a=save_first();a<save_end();a=save_next(a)) if(!page_ff(a)) (*np)++;
   } else {
     if(!slot_valid(src)) return 1;
     u32 b=slot_base(src), by=rd32(b+12), sum=0, bytes=0;
@@ -62,7 +62,7 @@ static int slot_copy(u32 src,u32 tgt,u32 fld){
   u32 bytes=0, prev=0, sets=0, on=0, need=0;
   /* Exact preflight, including recompressed field/slot settings. */
   for(u32 i=0;i<np;i++){
-    u32 a; if(save_page(src,i,&a) || a<g_cfg.user_start || a>=g_cfg.user_end || (i && a<=prev)) return 2;
+    u32 a; if(save_page(src,i,&a) || !save_has_page(a) || (i && a<=prev)) return 2;
     prev=a;
     if(copy_settings(a,tgt,fld)) return 2;
     if(a==SET_A) sets|=1u; if(a==SET_B) sets|=2u;

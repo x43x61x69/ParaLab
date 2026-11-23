@@ -43,12 +43,11 @@ void flash_erase4k(u32 addr)
   wait_ready();
 }
 
-void flash_prog4k(u32 addr, const void *src)
+static void flash_program(u32 addr, const void *src, u32 len)
 {
   u32 a1=addr>>1;
   u32 hi=(a1>>16)&0xFFFFu;
   u32 lo=a1 & 0xFFFFu;
-  flash_erase4k(addr);
   /* program */
   REG(FCTL+0x008)=0x3000u | hi;
   REG(FCTL+0x00C)=lo;
@@ -59,11 +58,22 @@ void flash_prog4k(u32 addr, const void *src)
   REG(FCTL+0x010)=0;
   REG(FCTL+0x000)=0x0000d082u;
   F_DFLA=0x60000000u | (addr & 0x00FFFFFFu);
-  F_DLEN=0x1000u; F_DMEM=(u32)src;
+  F_DLEN=len; F_DMEM=(u32)src;
   F_DCTL=0u;
   F_DCTL=1u;
   for(u32 g=0; (F_DCTL & 1u) && g<20000000u; g++){ if((g & 0xFFFFu)==0) feed(); }
   wait_ready();
+}
+
+void flash_prog4k(u32 addr, const void *src)
+{
+  flash_erase4k(addr);
+  flash_program(addr,src,0x1000u);
+}
+
+void flash_prog_word(u32 addr, u32 word)
+{
+  flash_program(addr,&word,sizeof(word));
 }
 
 void flash_read(u32 addr, void *dst, u32 len)

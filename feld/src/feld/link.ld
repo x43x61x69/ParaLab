@@ -7,6 +7,7 @@ SECTIONS {
   .text : {
     KEEP(*(.vectors))
     KEEP(*(.pmxcfg))
+    KEEP(*(.pmxversion))
     *(.text*)
     *(.rodata*)
     KEEP(*(.initcode))

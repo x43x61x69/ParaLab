@@ -670,6 +670,8 @@ function openRom(rom) {
   if (!editionId) editionId = limit < rom.length ? u32(rom, limit) : 0;
   if (editionId === 8 && u32(rom, 0xD24000) === 0x5641534E)
     limit = Math.min(limit, 0xD23000); // Neon switch journal precedes its active-slot record
+  if (editionId >= 5 && editionId <= 7 && u32(rom, 0x109000) === 0x31425352)
+    limit = Math.min(limit, 0xD01000); // six-field resident save starts here even when blank
   const groups = findGroups(entries);
   return { rom, root, files, entries, groups, adult: groups.length ? findFirstAdult(entries, groups) : -1, egg: findEgg(entries), assetEnd: end, limit, editionId, edition: EDITIONS[editionId] || ('Edition ' + editionId) };
 }

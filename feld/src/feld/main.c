@@ -66,6 +66,7 @@
 #else
 #define F_NEON_SAVES 0x1000u        /* independent native saves, each with its full settings ring */
 #endif
+#define F_RESIDENT_BANKS 0x4000u     /* separate secondary-bank resident snapshots */
 #define SAVE_OFF 0xF06u             /* settings block: number of the active save + 1 (save mode) */
 
 #define APPS_MAX 6
@@ -513,12 +514,34 @@ static void factory_page(u32 i, u8 *p){
   stamp(p);
 }
 
+/* Persistent pages are enumerated in flash order. The edition ID and the
+ * six-field rain/game assets between the native and resident ranges stay outside. */
+static u32 save_first(void){
+  return (g_cfg.flags & F_RESIDENT_BANKS) ? 0xD01000u : g_cfg.user_start;
+}
+static u32 save_end(void){
+  return (g_cfg.flags & F_RESIDENT_BANKS) ? 0xFF0000u : g_cfg.user_end;
+}
+static u32 save_next(u32 a){
+  a+=PAGE;
+  if(g_cfg.flags & F_RESIDENT_BANKS){
+    if(a==0xD29000u) return g_cfg.user_start;
+    if(a==g_cfg.user_end) return 0xFB7000u;
+  }
+  return a;
+}
+static int save_has_page(u32 a){
+  return (a>=g_cfg.user_start && a<g_cfg.user_end) ||
+    ((g_cfg.flags & F_RESIDENT_BANKS) &&
+     ((a>=0xD01000u && a<0xD29000u) || (a>=0xFB7000u && a<0xFF0000u)));
+}
+
 /* Conservative preflight for copy-and-switch, which needs room for the copy
  * and the live backup. Ordinary switching stages the backup directly. */
 static int stash_capacity(u32 extra){
   pool_mark(g_cfg.nslots); u32 free=pool_available(), np=0, on=0, need=extra, pages=0;
   if(need>free) return 0;
-  for(u32 a=g_cfg.user_start;a<g_cfg.user_end;a+=PAGE) if(!page_ff(a)){
+  for(u32 a=save_first();a<save_end();a=save_next(a)) if(!page_ff(a)){
     if(++np>NPAGE_MAX) return 0;
     flash_read(a,g_page,PAGE); u32 n=lz_pack(g_page,g_cmp);
     for(u32 k=0;k<n;k++){
@@ -531,13 +554,13 @@ static int stash_capacity(u32 extra){
 }
 static int stash(u32 fi){
   u32 b=slot_base(fi);
-  u32 tot=0; for(u32 a=g_cfg.user_start;a<g_cfg.user_end;a+=PAGE) if(!page_ff(a)) tot++;
+  u32 tot=0; for(u32 a=save_first();a<save_end();a=save_next(a)) if(!page_ff(a)) tot++;
   if(tot>NPAGE_MAX) return 10;
   for(u32 i=0;i<sizeof(g_hdr)/4;i++) ((u32*)&g_hdr)[i]=0xFFFFFFFFu;
   /* Keep every committed header and its pages intact until the backup verifies. */
   pool_mark(g_cfg.nslots);
   u32 np=0, by=0, sum=0, on=0, nd=0, done=0;
-  for(u32 a=g_cfg.user_start;a<g_cfg.user_end;a+=PAGE){
+  for(u32 a=save_first();a<save_end();a=save_next(a)){
     if(page_ff(a)) continue;
     flash_read(a, g_page, PAGE);
     u32 n=lz_pack(g_page, g_cmp);
@@ -598,7 +621,7 @@ static int restore_check(u32 fi){
   u32 b=slot_base(fi), np=rd32(b+8), by=rd32(b+12), sum=0, off=0, prev=0, sets=0;
   for(u32 i=0;i<np;i++){
     u32 a=rd16(b+32u+4u*i)<<12, n=rd16(b+34u+4u*i);
-    if(a<g_cfg.user_start || a>=g_cfg.user_end || (i && a<=prev) ||
+    if(!save_has_page(a) || (i && a<=prev) ||
        !n || n>sizeof g_cmp || n>by-off) return 21;
     prev=a;
     slot_get(fi,off,n,g_cmp);
@@ -616,13 +639,13 @@ static int restore_check(u32 fi){
 }
 static int restore_loaded(u32 fi,int fresh){
   u32 b=slot_base(fi), np=fresh?0:rd32(b+8);
-  u32 tot=(g_cfg.user_end-g_cfg.user_start)/PAGE, done=0;
+  u32 tot=(g_cfg.user_end-g_cfg.user_start)/PAGE + ((g_cfg.flags & F_RESIDENT_BANKS) ? 97u : 0u), done=0;
   /* Two passes: first everything except the settings block, then the block itself.
    * It holds the field; as long as it is old, the switch counts as not done and after
    * an interruption the menu offers to bring back the old save. */
   for(u32 pass=0;pass<2u;pass++){
     u32 o2=0, ix2=0;
-    for(u32 a=g_cfg.user_start;a<g_cfg.user_end;a+=PAGE){
+    for(u32 a=save_first();a<save_end();a=save_next(a)){
       int set = slot_settings_page(a), want=0;
       if(fresh){
         if(set!=(int)pass) continue;
@@ -2026,29 +2049,38 @@ static u32 chr_body_eyes(u32 body,u32 eyes){
   return body;
 }
 /* Select into a draft only. C returns to the previous step without writing. */
-static int appearance_character(int eye_step,u32 *body,u32 *eyes,u32 color){
+static int appearance_character(int eye_step,int (*eligible)(u32,u32),u32 *body,u32 *eyes,u32 color){
   u32 cur=eye_step?*eyes:*body, body_stage=t_stage(), si;
+  int adult_only=eligible!=0;
   int found=cat_find(*body);
   if(found>=0) body_stage=fl(g_cfg.cat_off+8u+28u*(u32)found+6u)[0];
-  si=body_stage>=2u && body_stage<=5u?body_stage-2u:3u;
+  si=!adult_only && body_stage>=2u && body_stage<=5u?body_stage-2u:3u;
   chr_build(si+2u);
+  if(eligible){
+    u32 n=0;
+    for(u32 i=0;i<g_chrn;i++)
+      if(eligible(rd16(g_cfg.cat_off+8u+28u*g_chr[i]),eye_step?*body:0u))
+        g_chr[n++]=g_chr[i];
+    g_chrn=n;
+  }
   u32 sel=0;
   for(u32 i=0;i<g_chrn;i++) if(rd16(g_cfg.cat_off+8u+28u*g_chr[i])==cur) sel=i;
   for(;;){
     if(!g_chrn){ message("NO CHARACTERS","IN THIS ROM",""); return 0; }
     u32 candidate=rd16(g_cfg.cat_off+8u+28u*g_chr[sel]);
     u32 preview_body=eye_step?*body:candidate, preview_eyes=eye_step?candidate:chr_body_eyes(candidate,*eyes);
-    rect(0,0,FELD_SCREEN_W,FELD_SCREEN_H,BG); menu_title(2,eye_step?"2/3 EYES":"1/3 BODY / STAGE");
+    if(eligible && !eye_step && !eligible(preview_eyes,preview_body)) preview_eyes=preview_body;
+    rect(0,0,FELD_SCREEN_W,FELD_SCREEN_H,BG); menu_title(2,eye_step?"2/3 EYES":adult_only?"1/3 BODY":"1/3 BODY / STAGE");
     char name[24],pos[24]; chr_name(g_chr[sel],name); ctext(14,name,chr_color(candidate,WHITE),1);
     text(3,24,stage_name(si+2u),GREY,1); utoa_(candidate,pos); text(77,24,pos,GOLD,1);
     tama_preview(preview_body,preview_eyes,color);
     utoa_(sel+1u,pos); int n=0; while(pos[n]) n++; pos[n++]='/'; utoa_(g_chrn,pos+n);
-    if(candidate==(eye_step?t_word(6):t_id())){ while(pos[n]) n++; const char *a=" CURRENT"; while(*a) pos[n++]=*a++; pos[n]=0; }
+    if(candidate==(adult_only?cur:eye_step?t_word(6):t_id())){ while(pos[n]) n++; const char *a=" CURRENT"; while(*a) pos[n++]=*a++; pos[n]=0; }
     ctext(102,pos,GOLD,1);
     if(preview_body==preview_eyes) ctext(111,"BODY / EYES MATCH",RGB(120,240,140),1);
-    ctext(120,eye_step?"A NEXT  B OK  C BACK":"A STAGE B OK C BACK",GREY,1); show(); wait_release();
+    ctext(120,eye_step || adult_only?"A NEXT  B OK  C BACK":"A STAGE B OK C BACK",GREY,1); show(); wait_release();
     int k=menu_key();
-    if(k==1 || (eye_step && k==K_A)){ sel=wrap_step(sel,k==K_A?1:g_step,0,g_chrn-1u); continue; }
+    if(k==1 || ((eye_step || adult_only) && k==K_A)){ sel=wrap_step(sel,k==K_A?1:g_step,0,g_chrn-1u); continue; }
     if(k==K_A){
       for(u32 i=0;i<4u;i++){ si=(si+1u)%4u; chr_build(si+2u); if(g_chrn) break; }
       sel=0; continue;
@@ -2074,7 +2106,7 @@ static void appearance_review_labels(const char *body,u16 body_color,const char 
 static void appearance_footer(const char *status,u16 color,int match,int review){
   ctext(102,status,color,1);
   if(match) ctext(111,"BODY / EYES MATCH",RGB(120,240,140),1);
-  ctext(120,review?"B SAVE   C BACK":"B REVIEW  C BACK",WHITE,1); show(); wait_release();
+  ctext(120,review<0?"B NEXT   C BACK":review?"B SAVE   C BACK":"B REVIEW  C BACK",WHITE,1); show(); wait_release();
 }
 /* Body -> same-stage eyes -> color -> review. Persist once after confirmation. */
 static void appearance_edit(void){
@@ -2083,7 +2115,7 @@ static void appearance_edit(void){
   u32 body=t_id(), eyes=t_word(6), color=t_color(), step=0;
   for(;;){
     if(step<2u){
-      if(appearance_character(step==1u,&body,&eyes,color)) step++;
+      if(appearance_character(step==1u,0,&body,&eyes,color)) step++;
       else if(step) step--; else return;
       continue;
     }
@@ -2187,26 +2219,97 @@ static void care_full(void){
   if(!yes_no()) return;
   t_care(15); set_write("TAMA CARED FOR");
 }
+#include "paradise_care_menu.h"
+#ifndef FELD_CLEAN
+#include "paradise_residents_menu.h"
+#endif
+
 static u32 g_care_mask;
+static const u8 care_once_bits[]={8,1,2,4};
 static int care_row(u32 i,char *name,char *right,u16 *col){
-  static const char *const rows[8]={"FULL CARE","EDIT FOOD","EDIT HAPPINESS","CLEAN TAMA","REFILL FOOD","REFILL HAPPINESS","HEAL","APPLY SELECTED"};
-  static const u8 bits[4]={8,1,2,4};
-  const char *s=rows[i]; int n=0; while(*s) name[n++]=*s++; name[n]=0;
-  if(i>=3u && i<=6u){ const char *r=g_care_mask&bits[i-3u]?"ON":"OFF"; n=0; while(*r) right[n++]=*r++; right[n]=0; }
-  *col=i==7u?GOLD:WHITE; return 0;
+  static const char *const rows[]={"FULL CARE","EDIT FOOD","EDIT HAPPINESS","CLEAN TAMA","REFILL FOOD","REFILL HAPPINESS","HEAL","APPLY SELECTED"};
+  u32 patches=care_patches();
+  if(care_layout()){
+    if(patches&CARE_AUTOPILOT_PATCH){
+      if(i==0u){
+        u32 mask=care_enabled(g_set);
+        care_label(name,"AUTOPILOT"); care_label(right,mask==CARE_AUTOPILOT?"ON":mask?"CUSTOM":"OFF");
+        *col=GOLD; return 1;
+      }
+      if(i==1u){ care_label(name,"AUTOPILOT OPTIONS"); return 1; }
+      i-=2u;
+    }
+    if(i==8u){ care_label(name,"CLEAR ALL POOP"); return 1; }
+    if(i==9u){
+      care_label(name,"TRAVEL FUEL"); utoa_(patches&CARE_FUEL_PATCH?CARE_FUEL_MAX:g_set[g_cfg.tama_off+0x1Bu],right);
+      char *p=right; while(*p) p++; care_label(p,"/60"); return 1;
+    }
+  }
+  care_label(name,rows[i]);
+  if(i>=3u && i<=6u) care_label(right,g_care_mask&care_once_bits[i-3u]?"ON":"OFF");
+  *col=i==7u?GOLD:WHITE; return 1;
+}
+static int autopilot_row(u32 i,char *name,char *right,u16 *col){
+  static const char *const rows[]={"KEEP FULL","MAX HAPPINESS","PREVENT ILLNESS","POOP MODE"};
+  u32 mask=care_enabled(g_set);
+  care_label(name,rows[i]);
+  const char *value=i==3u?(mask&CARE_NO_POOP?"NONE":mask&CARE_AUTO_CLEAN?"AUTO":"OFF"):
+    mask&(1u<<i)?"ON":"OFF";
+  care_label(right,value); *col=WHITE; return 1;
+}
+static void autopilot_write(u32 mask,const char *label){
+  if(!care_confirm("SAVE AUTOPILOT?",label)) return;
+  g_set[CARE_SAVE]=CARE_MARK;
+  g_set[CARE_SAVE+1u]=(u8)mask;
+  if(t_alive()) t_care(mask&(CARE_FOOD|CARE_JOY|CARE_HEALTH));
+  if(mask&(CARE_AUTO_CLEAN|CARE_NO_POOP)) care_manage_poop(g_set,care_layout(),mask);
+  set_write("AUTOPILOT SAVED");
+}
+static void autopilot_menu(int master){
+  if(master){
+    u32 mask=care_enabled(g_set)==CARE_AUTOPILOT?0u:CARE_AUTOPILOT;
+    autopilot_write(mask,mask?"ENABLE ALL":"TURN EVERYTHING OFF");
+    return;
+  }
+  static const char *const poop[]={"NORMAL","AUTO CLEAN TO FUEL","NO POOP"};
+  u32 sel=0;
+  for(;;){
+    int row=care_choose("AUTOPILOT OPTIONS",4u,sel,autopilot_row);
+    if(row<0) return;
+    sel=(u32)row;
+    u32 mask=care_enabled(g_set);
+    if(sel==3u){
+      u32 mode=mask&CARE_NO_POOP?0u:mask&CARE_AUTO_CLEAN?2u:1u;
+      mask=(mask&~(CARE_AUTO_CLEAN|CARE_NO_POOP))|(mode==1u?CARE_AUTO_CLEAN:mode==2u?CARE_NO_POOP:0u);
+      autopilot_write(mask,poop[mode]);
+    }else{
+      u32 bit=1u<<sel;
+      mask^=bit;
+      autopilot_write(mask,mask&bit?"ENABLE OPTION":"DISABLE OPTION");
+    }
+  }
 }
 static void care_menu(void){
   u32 sel=0; g_care_mask=0;
-  static const u8 bits[4]={8,1,2,4};
+  const struct CareLayout *layout=care_layout();
+  u32 first=(care_patches()&CARE_AUTOPILOT_PATCH)?2u:0u;
   for(;;){
-    list_draw("CARE",8,sel,0,care_row,"B SELECT  C BACK"); wait_release();
-    int k=menu_key();
-    if(k==K_BACK) return;
-    if(k==1 || k==K_A){ sel=wrap_step(sel,k==K_A?1:g_step,0,7); continue; }
-    if(k!=K_OK) continue;
-    if(sel==0) care_full();
-    else if(sel<3) tama_number(sel);
-    else if(sel<7) g_care_mask^=bits[sel-3u];
+    int row=care_choose("CARE",first+(layout?10u:8u),sel,care_row);
+    if(row<0) return;
+    sel=(u32)row;
+    if(sel<first){ autopilot_menu(sel==0u); continue; }
+    u32 action=sel-first;
+    if(layout && action==8u){
+      if(care_confirm("CLEAR ALL POOP?","CURRENT SAVE")){
+        care_clear_poop(g_set,layout); care_clear_event(g_set,layout->pet,0xEu); set_write("POOP CLEARED");
+      }
+      continue;
+    }
+    if(layout && action==9u){ care_fuel_menu(); continue; }
+    if(!t_alive()){ message("NO CURRENT TAMA","HATCH AN EGG FIRST",""); continue; }
+    if(action==0u) care_full();
+    else if(action<3u) tama_number(action);
+    else if(action<7u) g_care_mask^=care_once_bits[action-3u];
     else if(g_care_mask){
       rect(0,0,FELD_SCREEN_W,FELD_SCREEN_H,BG); ctext(16,"APPLY SELECTED CARE?",GOLD,1);
       int y=39; static const char *const names[4]={"REFILL FOOD","REFILL HAPPINESS","HEAL","CLEAN TAMA"};
@@ -2217,7 +2320,7 @@ static void care_menu(void){
   }
 }
 static void big_entry(int y, int sel, const char *name, const char *st, u16 c, u16 stc);
-static const char *const tama_rows[]={"CARE","APPEARANCE","AGE (DAYS)","PREVIEW"};
+static const char *const tama_rows[]={"CARE","APPEARANCE","AGE (DAYS)","PREVIEW","STARS","FIELD RESIDENTS"};
 static void tama_value(u32 i,char *out){
   const char *s=""; out[0]=0;
   if(i==0){
@@ -2228,19 +2331,25 @@ static void tama_value(u32 i,char *out){
   if(i==1){ int k=cat_find(t_id()); if(k>=0){ chr_name((u32)k,out); return; } s="UNKNOWN"; }
   if(i==2){ utoa_(t_word(0xCu),out); return; }
   if(i==3) s="VIEW CURRENT TAMA";
+  if(i==4) s="PAST TAMAS";
+  if(i==5) s="RELEASED TAMAS";
   while(*s) *out++=*s++; *out=0;
 }
 static void tama_menu(void){
   if(set_check_msg()) return;
   if(!t_layout()){ message("TAMA SAVE FORMAT","NOT SUPPORTED",""); return; }
-  const u32 n=sizeof(tama_rows)/sizeof(tama_rows[0]);
+  u32 n=care_layout()?5u:4u;
+#ifndef FELD_CLEAN
+  if(nfields() && resident_layout()) n=6u;
+#endif
   u32 sel=0;
   for(;;){
     rect(0,0,FELD_SCREEN_W,FELD_SCREEN_H,BG); menu_title(2,"TAMA");
     for(u32 i=0;i<n;i++){
-      int y=12+(int)i*20; char value[24]; tama_value(i,value);
-      if(i==sel) rect(0,y,128,y+20,RGB(60,60,110));
-      text(3,y,tama_rows[i],WHITE,1);
+      int height=n==6u?17:20;
+      int y=12+(int)i*height; char value[24]; tama_value(i,value);
+      if(i==sel) rect(0,y,128,y+height,RGB(60,60,110));
+      text(3,y,i==5u && (g_cfg.flags & F_NEON_EDIT)?"PLANET RESIDENTS":tama_rows[i],WHITE,1);
       if(i==0){
         int x=9; const char *s=value; u16 digits=RGB(120,240,140);
         while(*s){
@@ -2257,8 +2366,13 @@ static void tama_menu(void){
     if(k==1 || k==K_A){ sel=wrap_step(sel,k==K_A?1:g_step,0,n-1u); continue; }
     if(k==K_BACK) return;
     if(k!=K_OK) continue;
+    if(sel==0u){ care_menu(); continue; }
+    if(sel==4u){ stars_menu(); continue; }
+#ifndef FELD_CLEAN
+    if(sel==5u){ residents_menu(); continue; }
+#endif
     if(!t_alive()){ message("NO CURRENT TAMA","HATCH AN EGG FIRST",""); continue; }
-    if(sel==0) care_menu(); else if(sel==1) appearance_edit();
+    if(sel==1) appearance_edit();
     else if(sel==2) tama_number(0);
     else {
       rect(0,0,FELD_SCREEN_W,FELD_SCREEN_H,BG); menu_title(8,"CURRENT TAMA"); tama_preview(t_id(),t_word(6),t_color());

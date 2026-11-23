@@ -1,10 +1,9 @@
-// Compatibility of the My Lab v1.0.00 firmware with the Paradise screen patches.
+// Firmware profiles supported by the Paradise port.
 (function (root) {
 'use strict';
 const C = root.ParamixCore || (typeof require === 'function' ? require('./core') : null);
 const M = root.ParamixMyLab || (typeof require === 'function' ? require('./mylab') : null);
-const SIZE = 0x1000000, ASSETS = 0x211000, TRAILER = 0xA6B000;
-const HEADER = 0x100000, XIP = 0x111000, CHUNK = 0x4000;
+const SIZE = 0x1000000, HEADER = 0x100000, CHUNK = 0x4000;
 const crc = (rom, start, length) => C.crc32(rom.subarray(start, start + length));
 const text = (rom, offset, length) => String.fromCharCode(...rom.subarray(offset, offset + length));
 const view = rom => new DataView(rom.buffer, rom.byteOffset, rom.byteLength);
@@ -51,6 +50,38 @@ const adapterCrcs = [
   0xE0722EA2, 0x8D1A5666, 0x23F0417B, 0x59D8A174, 0x752BE1D5, 0x365F6437,
   0x33A78456, 0xE7EE2CF1, 0xB5EC9F70, 0x4E6E4393, 0x36E7C760, 0xF04D170E,
 ];
+const profiles = new Map([
+  ['1.0.00', [{
+    id: 'mylab-1.0.00-retail',
+    trailer: 0xA6B000,
+    headerCrc: 0x6DEFC54A,
+    assets: 0x211000,
+    assetEntries: 24,
+    languageEntries: 9,
+    minSprites: 1749,
+    pram: 0x101000,
+    pramCrc: { native: 0xFDD503FA, paradise: 0xA99EC765 },
+    sleepPage: 0x110000,
+    sleepCrc: 0xFFC5881E,
+    sleepDiagnostic: { offset: 0x19D108, crc: 0xD24EFE8B },
+    xip: 0x111000,
+    gameChunks,
+    adapter: { game: 0x19E000, boot: 0x45000, crcs: adapterCrcs },
+    display: { entry: 0x1647A4, native: 0xB082B580, paradise: 0xBC2CF039 },
+  }]],
+]);
+function candidates(rom) {
+  let version = null;
+  if (ArrayBuffer.isView(rom) && rom.BYTES_PER_ELEMENT === 1 && rom.length === SIZE &&
+      text(rom, HEADER, 8) === 'SN_FWIN\0') {
+    const field = text(rom, HEADER + 8, 8).replace(/\0+$/, '');
+    version = /^v(\d+\.\d+\.\d+)$/.exec(field)?.[1] || null;
+  }
+  const matches = (profiles.get(version) || []).filter(profile =>
+    crc(rom, HEADER, 4096) === profile.headerCrc &&
+    crc(rom, profile.trailer, 4096) === profile.headerCrc);
+  return { version, matches };
+}
 function archive(rom, offset, count, limit) {
   const v = view(rom);
   if (offset + 16 + count * 16 > limit || text(rom, offset, 4) !== 'ARC2' ||
@@ -68,13 +99,13 @@ function archive(rom, offset, count, limit) {
   }
   return v.getUint32(offset + 4, true) === C.arc2Checksum(rom, offset, length);
 }
-function assetsSupported(rom) {
-  if (!archive(rom, ASSETS, 24, TRAILER)) return false;
+function assetsSupported(rom, { assets, trailer, assetEntries, languageEntries, minSprites }) {
+  if (!archive(rom, assets, assetEntries, trailer)) return false;
   const v = view(rom), read = at => v.getUint32(at, true);
-  const strings = ASSETS + read(ASSETS + 52);
-  if (!archive(rom, strings, 9, strings + read(ASSETS + 60))) return false;
-  const sprites = ASSETS + read(ASSETS + 36), size = read(ASSETS + 44);
-  if (size < 4 || read(sprites) % 4 || read(sprites) < 4 * 1749 || read(sprites) > size / 6)
+  const strings = assets + read(assets + 52);
+  if (!archive(rom, strings, languageEntries, strings + read(assets + 60))) return false;
+  const sprites = assets + read(assets + 36), size = read(assets + 44);
+  if (size < 4 || read(sprites) % 4 || read(sprites) < 4 * minSprites || read(sprites) > size / 6)
     return false;
   const indexSize = read(sprites);
   for (let i = 0; i < indexSize; i += 4) {
@@ -86,58 +117,62 @@ function assetsSupported(rom) {
   }
   return true;
 }
-function inspect(rom, operations) {
-  let version = null;
-  const fail = reason => ({ supported: false, state: null, version, reason });
+function inspect(rom, operationsFor, firmwareOnly = false) {
+  const { version, matches } = candidates(rom);
+  const fail = reason => ({ supported: false, state: null, version, reason, portSupported: false });
+  if (!matches.length) return fail('Unrecognized My Lab firmware header or trailer');
+  const results = matches.map(profile => inspectProfile(rom, profile, version, operationsFor(profile.id), firmwareOnly));
+  const identified = results.filter(result => result.profileId);
+  if (identified.length > 1) return fail('Ambiguous My Lab firmware profile');
+  return identified[0] || results[0];
+}
+
+function inspectProfile(rom, profile, version, operations, firmwareOnly) {
+  let profileId = null, portSupported = false;
+  const fail = reason => ({ supported: false, state: null, version, reason, profileId, portSupported });
   try {
-    if (!ArrayBuffer.isView(rom) || rom.BYTES_PER_ELEMENT !== 1 || rom.length !== SIZE)
-      return fail('Invalid My Lab ROM size');
-    if (text(rom, HEADER, 8) === 'SN_FWIN\0') {
-      const field = text(rom, HEADER + 8, 8).replace(/\0+$/, '');
-      version = /^v(\d+\.\d+\.\d+)$/.exec(field)?.[1] || null;
-    }
-    if (version !== '1.0.00' || crc(rom, HEADER, 4096) !== 0x6DEFC54A ||
-        crc(rom, TRAILER, 4096) !== 0x6DEFC54A)
-      return fail('Unrecognized My Lab firmware header or trailer');
-    const mode = operations.status(rom);
+    const mode = operations?.status(rom);
     if (!mode) return fail('Unrecognized My Lab launcher');
     const port = M.hasParadisePortMarker(rom);
     const source = port ? 'paradise' : mode === 'install' ? 'stock' : 'native-menu';
-    const sleepHandler = crc(rom, 0x110000, 4096);
-    const diagnostic = port && text(rom, 0x19D108, 8) === 'PXMLSLPD' &&
-      sleepHandler === 0xD24EFE8B;
-    if (crc(rom, 0x101000, 0xF000) !== (port ? 0xA99EC765 : 0xFDD503FA) ||
-        (sleepHandler !== 0xFFC5881E && !diagnostic) ||
-        crc(rom, XIP, CHUNK) !== gameChunks[0][0])
+    const { pram, pramCrc, sleepPage, sleepCrc, sleepDiagnostic, xip, gameChunks, adapter, display } = profile;
+    const sleepHandler = crc(rom, sleepPage, 4096);
+    const diagnostic = port && text(rom, sleepDiagnostic.offset, 8) === 'PXMLSLPD' &&
+      sleepHandler === sleepDiagnostic.crc;
+    if (crc(rom, pram, sleepPage - pram) !== pramCrc[port ? 'paradise' : 'native'] ||
+        (sleepHandler !== sleepCrc && !diagnostic) || crc(rom, xip, CHUNK) !== gameChunks[0][0])
       return fail('Unrecognized My Lab game program');
-    if (!assetsSupported(rom)) return fail('Unrecognized My Lab asset layout');
+
+    // Port normalization reads existing screen assets and must validate them first.
+    if (port && !assetsSupported(rom, profile)) return fail('Unrecognized My Lab asset layout');
     const state = port ? operations.state(rom) : false;
-    const original = Uint8Array.from(rom);
-    const plain = port ? operations.edit(original, false) : original;
-    if (port) operations.normalizeSceneWheel(plain);
-    if (!gameChunks.every((allowed, i) => allowed.includes(crc(plain, XIP + i * CHUNK, CHUNK))))
+    const plain = port || !firmwareOnly ? Uint8Array.from(rom) : rom;
+    const normalized = port ? operations.edit(plain, false) : plain;
+    if (port) operations.normalizeSceneWheel(normalized);
+    if (!gameChunks.every((allowed, i) => allowed.includes(crc(normalized, xip + i * CHUNK, CHUNK))))
       return fail('Unrecognized My Lab game program');
     if (port) {
-      const gameAdapter = crc(plain, 0x19E000, 4096);
-      if (!adapterCrcs.includes(gameAdapter) || gameAdapter !== crc(plain, 0x45000, 4096))
+      const gameAdapter = crc(normalized, adapter.game, 4096);
+      if (!adapter.crcs.includes(gameAdapter) || gameAdapter !== crc(normalized, adapter.boot, 4096))
         return fail('Unrecognized Paradise display adapter');
-    } else {
-      // The real port installs both the display call and the wheel controls
-      // before applying screen corrections. Preview those dependencies here.
-      const v = view(plain);
-      if (v.getUint32(0x1647A4, true) !== 0xB082B580)
+    }
+    profileId = profile.id;
+    portSupported = !port;
+    if (!port && firmwareOnly) return { supported: false, state: null, version, source, profileId, portSupported };
+    if (!port) {
+      if (!assetsSupported(rom, profile)) return fail('Unrecognized My Lab asset layout');
+      const v = view(normalized);
+      if (v.getUint32(display.entry, true) !== display.native)
         return fail('Unrecognized My Lab display entry');
-      v.setUint32(0x1647A4, 0xBC2CF039, true);
-      operations.prepareWheel(plain);
+      v.setUint32(display.entry, display.paradise, true);
+      operations.prepareWheel(normalized);
     }
-    const fitted = operations.edit(plain, true);
-    // A recognized marker by itself is insufficient. Exercise both sets of
-    // structure and backup guards, including the native sprite capacities.
+    const fitted = operations.edit(normalized, true);
     const restored = operations.edit(fitted, false);
-    for (let i = 0; i < plain.length; i++) {
-      if (plain[i] !== restored[i]) return fail('My Lab screen corrections do not restore the original data');
+    for (let i = 0; i < normalized.length; i++) {
+      if (normalized[i] !== restored[i]) return fail('My Lab screen corrections do not restore the original data');
     }
-    return { supported: true, state, version, source };
+    return { supported: true, state, version, source, profileId, portSupported };
   } catch (error) {
     return fail(error instanceof Error ? error.message : 'Unrecognized My Lab screen layout');
   }

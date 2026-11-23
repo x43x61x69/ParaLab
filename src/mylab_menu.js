@@ -838,21 +838,26 @@ function editScreenFit(image, enabled, legacyCode) {
   return enabled ? withScreenCorrections(walk, true) : walk;
 }
 
-function screenFitSupport(image, legacyCode) {
-  return screenSupport.inspect(image, {
-    status, state: screenFitState, prepareWheel: installParadiseWheel, normalizeSceneWheel: image => setSceneWheel(image, false),
+const screenFitOperations = {
+  'mylab-1.0.00-retail': legacyCode => ({
+    status, state: screenFitState, prepareWheel: installParadiseWheel,
+    normalizeSceneWheel: image => setSceneWheel(image, false),
     edit: (copy, on) => editScreenFit(copy, on, legacyCode),
-  });
+  }),
+};
+function screenFitSupport(image, legacyCode, firmwareOnly = false) {
+  return screenSupport.inspect(image, id => screenFitOperations[id]?.(legacyCode), firmwareOnly);
 }
 function requireScreenFitPort(image, legacyCode) {
   const compatibility = screenFitSupport(image, legacyCode);
   if (!compatibility.supported || compatibility.source !== 'paradise')
     throw new Error(compatibility.reason || 'Screen corrections require a supported My Lab on Paradise ROM');
+  return compatibility.profileId;
 }
 function withScreenFit(image, enabled, legacyCode) {
   if (enabled === null) return image;
-  requireScreenFitPort(image, legacyCode);
-  return editScreenFit(image, enabled, legacyCode);
+  const profileId = requireScreenFitPort(image, legacyCode);
+  return screenFitOperations[profileId](legacyCode).edit(image, enabled);
 }
 
 function hasLegacySettingsLayout(image) {
@@ -1079,10 +1084,12 @@ function installParadiseSleep(image, hasParkHook = false, hasWheelWakeHook = fal
 function updateParadiseImage(rom, { feld, gamePort, stub, flashApp }) {
   if (!M.isParadiseFlashImage(rom, C) || !gamePort.length || gamePort.length > 0x1000)
     throw new Error('Invalid Paradise boot or rescue layout');
+  const compatibility = screenFitSupport(rom);
+  if (compatibility.profileId !== 'mylab-1.0.00-retail')
+    throw new Error('Unsupported My Lab firmware for Paradise port updates');
   // Upgrade earlier cameras before checking the boot and game adapters.
   // The standalone experiment also needs its adapter hook restored.
-  const mayMigrateScreen = screenFitSupport(rom).supported;
-  if (mayMigrateScreen && labPan.isLegacy(rom)) {
+  if (compatibility.supported && labPan.isLegacy(rom)) {
     const migrated = Uint8Array.from(rom);
     labPan.apply(migrated, true);
     rom = migrated;
@@ -1115,7 +1122,7 @@ function updateParadiseImage(rom, { feld, gamePort, stub, flashApp }) {
   }
   if (C.crc32(image.subarray(0x110000, 0x111000)) !== 0xFFC5881E)
     throw new Error('Unexpected deep power-down handler');
-  if (mayMigrateScreen && gamesFit.upgradePresenter(image)) updateLayoutChecksum(image);
+  if (compatibility.supported && gamesFit.upgradePresenter(image)) updateLayoutChecksum(image);
   image.fill(0, NATIVE_HOOK + 0x108, NATIVE_HOOK + 0x110);
   setSceneWheel(image);
   installParadiseP23(image);
@@ -1147,7 +1154,8 @@ function updateParadiseImage(rom, { feld, gamePort, stub, flashApp }) {
 async function forParadise(rom, { feld, flashApp, hook, gamePort, stub }, backup, subtle = root.crypto?.subtle) {
   if (!subtle) throw new Error('Web Crypto is unavailable');
   const backupEdition = backup && validateParadiseBackup(backup);
-  if (!M.isFlashImage(rom, C) || tag(rom, NATIVE_HOOK + 0x100, 8) !== 'PXMLAB02' ||
+  if (!screenFitSupport(rom, null, true).portSupported ||
+      !M.isFlashImage(rom, C) || tag(rom, NATIVE_HOOK + 0x100, 8) !== 'PXMLAB02' ||
       C.crc32(rom.subarray(STOCK_BOOT, STOCK_BOOT + BOOT_SIZE)) !== BOOT_CRC) {
     throw new Error('Expected a My Lab v1.0.00 image with the Computer menu and Flash Tool');
   }
@@ -1214,6 +1222,8 @@ function paradiseBins() {
 }
 
 async function createParadiseImage(rom, backup, key) {
+  if (!screenFitSupport(rom, null, true).portSupported)
+    throw new Error('Unsupported My Lab firmware for Paradise porting');
   if (status(rom) === 'install') rom = await apply(rom, key);
   return forParadise(rom, paradiseBins(), backup);
 }

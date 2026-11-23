@@ -40,11 +40,19 @@ function w32(b, o, v) { b[o] = v & 255; b[o + 1] = (v >>> 8) & 255; b[o + 2] = (
 /** Edition 5/6 (Tropical, Glacier) keep their ID page lower. */
 function idPage(edition) { return edition === 8 ? 0xD85000 : edition >= 5 && edition <= 7 ? 0xD29000 : 0xD49000; }
 function region(edition) { return [idPage(edition) + PAGE, REGION_END]; }
+function residentRanges(rom) {
+  const residentBanks = root.ParamixResidentBanks || (typeof require !== 'undefined' ? require('./paradise_resident_banks.js') : null);
+  return residentBanks?.inspect(rom)?.ranges || [];
+}
+function paraRanges(rom, edition) {
+  return [region(edition), ...residentRanges(rom)];
+}
 function paraClear(rom, edition) {
   if (rom.length !== 0x1000000 || !Number.isInteger(edition) || edition < 1 || edition > 8)
     throw new Error('expected a Paradise ROM with a known save layout');
-  const [start, end] = region(edition);
-  return new Uint8Array(rom).fill(0xFF, start, end);
+  const out = new Uint8Array(rom);
+  for (const [start, end] of paraRanges(rom, edition)) out.fill(0xFF, start, end);
+  return out;
 }
 function family(edition) { return edition === 8 ? 'neon' : edition >= 5 && edition <= 7 ? 'gen3' : edition === 4 ? 'jade' : 'gen1'; }
 
@@ -76,8 +84,9 @@ function neonSettings(pages) {
 // ---------------------------------------------------------------- Paradise
 /** Pages of the save region from a 16 MB image (all of them, empty ones too). */
 function paraFromImage(img, edition) {
-  const [a, b] = region(edition), pages = new Map();
-  for (let p = a; p < b; p += PAGE) pages.set(p, img.slice(p, p + PAGE));
+  const pages = new Map();
+  for (const [a, b] of paraRanges(img, edition))
+    for (let p = a; p < b; p += PAGE) pages.set(p, img.slice(p, p + PAGE));
   return pages;
 }
 /**
@@ -154,14 +163,15 @@ function paraDecode(b) {
  * Can this save go onto a device of this edition? Returns { errors, warnings, pages (only the
  * save region, full 4 KB), complete }.
  */
-function paraCheck(save, edition) {
+function paraCheck(save, edition, extra = []) {
   const errors = [], warnings = [], [a, b] = region(edition), pages = new Map();
   // 1.7.6 SAVE_FAMILY: the field switch changes the ID (Land/Water/Sky, Tropical/Glacier and their Forest/Sky): a save
   // of the same firmware fits, before a save from Tropical was refused on the device once it had switched to Glacier
   if (save.edition && family(save.edition) !== family(edition)) errors.push({ code: 'saveOtherEd', p: { s: save.edition, d: edition } });
+  const supplemental = [...save.pages.keys()].some(p => extra.some(([from, to]) => p >= from && p < to));
   let outside = 0;
   for (const [p, d] of save.pages) {
-    if (p < a || p >= b || d.length !== PAGE) { outside++; continue; }
+    if (((p < a || p >= b) && !extra.some(([from, to]) => p >= from && p < to)) || d.length !== PAGE) { outside++; continue; }
     pages.set(p, d);
   }
   if (outside) warnings.push({ code: 'saveOutside', p: { n: outside } });
@@ -174,15 +184,20 @@ function paraCheck(save, edition) {
     // The word at +0x0C advances with the clock. Prefer the start of a whole
     // backup, with the old heuristic only for partial saves without metadata.
     const [gen3Start] = region(5), [olderStart] = region(1);
-    const first = [...save.pages.keys()].reduce((min, at) => Math.min(min, at), Infinity);
+    const first = [...save.pages.keys()].reduce((min, at) => at < a && extra.some(([from, to]) => at >= from && at < to) ? min : Math.min(min, at), Infinity);
     const gen3 = first === gen3Start || (first !== olderStart && u16(set, 12) === 0x016D);
     if (first === region(8)[0] || gen3 !== (family(edition) === 'gen3'))
       errors.push({ code: 'saveFamily' });
   }
   let complete = true;
   for (let p = a; p < b; p += PAGE) if (!pages.has(p)) { complete = false; break; }
+  if (supplemental) {
+    for (const [from, to] of extra) for (let p = from; p < to; p += PAGE) {
+      if (!pages.has(p)) complete = false;
+    }
+  }
   if (!complete) warnings.push({ code: 'saveIncomplete' });
-  return { errors, warnings, pages, complete };
+  return { errors, warnings, pages, complete, supplemental };
 }
 /** Seconds counter to set on the device: the saved one plus the time since. */
 function paraClock(save, now = Math.floor(Date.now() / 1000)) {
@@ -470,6 +485,6 @@ function t7SaveIn(img, save, base = 0xC0000) {
   return out;
 }
 
-root.ParamixSaves = { paraPet, paraPetSet, neonSaveLayout, neonSettings, neonProgress, neonProgressSet, paraClear, paraWrite, t7SaveOut, t7SaveIn, t7SaveCheck, T7_EE, idPage, region, family, settingsOk, sealSettings, crc16arc, paraFromImage, paraEncode, paraDecode, paraCheck, paraClock, emuCfg, emuGuestAsync, lzGoneApply, KINDS, NEON_SETTINGS, NEON_GENERATION, SET_A, SET_B };
+root.ParamixSaves = { paraPet, paraPetSet, neonSaveLayout, neonSettings, neonProgress, neonProgressSet, paraClear, paraWrite, t7SaveOut, t7SaveIn, t7SaveCheck, T7_EE, idPage, region, residentRanges, paraRanges, family, settingsOk, sealSettings, crc16arc, paraFromImage, paraEncode, paraDecode, paraCheck, paraClock, emuCfg, emuGuestAsync, lzGoneApply, KINDS, NEON_SETTINGS, NEON_GENERATION, SET_A, SET_B };
 if (typeof module !== 'undefined') module.exports = root.ParamixSaves;
 })(typeof window !== 'undefined' ? window : globalThis);

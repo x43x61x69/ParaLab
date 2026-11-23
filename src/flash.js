@@ -76,6 +76,7 @@ const MSG = {
   lowBatteryLegacy: 'The installed My Lab Flash Tool reported low battery ({v} V). Start the UART tool from a newer My Lab update package, then reconnect.',
   readErr: 'read error at {a}',
   noCrc: 'no checksum at {a}',
+  quickReadSource: 'Quick Read requires a 16 MB ROM from the same product series as the connected firmware.',
   cancelled: 'cancelled',
   size: 'the image must be exactly 16 MB',
   notParadise: 'not a Paradise image (SONIXDEV missing)',
@@ -842,6 +843,41 @@ class Paradise {
     }
     return img;
   }
+  canQuickDump(base) {
+    const info = this.info;
+    if (!info || info.capacity !== FLASH_SIZE || info.flashError ||
+        info.editionIdentified === false || base?.length !== FLASH_SIZE) return false;
+    const ML = root.ParamixMyLab || (typeof require !== 'undefined' ? require('./mylab.js') : null);
+    const F = root.ParamixFeld || (typeof require !== 'undefined' ? require('./feld.js') : null);
+    if (ML?.hasParadisePortMarker(base))
+      return info.edition === MY_LAB_ON_PARADISE && ML.isParadiseFlashImage(base, { crc32 });
+    if (ML?.isMyLab(base) || ML?.isFlashImage(base, { crc32 })) return info.edition === 0xFE;
+    return !!EDITIONS[info.edition] && !!F?.edition(base);
+  }
+  /** Reconstruct all flash bytes against the on-device checksums. */
+  async quickDump(base, progress, cancel) {
+    if (!this.canQuickDump(base)) throw fe('quickReadSource');
+    const img = new Uint8Array(base);
+    const checkCancel = () => { if (cancel?.()) throw fe('cancelled'); };
+    await this.reportProgress('read', 0, FLASH_SIZE, progress);
+    for (let off = 0; off < FLASH_SIZE; off += BLOCK64) {
+      checkCancel();
+      const expected = await this.crc(off, BLOCK64);
+      if (expected !== crc32(img, off, BLOCK64)) {
+        for (let sector = off; sector < off + BLOCK64; sector += SECTOR) {
+          checkCancel();
+          if (await this.crc(sector, SECTOR) !== crc32(img, sector, SECTOR)) {
+            checkCancel();
+            img.set(await this.read(sector, SECTOR), sector);
+          }
+        }
+        if (expected !== crc32(img, off, BLOCK64)) throw fe('checkFail', { a: hex(off) });
+      }
+      await this.reportProgress('read', off + BLOCK64, FLASH_SIZE, progress);
+    }
+    checkCancel();
+    return img;
+  }
   /** Sectors (4 KB offsets) where the device differs from img, in [from, to). */
   async changed(img, progress, cancel, from = 0, to = FLASH_SIZE, phase = 'compare') {
     const out = new Set();
@@ -1151,6 +1187,10 @@ function keepPlan(F, E, menu, opts = {}) {
     // six fields keep pictures from 0xF00000; a start device (1.6.8) may have programs there (the Paradise never writes there)
     const launchImg = !!(menu && F.isLaunch && F.isLaunch(img, menu.stub));
     const ranges = mainOk ? [[ed.profile.idPage + (sameFam ? 0 : SECTOR), (F.isSix && F.isSix(img)) || launchImg || (NEON_HI && ed.profile.ring) ? 0xF00000 : FLASH_SIZE]] : [];   // NEON_HI: Neon's save ends at 0xF00000, programs may follow
+    const residentBanks = root.ParamixResidentBanks;
+    const targetResidents = mainOk && residentBanks?.inspect(img);
+    const sourceResidents = targetResidents && residentBanks.inspect(view);
+    if (sourceResidents) ranges.push(...targetResidents.ranges);
     if (clean && dclean) { const ci = F.cleanInfo(img), cd = F.cleanInfo(view); if (ci && cd && ci.clock === cd.clock) ranges.push([ci.clock, ci.clock + SECTOR]); }
     // field slots
     const fi = menu && F.feldFind(img, menu.stub), fd = menu && F.feldFind(view, menu.stub);
@@ -1432,6 +1472,22 @@ function keepPlan(F, E, menu, opts = {}) {
         if (!prot.has(s) || !neon.clearPlaceholderCounts(image.subarray(s, s + SECTOR))) continue;
         changed.add(s);
         prot.delete(s);
+      }
+    }
+    if (targetResidents && !sourceResidents) {
+      // The old device may have stored menu-pool data in these addresses.
+      // The new geometry gets its saves using the migration above, then the
+      // secondary residents are seeded from the live native save we kept.
+      const source = new Uint8Array(image);
+      for (const [from, to] of targetResidents.ranges) source.fill(0xFF, from, to);
+      const migrated = residentBanks.migrate(source);
+      for (const [from, to] of targetResidents.ranges) {
+        image.set(migrated.subarray(from, to), from);
+        for (let s = from; s < to; s += SECTOR) {
+          const before = dev.crc ? await dev.crc(s, SECTOR) : crc32(await dev.read(s, SECTOR));
+          if (before === crc32(image, s, SECTOR)) changed.delete(s);
+          else changed.add(s);
+        }
       }
     }
     if (opts.after) { const before = image.slice(); await opts.after(image); for (let s = 0; s < image.length; s += SECTOR) { if (changed.has(s)) continue; for (let i = s; i < s + SECTOR; i++) if (image[i] !== before[i]) { changed.add(s); break; } } }

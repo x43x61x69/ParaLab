@@ -109,7 +109,7 @@ function reservations(b) {
   for(let off=0x90000;off<0x110000;off+=PAGE){const c=off+0x140;if(U(b,c)!==0x444C4546)continue;const version=U(b,c+4);if(version<4 || version>11)throw new Error('unsupported Paramix allocation version');
     const stub=U(b,c+32),count=U(b,c+276),catAt=U(b,c+272);if(stub<0x90000 || stub>=0x110000 || count>2048)throw new Error('invalid Paramix allocation');
     add(stub,PAGE);add(off,0x10000);
-    if(catAt){if(U(b,catAt)!==0x54414350 || U(b,catAt+4)!==count)throw new Error('invalid Paramix catalog');let end=catAt+8+count*28;if(U(b,end)===0x54584550)end+=4+12*count;if(U(b,end)===0x56525054){let n=U(b,end+12),size=U(b,end+8);if(n>256 || size>128)throw new Error('invalid preview catalog');end+=24+n*size;}add(catAt,end-catAt);}
+    if(catAt){if(U(b,catAt)!==0x54414350 || U(b,catAt+4)!==count)throw new Error('invalid Paramix catalog');let end=catAt+8+count*28;if(U(b,end)===0x54584550)end+=4+12*count;if(U(b,end)===0x56525054){let n=U(b,end+12),size=U(b,end+8);if(n>256 || size>128)throw new Error('invalid preview catalog');end+=24+n*size;}if(U(b,end)===0x31435352){let n=U(b,end+4),size=U(b,end+8);if(n>256 || size!==0x104)throw new Error('invalid resident catalog');end+=16+n*size;}add(catAt,end-catAt);}
     const slots=U(b,c+16),size=U(b,c+12),first=U(b,c+8),second=U(b,c+364),split=U(b,c+368);if(slots>6 || (slots && (size<8192 || size%PAGE || split>slots || (second && !split))))throw new Error('invalid Paramix slots');
     for(let i=0;i<slots;i++)add(second && i>=split?second+(i-split)*size:first+i*size,size);
     if(U(b,c+36)&0x1000){if(first!==0xD25000 || size!==0x20000 || slots!==3 || second || split)throw new Error('invalid Neon save reservation');add(first-2*PAGE,2*PAGE);}

@@ -134,7 +134,8 @@ let feld = fs.readFileSync(__dirname + '/src/feld.js', 'utf8');
     if (!fs.readFileSync(__dirname + '/feld/' + name).includes(Buffer.from('PMXVER:' + v + '\0')))
       throw new Error('ParaLab menu version does not match VERSION; run sh feld/src/feld/build.sh first');
   }
-  feld = feld.replace('__FELD_B64__', d('feld.bin')).replace('__FELD_STUB_B64__', d('stub_feld_tpl.bin'));
+  feld = feld.replace('__FELD_B64__', d('feld.bin')).replace('__FELD_STUB_B64__', d('stub_feld_tpl.bin'))
+    .replace('__FELD_CARE_B64__', d('paradise-care.bin'));
   if (fs.existsSync(__dirname + '/feld/feldc.bin')) feld = feld.replace('__FELDC_B64__', d('feldc.bin'));   // 1.7.2 CLEAN_ROM: menu for ROMs without the Paradise
 }
 // Six fields: helper page (source in six/src)
@@ -173,6 +174,14 @@ let flash = fs.readFileSync(__dirname + '/src/flash.js', 'utf8');
   }
 }
 const saves = fs.readFileSync(__dirname + '/src/saves.js', 'utf8');
+const residentBanks = fs.readFileSync(__dirname + '/src/paradise_resident_banks.js', 'utf8')
+  .replace('__RESIDENT_BANK_HELPER__', fs.readFileSync(__dirname + '/six/resident-banks/helper.bin').toString('base64'));
+new (require('vm').Script)(residentBanks, { filename: 'paradise_resident_banks.js' });
+const residents = fs.readFileSync(__dirname + '/src/paradise_residents.js', 'utf8');
+for (const [name, source] of [['paradise_resident_banks.js', residentBanks], ['paradise_residents.js', residents]]) {
+  if (source.includes('</script')) throw new Error(name + ' contains a script end tag');
+  new (require('vm').Script)(source, { filename: name });
+}
 const visit = fs.readFileSync(__dirname + '/src/visit.js', 'utf8');
 if (visit.includes('</script')) throw new Error('script end tag inside source');
 new (require('vm').Script)(visit, { filename: 'visit.js' });
@@ -185,7 +194,7 @@ if (feld.includes('</script')) throw new Error('script end tag inside source');
 if (core.includes('</script') || app.includes('</script') || emu.includes('</script')) throw new Error('script end tag inside source');
 if (labItems.includes('</script')) throw new Error('lab_items.js contains a script end tag');
 html = html.replace('__LAB_ITEMS__', () => labItems);
-html = html.replace('__CORE__', () => core).replace('__SETTINGS__', () => settings).replace('__HOME_MENU__', () => homeMenu).replace('__LAB_RELEASE__', () => labRelease).replace('__EMU__', () => emu).replace('__FELD__', () => feld).replace('__SIX__', () => six).replace('__LEGACY_LZ4__', () => lz4).replace('__NEON_TRANSPLANT__', () => neon).replace('__SPECIAL_FOOD__', () => specialFood).replace('__FLASH__', () => flash).replace('__SAVES__', () => saves).replace('__VISIT__', () => visit).replace('__MYLAB__', () => myLab).replace('__MYLAB_MENU__', () => myLabMenu).replace('__APP__', () => app).split('__VERSION__').join('v' + v);
+html = html.replace('__CORE__', () => core).replace('__SETTINGS__', () => settings).replace('__HOME_MENU__', () => homeMenu).replace('__LAB_RELEASE__', () => labRelease).replace('__EMU__', () => emu).replace('__FELD__', () => feld).replace('__SIX__', () => six).replace('__LEGACY_LZ4__', () => lz4).replace('__NEON_TRANSPLANT__', () => neon).replace('__SPECIAL_FOOD__', () => specialFood).replace('__FLASH__', () => flash).replace('__SAVES__', () => saves).replace('__RESIDENTS__', () => residents).replace('__RESIDENT_BANKS__', () => residentBanks).replace('__VISIT__', () => visit).replace('__MYLAB__', () => myLab).replace('__MYLAB_MENU__', () => myLabMenu).replace('__APP__', () => app).split('__VERSION__').join('v' + v);
 fs.mkdirSync(path.dirname(output), { recursive: true });
 if (web) {
   const directory = path.join(path.dirname(output), webDirectory);

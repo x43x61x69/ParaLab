@@ -230,6 +230,7 @@ static u32 sl_signature(void){
   if(sl_ui_phase==SL_ROM) sl_ui_progress(len+16u,len+16u);
   u32 v[8]={g_cfg.id_c,g_cfg.user_start,g_cfg.user_end,g_cfg.tama_off,g_cfg.field_byte,g_cfg.six_off,g_cfg.list_off,g_cfg.count_off};
   for(u32 k=0;k<sizeof v;k++) crc=sl_crc(crc,((u8*)v)[k]);
+  if(g_cfg.flags & F_RESIDENT_BANKS) crc=sl_crc(crc,1);
   for(u32 k=0;k<8;k++) crc=sl_crc(crc,g_cfg.six_map[k]);
   for(u32 i=0;i<nfields();i++){ u32 f=fid(i); for(u32 k=0;k<4;k++) crc=sl_crc(crc,(u8)(f>>(8u*k))); }
   return ~crc;
@@ -238,7 +239,7 @@ static int sl_export(u32 src,u32 *fld){
   u32 np; if(source_check(src,&np)) return 0;
   u32 by=0,sum=0,prev=0,sets=0;
   for(u32 i=0;i<np;i++){
-    u32 a; if(save_page(src,i,&a) || a<g_cfg.user_start || a>=g_cfg.user_end || (i && a<=prev)) return 0;
+    u32 a; if(save_page(src,i,&a) || !save_has_page(a) || (i && a<=prev)) return 0;
     prev=a;
     if(a==SET_A || a==SET_B){ if(!set_ok(g_page)) return 0; sets|=a==SET_A?1u:2u; }
     if(a==SET_A){ int f=field_of(g_page); if(f<0) return 0; *fld=(u32)f; }
@@ -310,7 +311,7 @@ static int sl_receive(u32 tgt){
     for(u32 k=0;k<n*4u;k++) ((u8*)&g_hdr.e[i])[k]=sl_rx[k];
     for(u32 k=i;k<i+n;k++){
       u32 a=(u32)g_hdr.e[k].page<<12, len=g_hdr.e[k].clen;
-      if(a<g_cfg.user_start || a>=g_cfg.user_end || (k && a<=prev) || !len || len>sizeof g_cmp) return 0;
+      if(!save_has_page(a) || (k && a<=prev) || !len || len>sizeof g_cmp) return 0;
       prev=a; count+=len;
     }
     i+=n; sl_ui_progress(i,np);

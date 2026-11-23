@@ -47,6 +47,10 @@ Serve the entire `dist/web/` directory, including the versioned catalog. To choo
 | 💿 **Update File** | Create or patch a My Lab microSD update using a supported stock ROM and the matching device key. |
 | 🔀 **Experimental → Porting** | Adapt a supported My Lab ROM to run on Paradise hardware. |
 
+In Neon Planets, open **Saves → Planet Residents** to add, replace, move or remove residents in the loaded ROM or a matching `.tamasave` backup. For on-device editing, enable **Tama Editor** in **Menu** before exporting the ROM. On Neon Planets, open **ParaLab → Progress → Planet Residents** to add an adult Tama, edit its appearance, move residents between planets or remove them.
+
+On Paradise, open **ParaLab → Tama → Stars (Past Tamas)**. Select an empty slot to set the appearance, age and cause of death, then confirm to save. Select an occupied slot to edit appearance, age or cause of death individually.
+
 ## My Lab on Paradise
 
 The experimental port adapts My Lab firmware to Tamagotchi Paradise hardware. It displays the center 128 × 128 pixels of the My Lab game screen and maps the Paradise wheel to supported My Lab menus.
@@ -64,11 +68,13 @@ To update an existing v0.1.89 port, open its exported ROM in ParaLab v0.2.1 or l
 
 | Tool | What you can do |
 | --- | --- |
-| 🔌 **ROM Transfer** | Connect with a USB-UART adapter. Use **Read ROM** to save a backup or **Review and Write…** to check the prepared image and target before writing. |
+| 🔌 **ROM Transfer** | Connect with a USB-UART adapter. Use **Read ROM** or **Quick Read ROM** to save a backup, or **Review and Write…** to check the prepared image and target before writing. |
 | 💾 **Save Backup & Restore** | Read or restore supported saves over UART. |
 | 📦 **Downloaded Lab Items** | Use **Read Lab Items** to preview, edit, or export items. Choose **Add from Lab Item Catalog…** to install selected items directly through a connected Flash Tool. |
 | 🤝 **Playdate** | Choose a ROM character, import a character file, or reuse a visitor saved in your browser. Use the hidden-character presets to track visits from different editions. Select an adult visitor to try a breeding Playdate. |
 | 🎁 **Send Gift · Send Lab Item** | Browse gifts by Paradise edition or preview Lab Items and edit their prices before sending. |
+
+**Quick Read ROM** compares the connected flash with the original 16 MB ROM open in Workspace. It transfers only differing 4 KiB sectors and saves a complete `.bin` backup, including the device's current saves. Paradise editions can share a base. Native My Lab and My Lab on Paradise each require their own matching firmware family.
 
 > [!IMPORTANT]
 > For UART ROM or save operations, check the adapter pins before connecting. Back up your ROM and saves before writing, and keep the device powered throughout the write.

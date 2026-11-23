@@ -26,6 +26,7 @@ const FELD_MAGIC = 0x444C4546, SLOT_MAGIC = 0x544C5346, CAT_MAGIC = 0x54414350, 
 const PH_RING = 0x77777771, PH_APP = 0x1234ABCD, PH_FELD = 0x6789EF01, PH_AUTO = 0x66666661, PH_ORIG = [0x22222221, 0x33333331, 0x44444441, 0x55555551];
 const HOOK_OFF = [0x40, 0x46, 0x4C, 0x52];
 const F_FIELDS = 1, F_BAG = 2, F_TAMA = 4, F_SAVES = 8, F_LAUNCH = 16;
+const F_RESIDENT_BANKS = 0x4000;
 const F_RING = 0x80, F_NO_SHORTCUT = 0x2000; // persisted opt-out; the A+C menu remains enabled
 const F_BOOK6 = 256; // native Tama File has the three additional regions
 const F_APPS = 512;  // ordinary launcher menu without legacy Paradise save tools
@@ -73,6 +74,78 @@ function bw(from, to) {
   const J1 = (~I1 ^ S) & 1, J2 = (~I2 ^ S) & 1;
   return [0xF000 | (S << 10) | imm10, 0x9000 | (J1 << 13) | (J2 << 11) | imm11];
 }
+const CARE_OFFSET = 0xC00, CARE_RECORD = 0x40, CARE_MAGIC = 0x45524143, CARE_OPTIONS_MAGIC = 0x32524143;
+const CARE_AUTOPILOT_PATCH = 1, CARE_FUEL_PATCH = 2, CARE_FUEL_ENTRY = 0x68;
+const CARE_PROFILES = {
+  gen1: { layout: 0, settings: 0x18000B9C, fuelOffset: 0x11F,
+    tick: [0x22800, 0xB0D0B580, 0x914E904F, 0xFE7BF067], fuel: [0x67730, 0xF8ADB083, 0xF640000A, 0xF6C130A0] },
+  jade: { layout: 1, settings: 0x18000B9C, fuelOffset: 0x123,
+    tick: [0x229A0, 0xB0D0B580, 0x914E904F, 0xF837F06C], fuel: [0x6AAD8, 0xF8ADB083, 0xF640000A, 0xF6C130A0] },
+  gen3: { layout: 2, settings: 0x18000BE4, fuelOffset: 0x12F,
+    tick: [0x244BC, 0xB0CEB580, 0x914C904D, 0xFC5BF07D], fuel: [0x73748, 0xF8ADB083, 0xF640000A, 0xF6C130E8] },
+  neon: { layout: 3, settings: 0x18000290, fuelOffset: 0x12F,
+    tick: [0x2533C, 0xB0CEB580, 0x914C904D, 0xF96AF07F], fuel: [0x72284, 0xF8ADB083, 0xF240000A, 0xF6C12094] },
+};
+const CARE_B64 = '__FELD_CARE_B64__';
+function careOptions(rom, menu) {
+  if (!menu) return 0;
+  const at = menu.stubOff + CARE_OFFSET;
+  if (u32(rom, at + CARE_RECORD) !== CARE_MAGIC) return 0;
+  return u32(rom, at + 0x58) === CARE_OPTIONS_MAGIC ? u32(rom, at + 0x5C) : CARE_AUTOPILOT_PATCH;
+}
+function careSiteMatches(rom, [off, original, ...tail], helper) {
+  return tail.every((word, i) => u32(rom, off + 4 * (i + 1)) === word)
+    && (helper === undefined ? u32(rom, off) === original :
+      bw(xip(off), xip(helper)).every((word, i) => u16(rom, off + 2 * i) === word));
+}
+function careSupport(rom, menu) {
+  const profile = CARE_PROFILES[edition(rom)?.profile.name];
+  if (!profile) return 0;
+  const installed = careOptions(rom, menu), at = menu ? menu.stubOff + CARE_OFFSET : undefined;
+  if (!careSiteMatches(rom, profile.tick, installed ? at : undefined)) return 0;
+  return CARE_AUTOPILOT_PATCH | (careSiteMatches(rom, profile.fuel,
+    installed & CARE_FUEL_PATCH ? at + CARE_FUEL_ENTRY : undefined) ? CARE_FUEL_PATCH : 0);
+}
+function careInstall(rom, stub, profile, options) {
+  const { layout, settings, tick, fuel, fuelOffset } = CARE_PROFILES[profile];
+  if (!careSiteMatches(rom, tick) || (options & CARE_FUEL_PATCH && !careSiteMatches(rom, fuel)))
+    throw new Error('Optional care patches do not match this firmware');
+  const bytes = CARE_B64.startsWith('__')
+    ? (typeof require === 'undefined' ? null : require('node:fs').readFileSync(__dirname + '/../feld/paradise-care.bin'))
+    : b64(CARE_B64);
+  const at = stub + CARE_OFFSET;
+  if (!bytes || u32(bytes, CARE_RECORD) !== CARE_MAGIC || u32(bytes, 0x58) !== CARE_OPTIONS_MAGIC ||
+      bytes.length > 0x1000 - CARE_OFFSET ||
+      !isFF(rom, at, bytes.length)) throw new Error('Paradise care helper does not fit the menu launcher');
+  const code = new Uint8Array(bytes);
+  w32(code, 0x44, tick[0]);
+  w32(code, 0x48, settings);
+  w32(code, 0x4C, layout);
+  w32(code, 0x50, tick[1]);
+  bw(xip(at + 0x54), xip(tick[0] + 4)).forEach((word, i) => w16(code, 0x54 + 2 * i, word));
+  w32(code, 0x5C, options);
+  w32(code, 0x60, options & CARE_FUEL_PATCH ? fuel[0] : 0);
+  w32(code, 0x64, settings + fuelOffset);
+  rom.set(code, at);
+  bw(xip(tick[0]), xip(at)).forEach((word, i) => w16(rom, tick[0] + 2 * i, word));
+  if (options & CARE_FUEL_PATCH)
+    bw(xip(fuel[0]), xip(at + CARE_FUEL_ENTRY)).forEach((word, i) => w16(rom, fuel[0] + 2 * i, word));
+}
+function careStrip(rom, stub) {
+  const at = stub + CARE_OFFSET;
+  if (u32(rom, at + CARE_RECORD) !== CARE_MAGIC) return;
+  const profile = Object.values(CARE_PROFILES).find(({ layout, settings, tick }) =>
+    layout === u32(rom, at + 0x4C) && tick[0] === u32(rom, at + 0x44) &&
+    settings === u32(rom, at + 0x48) && tick[1] === u32(rom, at + 0x50));
+  const options = careOptions(rom, { stubOff: stub });
+  if (!profile || !careSiteMatches(rom, profile.tick, at) || ![1, 2, 3].includes(options) ||
+      (options & CARE_FUEL_PATCH && (profile.fuel[0] !== u32(rom, at + 0x60) ||
+        !careSiteMatches(rom, profile.fuel, at + CARE_FUEL_ENTRY))))
+    throw new Error('Paradise care hook does not match this ROM');
+  w32(rom, profile.tick[0], profile.tick[1]);
+  if (options & CARE_FUEL_PATCH) w32(rom, profile.fuel[0], profile.fuel[1]);
+}
+
 function neonGuard(rom, stub, enable) {
   const guard = stub + NEON_BOOT_GUARD;
   const writeBranch = (out, off, from, to) => bw(xip(from), xip(to)).forEach((h, i) => w16(out, off + 2 * i, h));
@@ -294,11 +367,12 @@ function languagePatchPages(rom) {
   }
   return pages;
 }
-function freeStubOff(rom, codeEnd = CODE_END) {
-  if (STUB_OFF + 0x2000 <= codeEnd && isFF(rom, STUB_OFF, 0x2000)) return STUB_OFF;
+function freeStubOff(rom, codeEnd, programSize) {
+  const fitsFixed = STUB_OFF + 0x1000 + programSize <= Math.min(FELD_END, codeEnd);
+  if (fitsFixed && isFF(rom, STUB_OFF, 0x1000 + programSize)) return STUB_OFF;
   let p = codeEnd;
   while (p > 0x90000 && isFF(rom, p - 0x1000, 0x1000)) p -= 0x1000;
-  return p;
+  return p === STUB_OFF && !fitsFixed ? p + 0x1000 : p;
 }
 function feldAt(rom, stubOff, ph) {
   const v = u32(rom, stubOff + ph);
@@ -540,12 +614,12 @@ function slotPages(s, resolveClock = true) {
   return pages;
 }
 /** A save (Map address -> 4 KB, only pages from..to that are not empty) packed like the menu does, for slotPlace. */
-function slotBuild(pages, i, from, to, sourceHead) {
+function slotBuild(pages, i, from, to, sourceHead, extra = []) {
   const head = new Uint8Array(0x1000).fill(0xFF), parts = []; let np = 0, bytes = 0, sum = 0;
   if (sourceHead) head.set(sourceHead.subarray(SLOT_TIME_OFF), SLOT_TIME_OFF);
   for (const a of [...pages.keys()].sort((x, y) => x - y)) {
     const d = pages.get(a);
-    if (a < from || a >= to || d.length !== 0x1000 || d.every((v) => v === 0xFF)) continue;
+    if (((a < from || a >= to) && !extra.some(([start, end]) => a >= start && a < end)) || d.length !== 0x1000 || d.every((v) => v === 0xFF)) continue;
     if (np >= 500) throw new Error('save too big for a slot');
     const c = lzPack(d); parts.push(c);
     w16(head, 32 + 4 * np, a >>> 12); w16(head, 34 + 4 * np, c.length); np++;
@@ -866,10 +940,12 @@ function characters(d) {
  * On Neon, the upper nibble of the picture word holds the native item limit.
  */
 const EXT_MAGIC = 0x54584550;
-function catalogBlob(cat) {
+function catalogBlob(cat, residents) {
   const x = 8 + 28 * cat.length;
   const previews = cat.filter(c => c.preview), end = x + 4 + 12 * cat.length;
-  const b = new Uint8Array(end + (previews.length ? 24 + TPRV_RECORD * previews.length : 0));
+  const previewEnd = end + (previews.length ? 24 + TPRV_RECORD * previews.length : 0);
+  const b = new Uint8Array(previewEnd + (residents?.length || 0));
+  if (residents) b.set(residents, previewEnd);
   w32(b, x, EXT_MAGIC);
   cat.forEach((c, i) => { const o = x + 4 + 12 * i; if (c.at) { w32(b, o, c.at.addr); w16(b, o + 4, c.at.len); w16(b, o + 6, c.at.sum); w32(b, o + 8, c.at.head); } });
   w32(b, 0, CAT_MAGIC); w32(b, 4, cat.length);
@@ -951,6 +1027,7 @@ function feldStrip(rom, emb, E) {
   if (!f) return out;
   if (Six) Six.sixBookStrip(out, f.stubOff);
   appearanceRebuild(out, false);
+  careStrip(out, f.stubOff);
   const tab = E.sceneTable(out);
   launchRestore(out, f.stubOff);   // start device: scene handlers back, trampolines gone (before the menu area is erased)
   const prev = f.stubOff === STUB_OFF ? E.installedOrigs(out, tab) : [0, 1, 2, 3].map((k) => u32(out, f.stubOff + 0x94 + 4 * k));
@@ -963,6 +1040,8 @@ function feldStrip(rom, emb, E) {
     let ce = f.catOff + 8 + (f.version >= 3 ? 28 : 24) * f.catN;
     if (u32(rom, ce) === EXT_MAGIC) ce += 4 + 12 * f.catN;
     if (u32(rom, ce) === TPRV_MAGIC && u32(rom, ce + 4) === 1 && u32(rom, ce + 8) === TPRV_RECORD && u32(rom, ce + 12) <= 256) ce += 24 + TPRV_RECORD * u32(rom, ce + 12);
+    if (u32(rom, ce) === 0x31435352 && u32(rom, ce + 8) === 0x104 && u32(rom, ce + 4) <= 256)
+      ce += 16 + 0x104 * u32(rom, ce + 4);
     // A large catalog may live behind the asset archive, separately from code.
     if (f.catOff >= page(assetEnd(rom)) && ce <= rom.length) {
       out.fill(0xFF, f.catOff, page(ce));
@@ -1000,8 +1079,8 @@ function feldStrip(rom, emb, E) {
 /* A six-field ROM owns the rain/game payload at F00000. Reserve only the
  * trailing erased pages after every referenced cell, restoration table and
  * non-erased byte, never an interior hole or the FF0000 rescue region. */
-function sixPoolTail(rom) {
-  const a=0xF00000,z=0xFF0000;
+function sixPoolTail(rom, limit = 0xFF0000) {
+  const a=0xF00000,z=limit;
   if(u32(rom,a)!==0x42584953) return null;
   const n=u32(rom,a+4), data=a+8+n*260;
   if(!n || n>256 || data>z) return null;
@@ -1053,18 +1132,22 @@ function feldApply(rom, opts, saved, emb, E) {
   const neonGrowthPage = neonGrowth && (neonGrowth.installed(out) || neonGrowth.itemsInstalled(out)) ? neonGrowth.growthPage : CODE_END;
   const lab = root.ParamixLabRelease || (typeof require !== 'undefined' ? require('./lab_release') : null);
   const specialFood = root.ParamixSpecialFood?.inspect(out);
+  const residentBanks = root.ParamixResidentBanks || (typeof require !== 'undefined' ? require('./paradise_resident_banks.js') : null);
+  const banks = residentBanks?.inspect(out);
   const languagePages = languagePatchPages(out);
   const codeEnd = Math.min(CODE_END, lz4Page, neonGrowthPage, ...languagePages,
-    shortcutPage ?? CODE_END, lab?.codePage(out) ?? CODE_END, specialFood?.page ?? CODE_END);
+    shortcutPage ?? CODE_END, lab?.codePage(out) ?? CODE_END, specialFood?.page ?? CODE_END, banks?.page ?? CODE_END);
   if (feldFind(out, emb.stub)) throw new Error('the menu is already built in');
   const ed = edition(out);
   if (!ed) throw new Error('edition not recognised');
   const P = profileOf(out, ed.profile);
   const launch = !!opts.launch;
+  const care = launch || opts.clean ? 0 :
+    (opts.autopilot ? CARE_AUTOPILOT_PATCH : 0) | (opts.infiniteFuel ? CARE_FUEL_PATCH : 0);
   const neonLaunch = P.ring && launch;
   const neonSaves = P.ring && !!opts.fields && !launch;
   const neonBag = P.ring && !!opts.bag && !launch;
-  const appsOnly = P.ring && !launch && (!!opts.appsOnly || neonSaves || neonBag || !!opts.neonTama);
+  const appsOnly = P.ring && !launch && (!!opts.appsOnly || neonSaves || neonBag || !!opts.neonTama || !!care);
   const save = (appsOnly || neonLaunch) && (root.ParamixSaves || (typeof require !== 'undefined' ? require('./saves.js') : null));
   const neonEdit = save && save.neonSaveLayout(out);
   const neonTama = appsOnly && !!opts.neonTama;
@@ -1077,13 +1160,14 @@ function feldApply(rom, opts, saved, emb, E) {
   const book9 = !launch && !!neonGrowth?.installed(out);
   if (book9) neonGrowth.fixLayerIndices(out);
   const gplay = GPLAY && !!opts.gplay && !launch && !opts.clean; const fields = !!opts.fields && !launch, bag = !!opts.bag && !launch, tama = !!opts.tama && v6 && !launch, saves = fields && v6 && opts.saves !== false;
-  if (!fields && !bag && !tama && !gplay && !launch && !appsOnly && !book9) throw new Error('nothing chosen');
+  if (care & CARE_AUTOPILOT_PATCH && !(tama || neonTama)) throw new Error('Autopilot requires the Tama Editor');
+  if (!fields && !bag && !tama && !gplay && !launch && !appsOnly && !book9 && !care) throw new Error('nothing chosen');
   if (launch && (u32(emb.stub, LAUNCH_ENTRY) !== 0x4C01B672 || (u32(emb.stub, LCHECK_ENTRY) & 0xF800) !== 0xF000)) throw new Error('launcher template does not fit');   // cpsid i; ldr r4, feld_src / b.w lcheck
   const tab = E.sceneTable(out);
   if (!tab.PSID_HOME) throw new Error('home screen not found');
   const prev = E.installedOrigs(out, tab);
-  const kind = appKind(out);
-  const stubOff = prev || kind ? STUB_OFF : freeStubOff(out, codeEnd);
+  const kind = appKind(out), fsz = page(emb.feld.length);
+  const stubOff = prev || kind ? STUB_OFF : freeStubOff(out, codeEnd, fsz);
   if (!prev && !isFF(out, stubOff, 0x1000)) throw new Error('no room for the launcher');
   const catList = bag ? itemCatalog(out) : [];
   if (neonBag && (!catList.length || new Set(catList.map(c => c.id)).size !== catList.length || catList.some(c => c.pic >= 0x1000))) {
@@ -1095,8 +1179,11 @@ function feldApply(rom, opts, saved, emb, E) {
     catList.push(...(neonEdit && !neonTama ? chars.filter(c => (c.sum >> 8) >= 7) : chars));
     catList.sort((a, b) => a.id - b.id);
   }
-  const cat = bag || tama || neonTama || book9 || (neonEdit && !launch) ? catalogBlob(catList) : new Uint8Array(0);
-  const fsz = page(emb.feld.length), csz = page(cat.length);
+  const residentEditor = (tama || neonTama) && !opts.clean && !launch;
+  const PRes = opts.residentCatalog !== false && residentEditor && root.ParamixResidents;
+  const residentCatalog = PRes ? PRes.catalog(out, root.ParamixCore) : null;
+  const cat = bag || tama || neonTama || book9 || (neonEdit && !launch) ? catalogBlob(catList, residentCatalog) : new Uint8Array(0);
+  const csz = page(cat.length);
   const doom = kind === 1;
   const doomEnd = Math.min(DOOM_SAVE, ...languagePages);
   let prog = doom ? doomCodeEnd(out) : stubOff + 0x1000;
@@ -1104,13 +1191,14 @@ function feldApply(rom, opts, saved, emb, E) {
   const tsz = launch ? launchSize(out, E.sceneTable(out)) : 0;   // start device: trampoline pages behind the menu
   if (doom) while (prog + fsz + csz + tsz <= doomEnd && !isFF(out, prog, fsz + csz + tsz)) prog += 0x1000;
   let codeCat = csz, catOff = cat.length ? prog + fsz : 0, catEnd = 0;
-  if (!doom && stubOff === STUB_OFF && prog + fsz + csz + tsz > FELD_END && cat.length) {
+  const progEnd = Math.min(stubOff === STUB_OFF ? FELD_END : CODE_END, codeEnd);
+  if (!doom && prog + fsz + csz + tsz > progEnd && cat.length) {
     // Keep the emulator save region at C0000 intact. Put references in unused
     // flash behind assets, reserving them before allocating any save slots.
     catOff = Math.max(SLOT_BASE, page(assetEnd(out))); catEnd = catOff + csz;
     const t18low = kind === 2 && E.t18Low && u32(out, 0xA0140) === 0x38584D50 ? E.t18Low(out) : 0;
     const guestLow = kind === 2 ? (u32(out, 0xA0140) === PMXC ? Math.min(u32(out, 0xA0148), GUEST_OFF) : t18low || GUEST_OFF) : P.idPage - 0x1000;
-    if (catEnd > Math.min(P.idPage - 0x1000, guestLow, opts.appsLow || 0x1000000) || !isFF(out, catOff, csz)) throw new Error('no room for the menu catalog');
+    if (catEnd > Math.min(banks ? 0xD01000 : P.idPage - 0x1000, guestLow, opts.appsLow || 0x1000000) || !isFF(out, catOff, csz)) throw new Error('no room for the menu catalog');
     codeCat = 0;
   }
   const tOff = page(prog + fsz + codeCat);
@@ -1134,8 +1222,10 @@ function feldApply(rom, opts, saved, emb, E) {
       slotOff = NEON_SLOT_OFF; slotSize = NEON_SLOT_SIZE;
     } else if (fields && P.six) {
       // six fields: slots behind the menu (up to the helper page) and behind the character data
-      const a1 = page(prog + fsz + codeCat), r1 = codeEnd - a1, a2 = Math.max(page(assetEnd(out)), catEnd), r2 = P.idPage - 0x1000 - a2;
-      for (let s = SLOT_SIZE; s >= 0x10000; s -= 0x1000) {
+      const a1 = page(prog + fsz + codeCat), r1 = codeEnd - a1, a2 = Math.max(page(assetEnd(out)), catEnd);
+      const r2 = (banks ? 0xD01000 : P.idPage - 0x1000) - a2;
+      // The shared pool lends data pages to any save. Slot size controls its geometry, not a per-save limit.
+      for (let s = SLOT_SIZE; s >= (banks ? 0x2000 : 0x10000); s -= 0x1000) {
         const n1 = Math.max(0, Math.floor(r1 / s)), n2 = Math.max(0, Math.floor(r2 / s));
         if (n1 + n2 >= nslots) { slotSize = s; slotN1 = Math.min(n1, nslots); slotOff = slotN1 ? a1 : a2; slotOff2 = slotN1 && slotN1 < nslots ? a2 : 0; if (!slotN1) slotN1 = 0; break; }
       }
@@ -1155,7 +1245,7 @@ function feldApply(rom, opts, saved, emb, E) {
   }
   const fs = { slotOff, slotSize, slotOff2, slotN1, poolExtraOff:0, poolExtraPages:0 };
   if(fields && P.six && v6 && u32(emb.feld,findWord(emb.feld,FELD_MAGIC)+4)>=11 && !kind && !launch && !opts.appsLow && !(opts.apps&&opts.apps.length)){
-    const tail=sixPoolTail(out);if(tail)Object.assign(fs,tail);
+    const tail=sixPoolTail(out, banks ? 0xFB7000 : 0xFF0000);if(tail)Object.assign(fs,tail);
   }
   if (fields) for (let i = 0; i < nslots; i++) if (!isFF(out, slotAddr(fs, i), slotSize)) throw new Error('the area for the saves is in use');
   // Program with settings
@@ -1168,7 +1258,7 @@ function feldApply(rom, opts, saved, emb, E) {
   w32(f, ci + 8, slotOff); w32(f, ci + 12, slotSize); w32(f, ci + 16, nslots);
   w32(f, ci + 20, P.idPage + 0x1000); w32(f, ci + 24, P.six || neonSaves ? 0xF00000 : 0x1000000);
   w32(f, ci + 28, P.idPage);   // ID page (1.2.2 to 1.2.11 lost this line: Tropical/Glacier wrote the ID to 0xD49000)
-  w32(f, ci + 32, stubOff); w32(f, ci + 36, (fields ? F_FIELDS : 0) | (bag ? F_BAG : 0) | (tama ? F_TAMA : 0) | (saves ? F_SAVES : 0) | (launch ? F_LAUNCH : 0) | (gplay ? F_GPLAY : 0) | (appsOnly ? F_APPS : 0) | (neonEdit ? F_NEON_EDIT : 0) | (neonTama ? F_NEON_TAMA : 0) | (P.ring ? F_RING : 0) | (opts.paramixShortcut === false ? F_NO_SHORTCUT : 0));
+  w32(f, ci + 32, stubOff); w32(f, ci + 36, (fields ? F_FIELDS : 0) | (bag ? F_BAG : 0) | (tama ? F_TAMA : 0) | (saves ? F_SAVES : 0) | (launch ? F_LAUNCH : 0) | (gplay ? F_GPLAY : 0) | (appsOnly ? F_APPS : 0) | (neonEdit ? F_NEON_EDIT : 0) | (neonTama ? F_NEON_TAMA : 0) | (P.ring ? F_RING : 0) | (opts.paramixShortcut === false ? F_NO_SHORTCUT : 0) | (banks ? F_RESIDENT_BANKS : 0));
   if (appsOnly || u32(f, ci + 4) >= 11) w32(f, ci + 620, fsz);
   if (neonSaves) w32(f, ci + 36, u32(f, ci + 36) | F_NEON_SAVES | F_SAVES);
   w32(f, ci + 40, P.c); w16(f, ci + 44, P.h[0]); w16(f, ci + 46, P.h[1]);
@@ -1259,6 +1349,7 @@ function feldApply(rom, opts, saved, emb, E) {
   if (launch) launchRedirect(out, tab, stubOff, tOff);
   else if (Six && Six.sixBookApply(out, stubOff)) w32(out, prog + ci + 36, u32(out, prog + ci + 36) | F_BOOK6);
   if (tama || neonTama) appearanceRebuild(out, true);
+  if (care) careInstall(out, stubOff, P.name, care);
   return shortcutPage === null ? out : H.apply(out, stubOff, shortcutPage);
 }
 
@@ -1361,6 +1452,6 @@ function embedded() {
 }
 
 function emuType(rom) { const m = u32(rom, APP_OFF + 0x140); return m === 0x37584D50 ? 't7' : m === 0x38584D50 ? 't18' : m === 0x31584D50 ? 'v1' : m === PMXC && appKind(rom) === 2 ? 'tama' : ''; }
-root.ParamixFeld = { poolCount, slotRanges, sixPoolTail, F_RING, F_NO_SHORTCUT, F_APPS, F_NEON_EDIT, F_NEON_TAMA, F_NEON_SAVES, neonSlotRange, neonActive, neonSwitchPending, neonAppearance, neonBagLayout, languagePatchPages, F_GPLAY, GPLAY, CLEAN_ROM, F_CLEAN, CLOCK_SEC, cleanReserved, cleanInfo, cleanBase, cleanApply, isClean, saveSlots, fieldOfSettings, lzPack, lzUnpack, slotPages, slotBuild, poolUsed, slotParse, FIELD_TEXT, characters, F_TAMA, F_SAVES, F_LAUNCH, isLaunch, launchRestore, emuType, familyOf, isSix, slotAddr, slotReadAsync, slotPlace, poolAddr, textTabelle, zeichenkette, edition, feldId, canFields, fieldNames, fieldNow, feldFind, feldSlots, feldStrip, feldApply, feldApps, appKind, itemCatalog, embedded, NAMES, F_FIELDS, F_BAG };
+root.ParamixFeld = { poolCount, slotRanges, sixPoolTail, F_RING, F_RESIDENT_BANKS, F_NO_SHORTCUT, F_APPS, F_NEON_EDIT, F_NEON_TAMA, F_NEON_SAVES, CARE_AUTOPILOT_PATCH, CARE_FUEL_PATCH, careOptions, careSupport, neonSlotRange, neonActive, neonSwitchPending, neonAppearance, neonBagLayout, languagePatchPages, F_GPLAY, GPLAY, CLEAN_ROM, F_CLEAN, CLOCK_SEC, cleanReserved, cleanInfo, cleanBase, cleanApply, isClean, saveSlots, fieldOfSettings, lzPack, lzUnpack, slotPages, slotBuild, poolUsed, slotParse, FIELD_TEXT, characters, F_TAMA, F_SAVES, F_LAUNCH, isLaunch, launchRestore, emuType, familyOf, isSix, slotAddr, slotReadAsync, slotPlace, poolAddr, textTabelle, zeichenkette, edition, feldId, canFields, fieldNames, fieldNow, feldFind, feldSlots, feldStrip, feldApply, feldApps, appKind, itemCatalog, embedded, NAMES, F_FIELDS, F_BAG };
 if (typeof module !== 'undefined') module.exports = root.ParamixFeld;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -2256,6 +2256,9 @@ function hiFree(rom, keep, menuOff) {
     else { mark(c.romOff, c.romOff + c.romLen); mark(c.saveOff, c.saveOff + 0x10000); mark(off, off + 0x20000); }
   }
   let out = rom;
+  const residentRanges = root.ParamixResidentBanks?.inspect(rom)?.ranges || [];
+  for (const [start, end] of residentRanges)
+    for (let b = start >>> 16; b < (end + 0xFFFF) >>> 16; b++) used.add(b);
   for (let b = 0xF0; b < RESCUE_BLK; b++) if (!used.has(b) && !isFF(out, b << 16, 0x10000)) { if (out === rom) out = new Uint8Array(rom); out.fill(0xFF, b << 16, (b + 1) << 16); }
   return out;
 }
