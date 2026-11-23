@@ -174,7 +174,38 @@ summary { cursor:pointer; font-weight:680; }
 .footer-notices summary { width:fit-content; margin-inline-start:auto; padding:10px 2px; color:var(--ink); }
 .footer-notices summary:hover { text-decoration:underline; }
 .notice-body { display:grid; grid-template-columns:1fr 1.5fr 1fr; gap:clamp(16px,3vw,48px); border-top:1px dotted var(--line); padding:18px 0; }
-.notice-body label:has(#analyticsOptIn) { display:inline-flex; align-items:center; gap:6px; margin-top:10px; }
+.analytics-settings {
+  border:0; background:none; padding:6px 0; margin-inline-start:12px;
+  color:var(--sky); font:inherit; text-decoration:underline; cursor:pointer;
+}
+.analytics-card {
+  position:fixed; z-index:8; inset-inline-end:max(16px, env(safe-area-inset-right));
+  inset-block-end:max(16px, env(safe-area-inset-bottom)); box-sizing:border-box;
+  width:min(470px, calc(100% - 32px)); max-height:calc(100dvh - 32px); overflow:auto;
+  padding:clamp(16px,4vw,24px); border:1px solid var(--line); border-radius:14px;
+  background:var(--panel); color:var(--ink); box-shadow:0 12px 32px rgb(23 37 70 / .14);
+}
+.analytics-card h2 { margin:0 0 8px; font-size:20px; line-height:1.25; }
+.analytics-card p { margin:0 0 8px; color:var(--soft); font-size:14px; line-height:1.5; }
+.analytics-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin:16px 0 8px; }
+.analytics-actions .btn {
+  display:block; min-width:0; min-height:44px; padding:7px 8px; overflow-wrap:anywhere;
+  border:1px solid var(--sky); color:var(--sky); background:var(--panel); text-align:center;
+}
+.analytics-actions .btn:hover { background:var(--check-a); }
+#analyticsAccept { background:var(--sky); color:var(--pink-ink); }
+#analyticsAccept:hover { background:var(--pink); }
+.analytics-actions .btn[aria-pressed="true"] { outline:2px solid var(--sky); outline-offset:2px; }
+.analytics-card summary { width:fit-content; min-height:44px; padding-block:12px; box-sizing:border-box; color:var(--sky); cursor:pointer; }
+.analytics-card :focus-visible,.analytics-settings:focus-visible { outline:2px solid var(--sky); outline-offset:3px; }
+#analyticsClose:not([hidden]) { margin-top:4px; }
+@media (max-width:900px) {
+  .footer-inner:has(.analytics-settings) { display:block; }
+  .footer-inner:has(.analytics-settings) .footer-notices summary { margin-inline-start:0; }
+}
+@media (max-width:520px) {
+  .analytics-card { inset-inline:12px; inset-block-end:max(12px, env(safe-area-inset-bottom)); width:auto; }
+}
 .notice-body h2 { font-size:14px; color:var(--ink); margin:0 0 6px; }
 .notice-body p { margin:0; line-height:1.6; }
 @media (max-width:720px) {

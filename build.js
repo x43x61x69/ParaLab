@@ -49,11 +49,27 @@ const specialFood = fs.readFileSync(__dirname + '/src/special_food.js', 'utf8')
   .replace("'__SPECIAL_FOOD_RELEASE__'", () => fs.readFileSync(__dirname + '/six/my-lab/helper.json', 'utf8').trim());
 const args = process.argv.slice(2);
 const web = args.includes('--web');
-const analyticsControls = `<section><h2 data-t="Usage Analytics">Usage Analytics</h2>
-          <p data-t="Share optional usage statistics with Google Analytics. ParaLab sends feature activity, ROM editions and built-in item IDs."></p>
-          <label><input type="checkbox" id="analyticsOptIn"> <span data-t="Share Usage Statistics">Share Usage Statistics</span></label>
-        </section>`;
-html = html.replace('__ANALYTICS_CONTROLS__', web ? analyticsControls : '')
+const analyticsCard = `<section class="analytics-card" id="analyticsCard" aria-labelledby="analyticsTitle" hidden>
+  <h2 id="analyticsTitle" tabindex="-1">
+    <span id="analyticsPromptTitle" data-t="Would you share usage statistics?">Would you share usage statistics?</span>
+    <span id="analyticsSettingsTitle" data-t="Usage Statistics Settings" hidden>Usage Statistics Settings</span>
+  </h2>
+  <p data-t="Sharing which features you use helps us decide what to improve in ParaLab."></p>
+  <p data-t="If you agree, Google Analytics 4 receives feature activity, ROM editions and built-in item IDs."></p>
+  <div class="analytics-actions">
+    <button class="btn" id="analyticsDecline" type="button" data-t="Do Not Share">Do Not Share</button>
+    <button class="btn" id="analyticsAccept" type="button" data-t="Agree to Share">Agree to Share</button>
+  </div>
+  <details id="analyticsDetails">
+    <summary data-t="Data and Settings">Data and Settings</summary>
+    <p data-t="Usage statistics exclude ROM files, save data and filenames. Google Analytics 4 may use cookies to distinguish browsers and visits."></p>
+    <p data-t="You can change your choice anytime in Usage Statistics Settings at the bottom of the page."></p>
+  </details>
+  <button class="btn small" id="analyticsClose" type="button" data-t="Close" hidden>Close</button>
+</section>`;
+const analyticsSettings = '<button id="analyticsSettings" class="analytics-settings" type="button" aria-controls="analyticsCard" aria-expanded="false" data-t="Usage Statistics Settings">Usage Statistics Settings</button>';
+html = html.replace('__ANALYTICS_CARD__', web ? analyticsCard : '')
+  .replace('__ANALYTICS_SETTINGS__', web ? analyticsSettings : '')
   .replace('__ANALYTICS_SCRIPT__', () => web
     ? '<script>' + fs.readFileSync(path.join(__dirname, 'src/analytics.js'), 'utf8') + '</script>' : '');
 const outputArg = args.find(arg => arg !== '--web');
