@@ -478,6 +478,11 @@ gm_step:
   pop {r0,r2-r6,pc}
 .ltorg
 
+@ Outdoor toy placement. The scene indexes six destinations using the first
+@ three native list entries twice. Native rendering and writes still get slots 0..2.
+.org 0xAD4
+  .word toy_fields, toy_slot_r0, toy_slot_r1, toy_preview, toy_conflicts, toy_remove, toy_place
+
 @ Clean Poop uses the same six-field unlock point as the expanded Fields menu.
 @ Keep the three physical slots in the native list, starting at the current
 @ slot. Below level 4, use the game's original unlock rules.
@@ -504,6 +509,83 @@ clean_field_list:
   bx r3
 .ltorg
 .org 0xB40
+.thumb_func
+toy_fields:
+  ldr r1,=0x18000BE8
+  ldrb r2,[r1,#0x84]
+  and r2,r2,#15
+  cmp r2,#4
+  blo 1f
+  movw r2,#0x0100
+  strh r2,[r0]
+  movw r2,#0x0602
+  strh r2,[r0,#2]
+  ldrb r2,[r1,#0x1EF]
+  strb r2,[r0,#4]
+  bx lr
+1:ldr r1,=0x100167D9
+  bx r1
+
+.thumb_func
+toy_slot_r0:
+  ldr r12,=0x18014184
+  ldr r12,[r12]
+  adds r12,#3
+  cmp r0,r12
+  it hs
+  subhs r0,r0,#3
+  ldrsb r0,[r0,#0x30]
+  bx lr
+
+.thumb_func
+toy_slot_r1:
+  push {r0,lr}
+  mov r0,r1
+  bl toy_slot_r0
+  mov r1,r0
+  pop {r0,pc}
+
+.thumb_func
+toy_preview:
+  ldr r12,=0x10070301
+  b toy_in_bank
+.thumb_func
+toy_conflicts:
+  ldr r12,=0x1006D805
+  b toy_in_bank
+.thumb_func
+toy_remove:
+  ldr r12,=0x10083D55
+  b toy_in_bank
+.thumb_func
+toy_place:
+  ldr r12,=0x10083B95
+@ Swap the live settings and stash only for the native operation. After
+@ restoring the original bank, changed toy records remain in the stash.
+toy_in_bank:
+  push {r4-r6,lr}
+  mov r6,r12
+  ldr r4,=0x18014184
+  ldr r4,[r4]
+  ldrb r5,[r4,#0x33]
+  cmp r5,#6
+  bne 2f
+  ldr r5,[r4,#0x38]
+  cmp r5,#3
+  blo 2f
+  ldr r4,=0x18001AE8
+  ldrb r5,[r4]
+  bl dna_init
+  eor r12,r5,#1
+  strb r12,[r4]
+  bl dna_swap
+  blx r6
+  strb r5,[r4]
+  bl dna_swap
+  pop {r4-r6,pc}
+2:blx r6
+  pop {r4-r6,pc}
+.ltorg
 
 @ ---------------------------------------------------------------- DNA per field (option bit 3)
 @ The firmware keeps a DNA history of 12 entries: the field slot the Tama lived in, one entry per

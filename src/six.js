@@ -703,6 +703,29 @@ const CLEAN_SITES = [
   [0x56056, '2bf09df8', 0xF70],
   [0x2196A, '07f0b5ff', 0xFB0],
 ];
+const TOY_ENTRIES = 0xAD4, TOY_ENTRIES_END = 0xAF0, TOY_CODE = 0xB40;
+const TOY_SITES = [
+  [0x389CE, 'eef703ff', 0], // placement scene's field list
+  [0x55048, '90f93000', 1], [0x55538, '90f93000', 1],
+  [0x55390, '91f93010', 2],
+  [0x55050, '2cf056f9', 3], [0x55540, '2bf0defe', 3],
+  [0x5565A, '29f0d3f8', 4], // check for toys displaced by the new placement
+  [0x5568C, '3ff062fb', 5], [0x556AE, '3ff071fa', 6],
+];
+function sixToyUpdateNeeded(rom) {
+  return TOY_SITES.every(([at, orig]) => hex(rom, at, 4) === orig) &&
+    rom.subarray(SIX_OFF + TOY_ENTRIES, SIX_OFF + TOY_ENTRIES_END).every(byte => byte === 0) &&
+    rom.subarray(SIX_OFF + TOY_CODE, SIX_OFF + P_DNA).every(byte => byte === 0);
+}
+function sixToyHooks(blob) {
+  if (!blob || blob.length < P_DNA) return null;
+  const hooks = TOY_SITES.map(([at, , entry]) => {
+    const fn = u32(blob, TOY_ENTRIES + 4 * entry);
+    return (fn & 1) && fn >= SIX_XIP + TOY_CODE && fn < SIX_XIP + P_DNA
+      ? [at, branch(XIP(at), fn & ~1, true)] : null;
+  });
+  return hooks.every(Boolean) ? hooks : null;
+}
 function sixAdultUpdateNeeded(rom) {
   return hex(rom, ADULT_FIELDS_AT, ADULT_FIELDS_OLD.length / 2) === ADULT_FIELDS_OLD;
 }
@@ -714,13 +737,14 @@ function sixCleanUpdateNeeded(rom) {
 function sixFieldsUpdateNeeded(rom) {
   const info = sixInfo(rom);
   return info?.kind === 'gen3' && info.fieldMenu && info.version === SIX_VERSION && info.dna &&
-    (sixAdultUpdateNeeded(rom) || sixCleanUpdateNeeded(rom));
+    (sixAdultUpdateNeeded(rom) || sixCleanUpdateNeeded(rom) || sixToyUpdateNeeded(rom));
 }
 function sixFieldsUpdate(rom, blob) {
   if (!sixFieldsUpdateNeeded(rom)) return rom;
   const adult = sixAdultUpdateNeeded(rom);
   const clean = blob && blob.length > 0xFB0 && sixCleanUpdateNeeded(rom);
-  if (!adult && !clean) return rom;
+  const toy = sixToyUpdateNeeded(rom) && sixToyHooks(blob);
+  if (!adult && !clean && !toy) return rom;
   const out = new Uint8Array(rom);
   if (adult) out.set(bookBytes(ADULT_FIELDS_NEW), ADULT_FIELDS_AT);
   if (clean) {
@@ -728,6 +752,11 @@ function sixFieldsUpdate(rom, blob) {
     out.set(blob.subarray(P_CLEAN), SIX_OFF + P_CLEAN);
     for (const [at, , target] of CLEAN_SITES) out.set(branch(XIP(at), SIX_XIP + target, true), at);
     w32(out, SIX_OFF + 32, u32(out, SIX_OFF + 32) | CLEAN_FLAG | (sixInfo(rom).scene ? SCENE_LAND : 0));
+  }
+  if (toy) {
+    out.set(blob.subarray(TOY_ENTRIES, TOY_ENTRIES_END), SIX_OFF + TOY_ENTRIES);
+    out.set(blob.subarray(TOY_CODE, P_DNA), SIX_OFF + TOY_CODE);
+    for (const [at, patch] of toy) out.set(patch, at);
   }
   return out;
 }
@@ -812,7 +841,8 @@ function fmInstall(out, page, K) {
 function install(out, kind, blob, alt, counts, planet, fieldMenu, games) {
   const K = KINDS[kind], f = (o) => 0x11000 + o, sites = (planet ? K.sites.concat(K.planet.sites) : K.sites).concat(...EXTRAS.filter((X) => alt[X.name]).map((X) => X.sites[kind]));
   const page = new Uint8Array(0x1000).fill(0xFF); page.set(blob.subarray(0, Math.min(blob.length, P_DNA)));
-  page.fill(0, P_CLEAN_LIST, CLEAN_LIST_END);
+  page.fill(0, TOY_ENTRIES, TOY_ENTRIES_END);
+  page.fill(0, P_CLEAN_LIST, P_DNA);
   w32(page, 8, K.flag); w32(page, 12, FLAG_OFF);
   w32(page, 16, counts[0]); w32(page, 20, counts[1]); w32(page, 24, counts[2]); w32(page, 28, K.id); w32(page, 32, (planet ? 1 : 0) | (fieldMenu ? 2 : 0) | (games ? 4 : 0) | (kind === 'gen3' ? SCENE_LAND : 0) | EXTRAS.reduce((m, X) => m | (alt[X.name] ? X.bit : 0), 0)); w32(page, 36, games ? games.rest : 0);
   // background table and child list
@@ -884,7 +914,7 @@ function sixLabGamesUpdate(rom, blob) {
     throw new Error('Lab game helper missing');
   const oldPage = rom.subarray(SIX_OFF, SIX_OFF + 0x1000);
   const page = new Uint8Array(oldPage);
-  page.set(blob.subarray(P_GM_FN, P_GM_END), P_GM_FN);
+  page.set(blob.subarray(P_GM_FN, TOY_ENTRIES), P_GM_FN);
   const out = new Uint8Array(rom);
   const assetHooks = [...G_SITES, ...G_TABS].map(([at]) => [Number(at), 0]);
   for (const [xip, entry] of [...assetHooks, ...G_NAV]) {
@@ -967,6 +997,12 @@ function dnaStrip(out, K, info) {
   if ((u32(page, 32) & CLEAN_FLAG) && hex(out, CLEAN_SITES[0][0], 4) !== CLEAN_SITES[0][1]) {
     for (const [at, orig] of CLEAN_SITES) out.set(bookBytes(orig), at);
     page.fill(0, P_CLEAN_LIST, CLEAN_LIST_END);
+  }
+  const toy = sixToyHooks(page);
+  if (toy && toy.every(([at, bytes]) => hex(out, at, 4) === hex(bytes, 0, 4))) {
+    for (const [at, orig] of TOY_SITES) out.set(bookBytes(orig), at);
+    page.fill(0, TOY_ENTRIES, TOY_ENTRIES_END);
+    page.fill(0, TOY_CODE, P_DNA);
   }
   w32(page, 32, (u32(page, 32) & ~(8 | CLEAN_FLAG)) | (info.scene ? SCENE_LAND : 0)); page.fill(0xFF, P_DNA, DNA_END);
 }

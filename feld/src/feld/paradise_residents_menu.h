@@ -64,13 +64,11 @@ static int resident_mark(const struct ResidentField *f,u32 slot){
   u32 at=resident_mark_address(f,slot), old=rd32(at);
   if(old==RES_BANK_MAGIC) return 1;
   if((old&RES_BANK_MAGIC)!=RES_BANK_MAGIC) return 0;
-#ifdef HOST
+  /* Use the same aligned DMA transfer as resident sectors. Never erase
+   * this page: it also owns every other private resident slot. */
   flash_read(RES_BANK_MARKS,g_page,PAGE);
   for(u32 i=0;i<4u;i++) g_page[at-RES_BANK_MARKS+i]=(u8)(RES_BANK_MAGIC>>(8u*i));
-  flash_prog4k(RES_BANK_MARKS,g_page);
-#else
-  flash_prog_word(at,RES_BANK_MAGIC);
-#endif
+  flash_prog4k_no_erase(RES_BANK_MARKS,g_page);
   return rd32(at)==RES_BANK_MAGIC;
 }
 static u32 resident_address(const struct ResidentField *f,u32 slot){
@@ -328,8 +326,11 @@ static void resident_appearance(const struct ResidentField *f,u32 slot,u32 addr,
     if(f && !resident_preserve(f,slot,addr)){ message("SHARED RECORD","COULD NOT COPY",""); return; }
     u32 len=resident_build(body,eyes,color);
     if(!len){ message("INVALID APPEARANCE","CHECK ROM CATALOG",""); return; }
-    if(!resident_write(f?resident_destination(f,slot,addr):addr,len,body) || (f && f->secondary && !resident_mark(f,slot))){
+    if(!resident_write(f?resident_destination(f,slot,addr):addr,len,body)){
       message("WRITE FAILED","CHECK RESIDENT","AND TRY AGAIN"); return;
+    }
+    if(f && f->secondary && !resident_mark(f,slot)){
+      message("BANK MARK FAILED","CHECK RESIDENT","AND TRY AGAIN"); return;
     }
     if(!f){
       if(new_star){

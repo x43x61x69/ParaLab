@@ -71,9 +71,9 @@ void flash_prog4k(u32 addr, const void *src)
   flash_program(addr,src,0x1000u);
 }
 
-void flash_prog_word(u32 addr, u32 word)
+void flash_prog4k_no_erase(u32 addr, const void *src)
 {
-  flash_program(addr,&word,sizeof(word));
+  flash_program(addr,src,0x1000u);
 }
 
 void flash_read(u32 addr, void *dst, u32 len)

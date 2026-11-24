@@ -3,7 +3,8 @@
 #include "io.h"
 void flash_erase4k(u32 addr);
 void flash_prog4k(u32 addr, const void *src);
-void flash_prog_word(u32 addr, u32 word);
+/* Source and destination must use the same alignment as flash_prog4k. */
+void flash_prog4k_no_erase(u32 addr, const void *src);
 void flash_read(u32 addr, void *dst, u32 len);
 int  flash_same(u32 addr, const void *src, u32 len);
 int  flash_update4k(u32 addr, const void *src);
