@@ -37,13 +37,17 @@ function growthKind(rom) {
 // Shared with zh patcher. The donor names still contain the stock Chinese codes.
 const NAME_STATE = GROWTH_PAGE + 0xFE0, NAME_MAGIC = 0x314E5A4E; // NZN1
 const FIELD_STATE = NAME_STATE + 16, FIELD_MAGIC = 0x31465A4E; // NZF1
-const GROWTH_VERSION = 2;
+const PROFILE_STATE = ITEM_STATE - 16, PROFILE_MAGIC = 0x31505A4E; // NZP1
+// Icon and background pairs used by the original Neon Tama Files detail page.
+const PROFILE_SPRITES = [153, 191, 154, 192, 155, 193];
+const GROWTH_VERSION = 3;
 const NATIVE_TEENS = 4, NATIVE_ADULTS = 16, MAX_ADULTS = 33;
 const GROWTH_CONFIG_SIZE = (3 + 3 * NATIVE_TEENS + 3 * NATIVE_ADULTS + 3 + 3 * MAX_ADULTS) * 2;
 const LAYER_INDEX_CODE = [0x00, 0x6C, 0x07, 0x9B, 0xB3, 0xF9, 0x00, 0x30, 0xBD, 0xF9, 0x1A, 0xC0];
 
 const u16 = (b, o) => b[o] | b[o + 1] << 8;
 const u32 = (b, o) => (u16(b, o) | u16(b, o + 2) << 16) >>> 0;
+const romView = bytes => new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
 function w16(b, o, v) { b[o] = v; b[o + 1] = v >>> 8; }
 function w32(b, o, v) { w16(b, o, v); w16(b, o + 2, v >>> 16); }
 function word(v) { const b = new Uint8Array(2); w16(b, 0, v); return b; }
@@ -368,8 +372,7 @@ function transplant(base, neon) {
   }
   // Node Buffer slices alias their input. The archive builder and frame
   // remapper need the copying behavior of an ordinary Uint8Array slice.
-  const view = bytes => new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  const dst = C.openRom(view(base)), src = C.openRom(view(neon));
+  const dst = C.openRom(romView(base)), src = C.openRom(romView(neon));
   const target = dataTables(dst.files[0]), donor = dataTables(src.files[0]);
   if (growthKind(base) === 'gen3' && !Lz4.isInstalled(base)) {
     throw new Error('the base needs its legacy LZ4 decoder first');
@@ -383,16 +386,49 @@ function transplant(base, neon) {
   }
   const imported = spriteImporter(dst.entries, src.entries, target[SPRITE_FLAGS], donor[SPRITE_FLAGS], dst.groups, Lz4.isInstalled(base));
   const anim = addAnimations(target, donor, chars, imported.sprite);
+  const profiles = growthKind(base) === 'gen3' ? PROFILE_SPRITES.map(imported.sprite) : [];
   const text = names(base, neon, chars);
   target[RECORDS] = concat([target[RECORDS], ...characterRows(donor[RECORDS], chars, anim.firstAnimation, text.start)]);
   target[SPRITE_FLAGS] = imported.allFlags();
   const rebuilt = C.buildRom({ ...dst, entries: imported.entries, files: [target, null, text.file] }, new Map(), dataPack(target));
   const rom = Six.sixFix(rebuilt.rom);
+  if (profiles.length) writeProfileSprites(rom, profiles);
   C.verifyRom(rom, []);
   return {
     ...rebuilt, rom, planetTextIds: text.planetTextIds, ...anim, sprites: imported.entries.length - dst.entries.length,
     rows: chars.map((c, i) => ({ ...c, animation: anim.firstAnimation + i, name: text.start + i + 1 })),
   };
+}
+
+function profileSprites(rom) {
+  if (u32(rom, PROFILE_STATE) !== PROFILE_MAGIC) return [];
+  const ids = PROFILE_SPRITES.map((_, i) => u16(rom, PROFILE_STATE + 4 + 2 * i));
+  return ids.every(id => id > 0 && id < 0xFFFF) ? ids : [];
+}
+
+function needsProfileSprites(rom) {
+  return growthKind(rom) === 'gen3' && installed(rom) && !profileSprites(rom).length;
+}
+
+function writeProfileSprites(rom, ids) {
+  if (!rom.subarray(PROFILE_STATE, ITEM_STATE).every(byte => byte === 0xFF))
+    throw new Error('Neon Tama Files profile area is occupied');
+  w32(rom, PROFILE_STATE, PROFILE_MAGIC);
+  ids.forEach((id, i) => w16(rom, PROFILE_STATE + 4 + 2 * i, id));
+}
+
+function updateProfileSprites(rom, neon) {
+  if (!needsProfileSprites(rom)) return rom;
+  if (C.editionIdOf(neon) !== 8) throw new Error('expected a Neon Planets source');
+  const dst = C.openRom(romView(rom)), src = C.openRom(romView(neon));
+  const tables = dataTables(dst.files[0]), donor = dataTables(src.files[0]);
+  const imported = spriteImporter(dst.entries, src.entries, tables[SPRITE_FLAGS], donor[SPRITE_FLAGS], dst.groups, Lz4.isInstalled(rom));
+  const ids = PROFILE_SPRITES.map(imported.sprite);
+  tables[SPRITE_FLAGS] = imported.allFlags();
+  const out = Six.sixFix(C.buildRom({ ...dst, entries: imported.entries }, new Map(), dataPack(tables)).rom);
+  writeProfileSprites(out, ids);
+  C.verifyRom(out, []);
+  return out;
 }
 
 function itemsInstalled(rom) {
@@ -577,7 +613,7 @@ function growthBranch(from, to) {
 function growthHeader(code) {
   const version = code && u32(code, 4);
   if (!code || code.length < 16 || code.length > 0x1000 ||
-      u32(code, 0) !== GROWTH_MAGIC || (version !== 1 && version !== GROWTH_VERSION)) return null;
+      u32(code, 0) !== GROWTH_MAGIC || version < 1 || version > GROWTH_VERSION) return null;
   const entry = u32(code, 8) & ~1, config = u32(code, 12);
   if (entry !== 16 || config < entry + 16 || config + GROWTH_CONFIG_SIZE > code.length) return null;
   return { entry, config, version };
@@ -617,8 +653,8 @@ function growthUpdateNeeded(rom) {
 function upgradeGrowth(rom) {
   if (!growthUpdateNeeded(rom)) return rom;
   const code = growthBinary(growthKind(rom)), fresh = growthHeader(code);
-  const old = growthHeader(rom.subarray(GROWTH_PAGE, ITEM_STATE));
-  if (fresh?.version !== GROWTH_VERSION || !old || code.length > ITEM_STATE - GROWTH_PAGE) {
+  const old = growthHeader(rom.subarray(GROWTH_PAGE, PROFILE_STATE));
+  if (fresh?.version !== GROWTH_VERSION || !old || code.length > PROFILE_STATE - GROWTH_PAGE) {
     throw new Error('Cannot update the Neon growth helper');
   }
   const config = rom.subarray(GROWTH_PAGE + old.config, GROWTH_PAGE + old.config + GROWTH_CONFIG_SIZE);
@@ -636,14 +672,15 @@ function installGrowth(rom, rows, code) {
   }
   code ||= growthBinary(kind);
   const header = growthHeader(code);
-  if (!header || code.length > ITEM_STATE - GROWTH_PAGE) throw new Error('invalid Neon growth helper');
+  if (!header || code.length > PROFILE_STATE - GROWTH_PAGE) throw new Error('invalid Neon growth helper');
   const stub = F.embedded()?.stub || (typeof require !== 'undefined'
     ? require('node:fs').readFileSync(__dirname + '/../../feld/stub_feld_tpl.bin') : null);
   const menu = stub ? F.feldFind(rom, stub) : null;
   const reserved = menu ? [...F.slotRanges(menu), [menu.off, menu.off + 0x10000], [menu.stubOff, menu.stubOff + 0x1000]] : [];
   if (F.languagePatchPages(rom).includes(GROWTH_PAGE) ||
       reserved.some(([begin, end]) => GROWTH_PAGE < end && GROWTH_PAGE + 0x1000 > begin) ||
-      !rom.subarray(GROWTH_PAGE, ITEM_STATE).every(v => v === 0xFF) ||
+      !rom.subarray(GROWTH_PAGE, PROFILE_STATE).every(v => v === 0xFF) ||
+      (!profileSprites(rom).length && !rom.subarray(PROFILE_STATE, ITEM_STATE).every(v => v === 0xFF)) ||
       (!itemsInstalled(rom) && !rom.subarray(ITEM_STATE, NAME_STATE).every(v => v === 0xFF)) ||
       !rom.subarray(NAME_STATE, GROWTH_PAGE + 0x1000).every(v => v === 0xFF)) {
     throw new Error('Neon growth helper page is occupied or reserved');
@@ -689,6 +726,6 @@ function installGrowth(rom, rows, code) {
   return out;
 }
 
-root.ParamixNeonTransplant = { transplant, importAdults, installGrowth, installed, growthUpdateNeeded, upgradeGrowth, fixLayerIndices, planetTextRows, needsPlanetNames, localizePlanetNames, transplantItems, itemsInstalled, clearPlaceholderCounts, clearItemSaveSlots, growthPage: GROWTH_PAGE };
+root.ParamixNeonTransplant = { transplant, importAdults, installGrowth, installed, growthUpdateNeeded, upgradeGrowth, fixLayerIndices, planetTextRows, needsPlanetNames, localizePlanetNames, transplantItems, itemsInstalled, clearPlaceholderCounts, clearItemSaveSlots, profileSprites, needsProfileSprites, updateProfileSprites, growthPage: GROWTH_PAGE };
 if (typeof module !== 'undefined') module.exports = root.ParamixNeonTransplant;
 })(typeof window !== 'undefined' ? window : globalThis);

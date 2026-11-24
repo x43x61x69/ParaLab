@@ -49,6 +49,10 @@ Serve the entire `dist/web/` directory, including the versioned catalog. To choo
 
 In Neon Planets, open **Saves → Planet Residents** to add, replace, move or remove residents in the loaded ROM or a matching `.tamasave` backup. For on-device editing, enable **Tama Editor** in **Menu** before exporting the ROM. On Neon Planets, open **ParaLab → Progress → Planet Residents** to add an adult Tama, edit its appearance, move residents between planets or remove them.
 
+On Paradise ROMs with imported Neon characters, hold **A** from just before the baby evolves until the animation begins to follow the original evolution route for its field. Without **A**, the imported Neon route is automatic. Open and save an already patched ROM to update its evolution behavior.
+
+To update the planet artwork in Tama Files on an existing Tropical or Glacier ROM with imported Neon characters, choose the original Neon Planets ROM again in **Menu** before saving.
+
 On Paradise, open **ParaLab → Tama → Stars (Past Tamas)**. Select an empty slot to set the appearance, age and cause of death, then confirm to save. Select an occupied slot to edit appearance, age or cause of death individually.
 
 ## My Lab on Paradise

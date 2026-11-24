@@ -124,6 +124,8 @@ const COOK_ROWS = [[5021, 5004, 5022, 5005, 5023, 5006, 5024, 5008], [5025, 5009
 const COOK_SITES = { gen3: [0x30A72, 0x4B930, 0x4B9A0, 0x4BAB4, 0x4BB7A, 0x6F202].map((o) => [o, 0, 0x10091FBC, 'cook']),
   jade: [0x2C426, 0x45B94, 0x45C04, 0x45D18, 0x45DDE, 0x635CA].map((o) => [o, 0, 0x1007EB5C, 'cook']) };
 const T_COOK = 0x740;   // 24 halfwords up to the egg hunt table
+const SHOP_MEALS = 0x400;
+const SHOP_ITEM_SIZE = 46, SHOP_FLAGS_OFF = 44, SHOP_FOR_SALE = 2;
 /* the add-on tables of six fields: name, sites, place in the helper page, option bit, table for this ROM */
 const EXTRAS = [
   { name: 'hunt', on: () => SIX_HUNT, sites: HUNT_SITES, at: 0x770, bit: 16,
@@ -160,6 +162,41 @@ function huntRow(rom, r, bitBase) {
   const cat = Fd ? Fd.itemCatalog(rom) : [], pic = new Map(cat.map((x) => [x.id, x.pic]));
   const out = [];
   for (const [id, bit] of HUNT_ROWS[r]) { if (!pic.has(id)) throw new Error('item ' + id + ' missing'); out.push(pic.get(id), id, bitBase === undefined ? bit : bitBase + (bit % 6)); }
+  return out;
+}
+
+function sixShopMealFlags(rom) {
+  const archive = C.arc2Parse(rom, C.ASSET_BASE);
+  const data = archive.ents[0];
+  if (!data || data.flags || data.ulen < 48 || data.ulen > data.clen || data.offset + data.clen > archive.length + 16) return [];
+  const base = C.ASSET_BASE + data.offset;
+  const start = u32(rom, base + 40) * 2, end = u32(rom, base + 44) * 2;
+  if (start < 48 || end <= start || end > data.ulen || (end - start) % SHOP_ITEM_SIZE) return [];
+  const flags = new Map();
+  for (let at = base + start; at < base + end; at += SHOP_ITEM_SIZE) {
+    const id = u16(rom, at);
+    if (id < 5021 || id > 5032) continue;
+    if (flags.has(id)) return [];
+    flags.set(id, at + SHOP_FLAGS_OFF);
+  }
+  return flags.size === 12 ? [...flags.values()] : [];
+}
+
+function sixShopUpdateNeeded(rom) {
+  const info = sixInfo(rom);
+  if (info?.kind !== 'gen3' || info.version !== SIX_VERSION || (u32(rom, SIX_OFF + 32) & SHOP_MEALS)) return false;
+  const flags = sixShopMealFlags(rom);
+  return flags.length > 0 && flags.every(at => u16(rom, at) === 0);
+}
+
+function sixShopUpdate(rom) {
+  if (!sixShopUpdateNeeded(rom)) return rom;
+  const out = new Uint8Array(rom);
+  // Restore the native Land/Water/Sky recipes to the shop, with their original
+  // prices and unlock levels. Ingredients keep their egg hunt availability.
+  for (const at of sixShopMealFlags(rom)) w16(out, at, SHOP_FOR_SALE);
+  w32(out, SIX_OFF + 32, u32(out, SIX_OFF + 32) | SHOP_MEALS);
+  w32(out, C.ASSET_BASE + 4, C.arc2Checksum(out, C.ASSET_BASE, u32(out, C.ASSET_BASE + 8)));
   return out;
 }
 // v1 and v2 (1.2.0, 1.2.1) of Tropical/Glacier jumped from these places too
@@ -401,6 +438,11 @@ const G_SEQ = [0, 1, 2, 3, 4, 5, 6, 0xA, 0xB, 0xE];
 const G_OPEN = 0x1001FEBA, G_OPEN_ORIG = '5bf02dff', G_ALL = 0x100;
 const G_NAV = [[0x1002FFE4, 1], [0x1003003A, 2]];       // ldrh.w r1,[r2,#126] -> six_cnext / six_cprev
 const G_NAV_ORIG = 'b2f87e10';
+const G_BG_SITE = 0x1008F89C;
+// The original Land and Jade Catching Poop backgrounds already exist in the
+// Tropical/Glacier archive. Entries are ordered by the native transition code.
+const G_BG_LAND = [2126, 2127, 2128, 2129, 2130];
+const G_BG_JADE = [2140, 2141, 2126, 2127, 2128];
 const G_SITES = [
   ['0x10050b1e','w','r0',"",1225,'c',997,3],
   ['0x10050b46','w','r1',"",2626,'s',1967,3],
@@ -479,7 +521,7 @@ const G_TABS = [
   ['0x100306c4','r0','cardName',3],
   ['0x100478e2','r0','cardName',3],
   ['0x10047baa','r0','cardName',3],
-  ['0x1008f89c','r0','bg03',3],
+  [G_BG_SITE,'r0','bg03',3],
   ['0x1008f8d0','r0','bg03',3],
   ['0x1008f906','r0','bg03',3],
   ['0x1008f934','r0','bg03',3],
@@ -499,7 +541,7 @@ const G_TABLES = {
   cardName: { addr: 0x10093560, n: 8, w: 2, f1: [[0,'=',803],[1,'=',804],[2,'=',805],[3,'=',806],[6,'=',807],[5,'=',808]], f2: [[0,'=',803],[1,'=',804],[2,'=',805],[3,'=',806],[5,'=',808]] },
   cardLevel: { addr: 0x10093976, n: 7, w: 2, f1: [[0,'=',1],[1,'=',4],[2,'=',4],[3,'=',4],[6,'=',1],[5,'=',1]], f2: [[0,'=',1],[1,'=',4],[2,'=',4],[3,'=',4],[5,'=',1]] },
   intro03: { addr: 0x10094368, n: 2, w: 2, f1: [[0,'s',2005],[1,'s',2015]], f2: [[0,'s',2005],[1,'s',2015]] },
-  bg03: { addr: 0x10091CC4, n: 5, w: 2, f1: [[0,'p',1402],[1,'p',1402],[2,'p',1402],[3,'p',1402],[4,'p',1402]], f2: [[0,'p',1402],[1,'p',1402],[2,'p',1402],[3,'p',1402],[4,'p',1402]] },
+  bg03: { addr: 0x10091CC4, n: 5, w: 2, f1: G_BG_LAND.map((id, i) => [i, '=', id]), f2: G_BG_JADE.map((id, i) => [i, '=', id]) },
   play: { addr: 0x10094140, n: 24, w: 2, f1: [[0,'=',809],[2,'=',101],[12,'=',811],[14,'=',103],[18,'=',812],[20,'=',104]] },
 };
 const P_GM = 0x980, P_GM_FN = 0x9B0, P_GM_END = 0xB00;
@@ -654,7 +696,7 @@ function gamesBuild(rom, X, base) {
     patches.push([xip, 4]);
   }
   for (const [a, rd, name, fams, flags = 0] of G_TABS) {
-    const xip = parseInt(a, 16), t = movPair(rom, f(xip));
+    const xip = Number(a), t = movPair(rom, f(xip));
     if (t !== G_TABLES[name].addr) throw new Error('game table place changed ' + a);
     site(xip, REG(rd), 0xFF, [t, fams & 1 && tabAt[name + 1] ? tabAt[name + 1] : t, fams & 2 && tabAt[name + 2] ? tabAt[name + 2] : t], flags);
     patches.push([xip, 8]);
@@ -786,6 +828,9 @@ function sixStrip(rom) {
   const info = sixInfo(rom);
   if (!info) return rom;
   const out = new Uint8Array(rom), K = KINDS[info.kind], f = (o) => 0x11000 + o;
+  if (info.kind === 'gen3' && info.version === SIX_VERSION && (u32(rom, SIX_OFF + 32) & SHOP_MEALS)) {
+    for (const at of sixShopMealFlags(rom)) w16(out, at, u16(out, at) & ~SHOP_FOR_SALE);
+  }
   const put = (o, h) => { for (let k = 0; k < h.length / 2; k++) out[o + k] = parseInt(h.substr(2 * k, 2), 16); };
   if (info.dna) dnaStrip(out, K, info);
   if (info.food && K.food) foodStrip(out, K);
@@ -903,19 +948,36 @@ function gamesInstall(out, page, K, games) {
     out.set(gameHook(xip, page, entry), fo(xip));
   }
 }
+function oldArcadeBackgrounds(rom, info) {
+  const begin = B_OFF;
+  const end = info.gamesRest;
+  const list = u32(rom, SIX_OFF + P_GM) - 0x60000000;
+  if (end <= begin || end >= B_END || list < begin || list >= end) return [];
+  for (let at = list; at + 20 <= end && u32(rom, at); at += 20) {
+    if (u32(rom, at) !== ((G_BG_SITE + 4) | 1) || u32(rom, at + 4) !== G_TABLES.bg03.addr) continue;
+    const offsets = [8, 12].map(off => u32(rom, at + off) - 0x60000000);
+    if (offsets.some(off => off < begin || off + 10 > list) || offsets[0] === offsets[1]) return [];
+    return offsets.flatMap((off, i) => G_BG_LAND.every((_, k) => u16(rom, off + 2 * k) === G_BG_LAND[0])
+      ? [[off, i ? G_BG_JADE : G_BG_LAND]] : []);
+  }
+  return [];
+}
 function sixLabGamesUpdateNeeded(rom) {
   const info = sixInfo(rom);
-  return !!(info?.kind === 'gen3' && info.version === SIX_VERSION && info.games && !info.allLabGames);
+  return !!(info?.kind === 'gen3' && info.version === SIX_VERSION && info.games &&
+    (!info.allLabGames || oldArcadeBackgrounds(rom, info).length));
 }
 function sixLabGamesUpdate(rom, blob) {
   if (!sixLabGamesUpdateNeeded(rom)) return rom;
+  const info = sixInfo(rom), out = new Uint8Array(rom);
+  for (const [at, ids] of oldArcadeBackgrounds(rom, info)) ids.forEach((id, i) => w16(out, at + 2 * i, id));
+  if (info.allLabGames) return out;
   if (!blob || blob.length < P_GM_END || blob.length > 0x1000 || u32(blob, 0) !== SIX_MAGIC || u32(blob, 4) !== SIX_VERSION ||
       (u32(blob, P_GM_FN + 12) & ~1) < SIX_XIP + P_GM_FN || (u32(blob, P_GM_FN + 12) & ~1) >= SIX_XIP + P_GM_END)
     throw new Error('Lab game helper missing');
   const oldPage = rom.subarray(SIX_OFF, SIX_OFF + 0x1000);
   const page = new Uint8Array(oldPage);
   page.set(blob.subarray(P_GM_FN, TOY_ENTRIES), P_GM_FN);
-  const out = new Uint8Array(rom);
   const assetHooks = [...G_SITES, ...G_TABS].map(([at]) => [Number(at), 0]);
   for (const [xip, entry] of [...assetHooks, ...G_NAV]) {
     const at = xip - 0x10000000 + 0x11000;
@@ -1050,8 +1112,13 @@ function sixApply(rom, land, blob, opts = {}) {
   const wantFood = SIX_FOOD && opts.dna !== false;
 
   if (sixStale(have) && have.version === SIX_VERSION && land && have.planet === planet &&
-      have.fieldMenu === fieldMenu && have.games === wantGames) return sixWalkingUpdate(rom, land);
-  if (have && have.version >= SIX_VERSION && have.planet === planet && have.fieldMenu === fieldMenu && have.games === wantGames) { let r = sixDna(rom, blob, wantDna); if (wantFood) r = sixFood(r, blob); return sixLabGamesUpdate(sixFieldsUpdate(sixHunt(r), blob), blob); }
+      have.fieldMenu === fieldMenu && have.games === wantGames) return sixShopUpdate(sixLabGamesUpdate(sixWalkingUpdate(rom, land), blob));
+  if (have && have.version >= SIX_VERSION && have.planet === planet && have.fieldMenu === fieldMenu && have.games === wantGames) {
+    let upgraded = sixDna(rom, blob, wantDna);
+    if (wantFood) upgraded = sixFood(upgraded, blob);
+    upgraded = sixFieldsUpdate(sixHunt(upgraded), blob);
+    return sixShopUpdate(sixLabGamesUpdate(upgraded, blob));
+  }
   if (have) rom = sixStrip(rom);
   const kind = kindOf(rom);
   if (kind && fieldMenu && !fmCan(rom, KINDS[kind])) fieldMenu = false;
@@ -1172,7 +1239,7 @@ function sixApply(rom, land, blob, opts = {}) {
   bList.forEach((x, k) => { const o = 8 + k * 260; w32(bh, o, x.id); x.rel.forEach((r, t) => w32(bh, o + 4 + 4 * t, r < 0 ? 0xFFFFFFFF : r)); });
   out.set(bh, B_OFF); out.set(concat(bData), B_OFF + bHead);
   if (games) out.set(games.bytes, gBase);
-  return sixFix(sixFieldsUpdate(out, blob));
+  return sixFix(sixShopUpdate(sixFieldsUpdate(out, blob)));
 }
 /** Fix the walking picture indices without rebuilding the other six-field imports. */
 function sixWalkingUpdate(rom, land) {
@@ -1223,6 +1290,7 @@ const BOOK_B64 = '__BOOK_B64__', BOOK_AT = 0x300, BOOK_MAGIC = 0x36304b42;
 const BOOK_VERSION = 3;
 const BOOK_NEON_COUNTS = [24, 38, 24];
 const BOOK_NEON_NAMES = ['COSMIC PLANET', 'NEW TAMAGOTCHI PLANET', 'TAMAGOTCHI PLANET'];
+const BOOK_LAND_SPRITES = [144, 183, 145, 184, 146, 185];
 const BOOK_SITES = [
   [0x166d4, '80b586b0', 'jump', 0],
   [0x16630, '80b586b0', 'jump', 1],
@@ -1373,9 +1441,11 @@ function bookCharacters(rom) {
   }
   if (new Set(added).size !== 66) return null;
   const data = neonBookCharacters(rom, chars);
-  if (!data) return info && !chars.some(c => c.field >= 7 && c.field <= 9) ? { ids: added, names: [] } : null;
+  const landSprites = info ? BOOK_LAND_SPRITES : [];
+  if (!data) return info && !chars.some(c => c.field >= 7 && c.field <= 9) ? { ids: added, names: [], landSprites } : null;
   const ids = added.concat(data.ids);
-  return new Set(ids).size === ids.length ? { ids, names: data.names } : null;
+  const neonSprites = nt?.profileSprites?.(rom) ?? [];
+  return new Set(ids).size === ids.length ? { ids, names: data.names, landSprites, neonSprites } : null;
 }
 
 function neonBookCharacters(rom, chars) {
@@ -1414,7 +1484,7 @@ function sixBookApply(rom, stubOff) {
   let data;
   try { data = legacy ? legacyBookCharacters(rom, legacy) : bookCharacters(rom); } catch (_) { return false; }
   if (!data) return false;
-  const { ids, names, rosters } = data;
+  const { ids, names, rosters, landSprites = [], neonSprites = [] } = data;
   const version = legacy ? LEGACY_BOOK_VERSION : names.length ? BOOK_VERSION : 2;
   const sites = legacy ? legacy.sites : bookSites(version);
   if (sites.some(([off, orig]) => hex(rom, off, orig.length / 2) !== orig)) return false;
@@ -1425,10 +1495,11 @@ function sixBookApply(rom, stubOff) {
     : b64(code);
   if (!page) return false;
   const idsAt = u32(page, 60), countAt = u32(page, 68), namesAt = u32(page, 72);
+  const spritesAt = u32(page, 8 + 4 * 11);
   const rostersAt = legacy ? u32(page, 76) : 0;
   if (u32(page, 0) !== BOOK_MAGIC || u32(page, 4) !== (legacy ? LEGACY_BOOK_VERSION : BOOK_VERSION) ||
       idsAt + 2 * ids.length > page.length || countAt >= page.length ||
-      namesAt + 2 * names.length > page.length ||
+      namesAt + 2 * names.length > page.length || (!legacy && spritesAt + 36 > page.length) ||
       (legacy && rostersAt + 2 * rosters.length > page.length) ||
       at + page.length > stubOff + 0x1000 || !rom.subarray(at, at + page.length).every((b) => b === 255)) return false;
   w32(page, 4, version);
@@ -1436,6 +1507,8 @@ function sixBookApply(rom, stubOff) {
   if (rosters) rosters.forEach((id, i) => w16(page, rostersAt + 2 * i, id));
   ids.forEach((id, i) => w16(page, idsAt + 2 * i, id));
   names.forEach((id, i) => w16(page, namesAt + 2 * i, id));
+  landSprites.forEach((id, i) => w16(page, spritesAt + 12 + 2 * i, id));
+  neonSprites.forEach((id, i) => w16(page, spritesAt + 24 + 2 * i, id));
   rom.set(page, at);
   sites.forEach((site) => rom.set(bookReplacement(page, at, site), site[0]));
   return true;
@@ -1455,6 +1528,6 @@ function sixBookStrip(rom, stubOff) {
   sites.forEach(([off, orig]) => rom.set(bookBytes(orig), off));
 }
 
-root.ParamixSix = { sixStale, sixWalkingUpdate, VERSION: SIX_VERSION, DNA: SIX_DNA, HUNT: SIX_HUNT, sixHunt, sixLabGamesUpdate, sixLabGamesUpdateNeeded, sixFieldsUpdate, sixFieldsUpdateNeeded, sixDna, sixDnaCan, sixApply, sixStrip, sixFix, sixCan, sixSource, sixInfo, sixNeedsSource, sixBookApply, sixBookStrip, kindOf, embedded, FLAG_OFF, SIX_OFF, packGroup, reduceOne, mapCells };
+root.ParamixSix = { sixStale, sixWalkingUpdate, VERSION: SIX_VERSION, DNA: SIX_DNA, HUNT: SIX_HUNT, sixHunt, sixLabGamesUpdate, sixLabGamesUpdateNeeded, sixFieldsUpdate, sixFieldsUpdateNeeded, sixShopUpdate, sixShopUpdateNeeded, sixDna, sixDnaCan, sixApply, sixStrip, sixFix, sixCan, sixSource, sixInfo, sixNeedsSource, sixBookApply, sixBookStrip, kindOf, embedded, FLAG_OFF, SIX_OFF, packGroup, reduceOne, mapCells };
 if (typeof module !== 'undefined') module.exports = root.ParamixSix;
 })(typeof window !== 'undefined' ? window : globalThis);

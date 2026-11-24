@@ -1177,9 +1177,13 @@ function keepPlan(F, E, menu, opts = {}) {
     // active field. Within such a family the device's ID page and save stay (so the device keeps its field).
     const fam = (id) => (F.familyOf ? F.familyOf(id) : null);
     const sameFam = dev.info.edition !== ed.id && fam(dev.info.edition) && fam(dev.info.edition) === fam(ed.id);
-    if (dev.info.edition !== ed.id && !sameFam) throw fe('otherEd', { d: dev.info.name, r: EDITIONS[ed.id] || ed.id });
-    const image = new Uint8Array(img), notes = [];
-    if (sameFam) notes.push(note('noteEdKept', { d: dev.info.name, r: EDITIONS[ed.id] || ed.id }));
+    const notes = [];
+    if (dev.info.edition !== ed.id) {
+      const editions = { d: dev.info.name, r: EDITIONS[ed.id] || ed.id, deviceEdition: dev.info.edition, romEdition: ed.id };
+      if (!sameFam) throw fe('otherEd', editions);
+      notes.push(note('noteEdKept', editions));
+    }
+    const image = new Uint8Array(img);
     // the device's program area (stub, menu, apps), only the sectors that differ
     const view = new Uint8Array(img);
     for (const s of changed) if (s === 0 || (s >= 0x90000 && s < 0x110000)) view.set(await dev.read(s, SECTOR), s);

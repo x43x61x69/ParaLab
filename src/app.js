@@ -89,6 +89,7 @@ const T = {
     keepAwakePatch: 'Keep Tama awake',
     keepAwakePatchHelp: 'Adds an AWAKE switch to the on-device Tama menu. It starts off for new saves. Turning it on affects growth.',
     fl_slotMigration: 'Keep Saves could not verify the contents of slot {f}. Nothing was written.',
+    mmHint2: 'Wait for the connection to finish.',
     fl_slotLayout: 'Keep Saves cannot map slot {f} to a unique slot in the new ROM. Nothing was written.',
     fl_slotSpace: 'The new ROM does not have enough save space to preserve slot {f}. Nothing was written.',
     fl_slotResidentBanksRequired: 'This device already uses separate field resident storage. Use a ROM with the same resident storage to keep its saves. Nothing was written.',
@@ -162,7 +163,8 @@ const T = {
     paraClear: 'Clear Active ROM Save', paraClearAsk: 'Clear the active Paradise save in the loaded ROM?', paraClearDone: 'Active save cleared. Save the ROM as a new file.', paraClearPending: 'Finish recovering the saved game in the ParaLab menu first.',
     specialFoodOn: 'Special Food in game', specialFoodHint: 'Adds SPECIALFOOD and RELEASE under CONNECTION. Choose a Neon Planets ROM.',
     labReleaseOn: 'Send to My Lab in game', labReleaseHint: 'Adds RELEASE under CONNECTION. Choose a Neon Planets ROM for the in-game text.', labReleaseInstalled: 'RELEASE is already installed.', labReleaseUpgrade: 'RELEASE will be updated on export.', labReleaseFail: 'Could not add Lab Invite: {e}',
-    neonDonorPick: 'Choose Neon Planets ROM', neonDonorHint: 'Add 86 Tama and 59 items from Neon Planets.', neonDonorReady: 'Neon source: {name}', neonDonorBad: 'Choose a supported Neon Planets ROM.', neonDonorFail: 'Could not add Neon content: {e}', neonDonorOn: 'Neon content', neonItemsHint: 'Add 59 items from Neon Planets.', neonLocalizeHint: 'Update Tama Files with the original planet names in all languages.',
+    neonDonorPick: 'Choose Neon Planets ROM', neonDonorHint: 'Add 86 Tama and 59 items from Neon Planets.', neonDonorReady: 'Neon source: {name}', neonDonorBad: 'Choose a supported Neon Planets ROM.', neonDonorFail: 'Could not add Neon content: {e}', neonDonorOn: '{editionNeon} content', neonItemsHint: 'Add 59 items from Neon Planets.', neonLocalizeHint: 'Update Tama Files with the original planet names in all languages.',
+    neonProfileHint: 'Update the planet artwork in Tama Files.',
     appsOnlyOn: 'Programs menu', appsOnlyHint: 'Open ParaLab alongside the Neon Planets game to use programs and the Flash Tool.', neonSaves: 'Three Neon save slots', neonSaveFields: 'New saves use the game’s setup. The game unlocks fields with progress.', neonSaveFull: 'Writing a Neon menu slot requires a complete .tamasave backup.',
     neonTamaOn: 'Tama in Programs menu (care, appearance, age)', petPoints: 'Tamapoints', petMission: 'Mission', petMissionAction: 'Completion', petMissionComplete: 'Mark complete', petMissionReset: 'Reset completion',
     open: 'Open ROM', save: 'Save New ROM',
@@ -4175,9 +4177,11 @@ function renderFeld() {
     : labUpgrade ? t('labReleaseUpgrade') : labInstalled ? t('labReleaseInstalled') :
     labDonor && state.labRelease ? t('neonDonorReady', { name: labDonor.name }) : t('labReleaseHint');
   const neonItems = !!NT?.itemsInstalled(rom);
+  const neonNames = neonBuilt && NT.needsPlanetNames(rom);
+  const neonProfiles = neonBuilt && NT.needsProfileSprites(rom);
   $('neonDonorRow').hidden = !NT || !LZ || !ed || neon || la || !!state.clean ||
-    (neonBuilt && neonItems && !NT.needsPlanetNames(rom));
-  const neonHint = !neonBuilt ? 'neonDonorHint' : neonItems ? 'neonLocalizeHint' : 'neonItemsHint';
+    (neonBuilt && neonItems && !neonNames && !neonProfiles);
+  const neonHint = !neonBuilt ? 'neonDonorHint' : !neonItems ? 'neonItemsHint' : neonNames ? 'neonLocalizeHint' : 'neonProfileHint';
   $('neonDonorStat').textContent = (state.neonDonor
     ? t('neonDonorReady', { name: state.neonDonor.name }) : t(neonHint));
   $('sixRow').hidden = !sixCan || la;
@@ -4443,7 +4447,7 @@ async function composeRom({ deferResidentBanks = false, confirmResidentFallback 
 async function composeBaseRom(deferResidentBanks = false) {
   if (CLEAN_ROM && state.clean) return composeClean();
   const keysDirty = !state.doom && doomInstalled() && state.doomKeys && D.doomKeysGet(state.ctx.rom) && JSON.stringify(state.doomKeys) !== JSON.stringify(D.doomKeysGet(state.ctx.rom));
-  const si0 = S6.sixInfo(state.ctx.rom), sixUp = (!!si0 && (si0.version < S6.VERSION || !sixSame(si0)) && !S6.sixNeedsSource(state.ctx.rom)) || sixDnaUp(si0) || S6.sixFieldsUpdateNeeded(state.ctx.rom) || S6.sixLabGamesUpdateNeeded(state.ctx.rom);
+  const si0 = S6.sixInfo(state.ctx.rom), sixUp = (!!si0 && (si0.version < S6.VERSION || !sixSame(si0)) && !S6.sixNeedsSource(state.ctx.rom)) || sixDnaUp(si0) || S6.sixFieldsUpdateNeeded(state.ctx.rom) || S6.sixLabGamesUpdateNeeded(state.ctx.rom) || S6.sixShopUpdateNeeded(state.ctx.rom);
   const emuUp = emuUpPending();
   const codecUp = LZ?.updateNeeded(state.ctx.rom);
   const growthUp = NT?.growthUpdateNeeded(state.ctx.rom);
@@ -4555,13 +4559,14 @@ async function composeBaseRom(deferResidentBanks = false) {
   }
   if (S6.DNA && S6.sixInfo(rom)) rom = S6.sixDna(rom, S6.embedded(), true);
   if (S6.HUNT && S6.sixInfo(rom)) rom = S6.sixHunt(rom);   // 1.7.3 test23: egg hunt per field
-  try { rom = S6.sixLabGamesUpdate(rom, S6.embedded()); }
+  try { rom = S6.sixShopUpdate(S6.sixLabGamesUpdate(rom, S6.embedded())); }
   catch (e) { toast(t('sixFail', { e: em(e) }), true); return null; }
   if (S6.sixInfo(rom)) rom = S6.sixFix(rom);   // the archive may have moved: rain pictures point to 0xF00000
   if (state.neonDonor) {
     try {
       if (NT.installed(rom)) {
         if (NT.needsPlanetNames(rom)) rom = NT.localizePlanetNames(rom, state.neonDonor.rom);
+        rom = NT.updateProfileSprites(rom, state.neonDonor.rom);
       } else {
         if (C.editionIdOf(rom) >= 4 || LZ.isInstalled(rom)) {
           const helper = LZ.embedded(rom);
@@ -5046,10 +5051,17 @@ function devRender(msg) {
   uartWarnRender();
   visRender();
 }
-/* Flasher errors and notes carry a code; German has its own texts, English uses the module's */
+/* Flasher errors and notes carry a code and an English fallback. */
 function flMsg(x) {
   const key = x?.code && 'fl_' + x.code;
-  if (key && locale() !== 'en' && Object.hasOwn(T.en, key)) return t(key, x.p);
+  if (key && locale() !== 'en') {
+    const variables = x.p?.deviceEdition !== undefined ? {
+      d: I18n.edition(romEditionKey(x.p.deviceEdition)) || x.p.d,
+      r: I18n.edition(romEditionKey(x.p.romEdition)) || x.p.r,
+    } : x.p;
+    const translated = I18n.message(key, T.en[key] || '', variables);
+    if (translated) return translated;
+  }
   return t(x?.message || x?.text || String(x));
 }
 function transferProgress(prefix, done, total, label) {
@@ -7259,7 +7271,11 @@ $('btnConn').onclick = async () => {
       if (dv.io) await dv.io.close();
       dv.io = null; dv.d = null; dv.loaded = false;
       let pl = false; try { pl = PL_HINT && port.getInfo().usbVendorId === 0x067B; } catch (x) {}
-      if (pl && e && (e.code === 'noData' || e.code === 'noAnswer')) e.message = flMsg(e) + '. ' + t('plHint'), e.code = null;
+      if (pl && e && (e.code === 'noData' || e.code === 'noAnswer')) {
+        const detail = flMsg(e);
+        e.message = detail + (/[.!?。！？]$/.test(detail) ? ' ' : '. ') + t('plHint');
+        e.code = null;
+      }
       throw e;
     } finally {
       dv.connecting = null;
@@ -7474,10 +7490,10 @@ $('btnWrite').onclick = async () => {
     await stashDel();
     dv.restartNeeded = r.written > 0;
     if (r.written) measure('operation', 'write_rom', romEditionKey(device.info.edition));
-    let m = r.written ? t('devDone', { w: r.committed, k: r.kept ? t('devKept', { k: r.kept }) : '' }) : t('devSame');
-    if (r.rescue) m += '\n' + t('resOn');
-    if (r.notes.length) m += '\n' + r.notes.map(flMsg).join('\n');
-    devRender(m);
+    devRender(() => {
+      const summary = r.written ? t('devDone', { w: r.committed, k: r.kept ? t('devKept', { k: r.kept }) : '' }) : t('devSame');
+      return [summary, ...(r.rescue ? [t('resOn')] : []), ...r.notes.map(flMsg)].join('\n');
+    });
   });
   }); } catch (e) { devRender(t('devErr', { e: flMsg(e) })); }
 };
@@ -7552,7 +7568,11 @@ $('btnRescueBack').onclick = () => devWriteTask(async () => {
 const SV = window.ParamixSaves;
 const stamp = () => { const d = new Date(), z = (n) => String(n).padStart(2, '0'); return d.getFullYear() + z(d.getMonth() + 1) + z(d.getDate()) + '-' + z(d.getHours()) + z(d.getMinutes()); };
 const edSlug = (id) => (FL.EDITIONS[id] || 'paradise').toLowerCase().replace(/[ /]/g, '-');
-function saveMsg(x) { return t('fl_' + x.code, x.p); }
+function saveMsg(x) {
+  if (x.code !== 'saveOtherEd') return t('fl_' + x.code, x.p);
+  const name = id => I18n.edition(romEditionKey(id)) || FL.EDITIONS[id] || id;
+  return t('fl_saveOtherEd', { s: name(x.p.s), d: name(x.p.d) });
+}
 function mainName(r) {
   const ty = F.emuType(r);
   if (ty === 't7') return E.t7XName(E.t7FromRom(r).rom);
@@ -8516,8 +8536,7 @@ $('fileSave').onchange = async (e) => {
   if (dv.d !== device) return;
   const chk = SV.paraCheck(save, ed, extra);
   if (extra.length && !chk.complete) chk.errors.push({ code: 'saveIncomplete' });
-  chk.errors.forEach((x) => { if (x.p) { x.p.s = FL.EDITIONS[x.p.s] || x.p.s; x.p.d = FL.EDITIONS[x.p.d] || x.p.d; } });
-  if (chk.errors.length) { devRender(t('devErr', { e: chk.errors.map(saveMsg).join(', ') })); return; }
+  if (chk.errors.length) { devRender(() => t('devErr', { e: chk.errors.map(saveMsg).join(listSeparator()) })); return; }
   const warn = chk.warnings.map(saveMsg).join('\n');
   if (g_slotIn !== 'live') { slotWrite(save, chk, +g_slotIn, warn); return; }
   if (!await confirmFlashOperation(t('devSaveSure', { ed: connectedEdition(dv.d) }) + (warn ? '\n\n' + warn : ''))) return;

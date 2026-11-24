@@ -42,6 +42,8 @@ u16 neon_growth_pick(const u8 *settings, u16 stock, u32 care) {
   const u16 previous = *(const u16 *)(settings + GROWTH_TAMA);
   const u32 stage = (settings[GROWTH_TAMA + 0x14] >> 2) & 7;
   if (stage == 3 && previous == 1001) {
+    /* A is active-low on Paradise GPIO0 pin 9. Keep the native child selection. */
+    if (!(*(volatile const u32 *)0x40018000u & (1u << 9))) return stock;
     u32 field = settings[GROWTH_FIELD];
 #ifdef GROWTH_JADE_SKY
     /* The optional fourth field uses the live Water slot and the alternate-set byte. */
