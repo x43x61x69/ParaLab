@@ -644,14 +644,11 @@ static void lab_main_menu(void){
     if(save) utoa_(lab_u32(LAB_POINTS),points);
     else lab_copy_label(points,"NO SAVE");
     rect(0,0,FELD_SCREEN_W,FELD_SCREEN_H,BG);
-    menu_title(1,"PARALAB");
-#ifdef BAT_SHOW
-    menu_battery(1);
-#endif
+    menu_header();
     for(u32 row=0;row<4;row++){
       u32 entry=(top+row)%n;
       if(!flash && entry>=5) entry++;
-      big_entry(10+(int)row*27,(top+row)%n==sel,names[entry],status[entry],colors[entry],GREY);
+      main_entry(10+(int)row*27,(top+row)%n==sel,names[entry],status[entry],colors[entry],GREY);
     }
     ctext(120,"A MOVE B OK C EXIT",GREY,1);
     show();

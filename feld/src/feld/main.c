@@ -26,6 +26,7 @@
 #include "hw.h"
 #include "flash.h"
 #include "font.h"
+#include "../../../shared/title_font.h"
 #ifdef FELD_MY_LAB_ON_PARADISE
 #include "../stub/my_lab_paradise_entry.h"
 #endif
@@ -201,13 +202,36 @@ static int slen(const char *s){ int n=0; while(s[n]) n++; return n; }
 static int text_w(const char *s, int sc){ int n=slen(s); return n ? n*6*sc-sc : 0; }
 static void textn(int x,int y,const char *s,int n,u16 c,int sc){
   for(int i=0;i<n && s[i];i++,x+=6*sc){
-    int ch=(u8)s[i]; if(ch>=0x60 && ch!='x') ch-=32;
-    const u8 *g=g_font[glyph(ch)&127];
-    for(int r=0;r<7;r++) for(int k=0;k<5;k++) if(g[r]&(16>>k)) rect(x+k*sc,y+r*sc,x+k*sc+sc,y+r*sc+sc,c);
+    int ch=(u8)s[i]; if(ch>=0x60 && ch!='x' && ch!='v') ch-=32;
+    unsigned index=glyph(ch);
+    if(index>=sizeof(font_index)) continue;
+    const u8 *g=font_columns[font_index[index]];
+    for(int k=0;k<5;k++) for(int r=0;r<7;r++) if(g[k]&(1u<<r)) rect(x+k*sc,y+r*sc,x+k*sc+sc,y+r*sc+sc,c);
   }
 }
 static void text(int x,int y,const char *s,u16 c,int sc){ textn(x,y,s,999,c,sc); }
 static void ctext(int y,const char *s,u16 c,int sc){ text((FELD_SCREEN_W-text_w(s,sc))/2,y,s,c,sc); }
+static int title_width(const char *s){
+  int width=0;
+  for(;*s;s++,width+=10){
+    int ch=(u8)*s&~0x20;
+    if(*s!=' ' && (ch<'A' || ch>'Z')) return 0;
+  }
+  return width ? width-2 : 0;
+}
+static void title_text(int x,int y,const char *s,u16 color){
+  for(;*s;s++,x+=10){
+    if(*s==' ') continue;
+    const unsigned char *rows=title_font[((u8)*s&~0x20)-'A'];
+    for(int r=0;r<12;r++) for(int k=0;k<8;k++)
+      if(rows[r]&(128u>>k)) rect(x+k,y+r,x+k+1,y+r+1,color);
+  }
+}
+static void centered_title(int y,const char *s,u16 color){
+  int width=title_width(s);
+  if(width && width<=FELD_SCREEN_W-4) title_text((FELD_SCREEN_W-width)/2,y,s,color);
+  else ctext(y,s,color,1);
+}
 static void show(void){ hw_push(g_fb,FELD_SCREEN_W,0,0,FELD_SCREEN_W,FELD_SCREEN_H); }
 static void utoa_(u32 v, char *s){ char t[12]; int n=0; do{ t[n++]=(char)('0'+v%10u); v/=10u; }while(v); for(int i=0;i<n;i++) s[i]=t[n-1-i]; s[n]=0; }
 
@@ -221,7 +245,7 @@ static void utoa_(u32 v, char *s){ char t[12]; int n=0; do{ t[n++]=(char)('0'+v%
 #define ABOUT_COLOR RGB(135,205,255)
 #define PROGRESS_COLOR RGB(192,160,255)
 
-static void menu_title(int y,const char *title){ ctext(y,title,GREY,1); }
+static void menu_title(int y,const char *title){ centered_title(y,title,GREY); }
 
 static u16 fcol(u32 i){ return (u16)(i<4u ? g_cfg.field_col[i] : g_cfg.field_col2[i-4u]); }
 static const char *fname(u32 i){ return i<4u ? (const char*)g_cfg.field_name[i] : (const char*)g_cfg.field_name2[i-4u]; }
@@ -705,7 +729,7 @@ static void leave(void){
 }
 static void error_screen(int code){
   rect(0,0,FELD_SCREEN_W,FELD_SCREEN_H,BG);
-  ctext(30,"ERROR",RED,2);
+  centered_title(30,"ERROR",RED);
   char s[12]="CODE 00"; s[5]=(char)('0'+code/10); s[6]=(char)('0'+code%10);
   ctext(56,s,WHITE,1);
   if(code==10||code==11) ctext(68,"SAVE TOO BIG",WHITE,1);   /* the field stays as it is */
@@ -730,7 +754,7 @@ static void done_screen(const char *what, u16 col){
   const int left=8, right=FELD_SCREEN_W-8;
 #endif
   for(;;){
-    rect(0,0,FELD_SCREEN_W,FELD_SCREEN_H,BG); ctext(8,"DONE",WHITE,2); ctext(34,what,col,1);
+    rect(0,0,FELD_SCREEN_W,FELD_SCREEN_H,BG); centered_title(8,"DONE",WHITE); ctext(34,what,col,1);
     ctext(58,"EXIT MENU?",WHITE,1);
     rect(left,exit?94:78,right,exit?107:91,RGB(60,60,110));
 #ifdef FELD_MY_LAB_ON_PARADISE
@@ -943,6 +967,14 @@ static void big_entry(int y, int sel, const char *name, const char *st, u16 c, u
   text(9,y+19,st,stc,1);
 }
 
+static void main_entry(int y,int sel,const char *name,const char *st,u16 c,u16 stc){
+  int width=title_width(name);
+  if(!width || width>FELD_SCREEN_W-10){ big_entry(y,sel,name,st,c,stc); return; }
+  if(sel){ rect(3,y,FELD_SCREEN_W-3,y+28,c); rect(5,y+2,FELD_SCREEN_W-5,y+26,BG); }
+  title_text(width>FELD_SCREEN_W-14 ? 5 : 9,y+4,name,c);
+  text(9,y+19,st,stc,1);
+}
+
 /* ---------------------------------------------------------------- Fields */
 static int g_cur;                     /* index of the active field, -1 = not a field in the list */
 static int g_act;                     /* slot of the live save: field mode = g_cur, save mode = its save number */
@@ -1076,10 +1108,18 @@ static u32 menu_battery(int y){
   u32 mv=bat_mv();
 #endif
   char label[5]; bat_pct_text(mv,label);
-  text(FELD_SCREEN_W-4-text_w(label,1),y,label,bat_flash_low(mv)?ORANGE:GREY,1);
+  text(FELD_SCREEN_W-4-text_w(label,1),y,label,bat_display_color(mv),1);
   return mv;
 }
 #endif
+static __attribute__((noinline)) void menu_header(void){
+  text(4,1,"PARALAB",ORANGE,1);
+  textn(54,1,"v" PARAMIX_VERSION,8,GOLD,1);
+  rect(4,9,FELD_SCREEN_W-4,10,RGB(59,64,92));
+#ifdef BAT_SHOW
+  menu_battery(1);
+#endif
+}
 static void lset_menu(void);
 #ifdef FELD_CLEAN
 static int clean_mode(void);
@@ -1147,7 +1187,7 @@ static void apps_menu(int top){
   g_idle_t=g_ms;
   for(;;){
     rect(0,0,FELD_SCREEN_W,FELD_SCREEN_H,BG);
-    int y0 = n>=4u ? 1 : 12;
+    int y0 = n>=4u ? 1 : 15;
     if(n<4u) menu_title(2,launch_mode() ? "PARALAB" : "PROGRAMS");
     if(n>8u){ if(sel<first) first=sel; if(sel>=first+8u) first=sel-7u; } else first=0;
     for(u32 i=first;i<n && i<first+(n>8u?8u:n);i++){
@@ -1195,7 +1235,7 @@ static void field_menu(int with_app, int top){
   for(;;){
     for(u32 i=0;i<nf;i++) has[i]=slot_valid(i);
     rect(0,0,FELD_SCREEN_W,FELD_SCREEN_H,BG);
-    int y0 = n>=4u ? 1 : 12;
+    int y0 = n>=4u ? 1 : 15;
     if(n<4u) menu_title(2,top ? "PARALAB" : "FIELD");
     for(u32 i=0;i<n;i++){
       const char *nm = i<nf ? fname(i) : g_napp>1u ? "PROGRAMS" : g_appnm[0];
@@ -1669,12 +1709,12 @@ static void draw_item_pic(u32 id, int cx, int cy, int box){
 }
 static const char *group_name(u32 id){ switch(id/1000u){ case 5: return "FOOD"; case 6: return "SNACKS"; case 7: return "TOYS"; case 8: return "GOODS"; default: return "OTHER"; } }
 
-/* Draw a list: title, 10 rows from y=12, footer. */
+/* Draw a list: title, 10 rows from y=15, footer. */
 static void list_draw(const char *title, u32 n, u32 sel, u32 top, int (*row)(u32 i, char *name, char *right, u16 *col), const char *foot){
   rect(0,0,FELD_SCREEN_W,FELD_SCREEN_H,BG);
   menu_title(2,title);
   for(u32 r=0;r<10u && top+r<n;r++){
-    u32 i=top+r; int y=12+(int)r*10;
+    u32 i=top+r; int y=15+(int)r*10;
     char nm[24], rt[8]; u16 c=WHITE; nm[0]=0; rt[0]=0;
     row(i,nm,rt,&c);
     if(i==sel) rect(0,y-1,FELD_SCREEN_W,y+8,RGB(60,60,110));
@@ -1683,7 +1723,7 @@ static void list_draw(const char *title, u32 n, u32 sel, u32 top, int (*row)(u32
     textn(3,y,nm,maxc,c,1);
     text(FELD_SCREEN_W-3-rw,y,rt,GREY,1);
   }
-  if(n>10u){ int h=100*10/(int)n; if(h<6) h=6; int y=12+(int)(100-h)*(int)top/(int)(n-10u); rect(FELD_SCREEN_W-2,y,FELD_SCREEN_W,y+h,GREY); }
+  if(n>10u){ int h=100*10/(int)n; if(h<6) h=6; int y=15+(int)(100-h)*(int)top/(int)(n-10u); rect(FELD_SCREEN_W-2,y,FELD_SCREEN_W,y+h,GREY); }
   ctext(118,foot,GREY,1);
   show();
 }
@@ -2335,10 +2375,10 @@ static void tama_menu(void){
   u32 n=edit_rows+!!(g_cfg.flags & F_KEEP_AWAKE);
   u32 sel=0;
   for(;;){
-    rect(0,0,FELD_SCREEN_W,FELD_SCREEN_H,BG); menu_title(2,"TAMA");
+    rect(0,0,FELD_SCREEN_W,FELD_SCREEN_H,BG); menu_title(1,"TAMA");
     for(u32 i=0;i<n;i++){
       int height=n>6u?15:n==6u?17:20;
-      int y=12+(int)i*height;
+      int y=13+(int)i*height;
       if(i==sel) rect(0,y,128,y+height,RGB(60,60,110));
       if(i==edit_rows){
         const char *labels=(const char*)fl(g_cfg.stub_off+0xF40u);
@@ -2446,7 +2486,7 @@ static void save_label(u32 i,char *s){
 }
 static void save_list_entry(u32 row,int selected,const char *name,const char *status,
                             const char *detail,u16 color,u16 status_color){
-  int y=12+(int)row*15;
+  int y=13+(int)row*15;
   if(selected){
     rect(0,y,FELD_SCREEN_W,y+15,color);
     rect(1,y+1,FELD_SCREEN_W-1,y+14,BG);
@@ -2633,7 +2673,7 @@ static u32 flash_tool_checked(void){
 static void flash_tool_menu(void){
   u32 base=flash_tool_checked();
   if(!base) return;
-  rect(0,0,FELD_SCREEN_W,FELD_SCREEN_H,BG); ctext(12,"FLASH TOOL",ORANGE,2);
+  rect(0,0,FELD_SCREEN_W,FELD_SCREEN_H,BG); centered_title(12,"FLASH TOOL",ORANGE);
 #ifdef BAT_SHOW
   if(bat_flash_low(menu_battery(1))) ctext(83,"LOW BATTERY",ORANGE,1);
 #endif
@@ -2673,7 +2713,7 @@ static void flash_tool_sd_backup(u32 bank,u32 slot,u32 crc){
 
 static void about_menu(void){
   rect(0,0,FELD_SCREEN_W,FELD_SCREEN_H,BG);
-  ctext(10,"ABOUT",ABOUT_COLOR,2);
+  centered_title(10,"ABOUT",ABOUT_COLOR);
 #ifdef FELD_MY_LAB
   ctext(40,"PARALAB",WHITE,1);
   ctext(60,"VERSION",GREY,1);
@@ -2728,10 +2768,7 @@ static void main_menu(void){
     int ok=(!(g_cfg.flags & F_APPS) || (g_cfg.flags & F_NEON_EDIT)) && set_load()==0;
     rect(0,0,FELD_SCREEN_W,FELD_SCREEN_H,BG);
     int y0=10, dy=27;
-    menu_title(1,"PARALAB");
-#ifdef BAT_SHOW
-    menu_battery(1);
-#endif
+    menu_header();
     g_small = 0;                     /* separate name and status lines */
     for(u32 row=0;row<shown;row++){
       u32 i=(top+row)%n; int y=y0+(int)row*dy; char st[24];
@@ -2739,19 +2776,19 @@ static void main_menu(void){
         case 0: if(g_cfg.flags & F_NEON_SAVES){
                   int active=neon_active();
                   if(active>=0) save_label((u32)active,st); else st[0]=0;
-                  big_entry(y,i==sel,"SAVES",st,GOLD,WHITE);
-                } else if(saves_mode()){ const char *a="SAVE "; int q=0; while(a[q]){ st[q]=a[q]; q++; } st[q++]=(char)('1'+g_act); st[q++]=' '; a=fname((u32)g_cur); while(*a && q<22) st[q++]=*a++; st[q]=0; big_entry(y,i==sel,"SAVES",st,fcol((u32)g_cur),WHITE); }
-                else big_entry(y,i==sel,"FIELD",fname((u32)g_cur),fcol((u32)g_cur),WHITE); break;
+                  main_entry(y,i==sel,"SAVES",st,GOLD,WHITE);
+                } else if(saves_mode()){ const char *a="SAVE "; int q=0; while(a[q]){ st[q]=a[q]; q++; } st[q++]=(char)('1'+g_act); st[q++]=' '; a=fname((u32)g_cur); while(*a && q<22) st[q++]=*a++; st[q]=0; main_entry(y,i==sel,"SAVES",st,fcol((u32)g_cur),WHITE); }
+                else main_entry(y,i==sel,"FIELD",fname((u32)g_cur),fcol((u32)g_cur),WHITE); break;
         case 1: { u32 c=0; if(ok){ u32 L=list_len(); for(u32 j=0;j<L;j++) if(!cat_fixed(list_id(j)) && BAG_SHOWN(j)) c++; utoa_(c,st); int k=slen(st); const char *a=" IN BAG"; for(int q=0;a[q];q++) st[k++]=a[q]; st[k]=0; } else { st[0]='-'; st[1]=0; }
-                  big_entry(y,i==sel,"ITEMS",st,PINK,GREY); } break;
+                  main_entry(y,i==sel,"ITEMS",st,PINK,GREY); } break;
         case 2: if(ok) utoa_(money_get(),st); else { st[0]='-'; st[1]=0; }
-                big_entry(y,i==sel,"POINTS",st,GOLD,GREY); break;
+                main_entry(y,i==sel,"POINTS",st,GOLD,GREY); break;
         case 4: { int k=cat_find(t_id()); if(ok && k>=0 && fl(g_cfg.cat_off+8u+28u*(u32)k+2u)[0]==2u) chr_name((u32)k,st); else if(ok) utoa_(t_id(),st); else { st[0]='-'; st[1]=0; }
-                  big_entry(y,i==sel,"TAMA",st,RGB(120,220,120),GREY); } break;
-        case 7: big_entry(y,i==sel,"PROGRESS","LEVEL / FILES / TASK",PROGRESS_COLOR,GREY); break;
-        case 5: big_entry(y,i==sel,"FLASH TOOL","PC FLASH",ORANGE,GREY); break;
-        case 6: big_entry(y,i==sel,"ABOUT",PARAMIX_VERSION,ABOUT_COLOR,GREY); break;
-        default: big_entry(y,i==sel,g_napp>1u ? "PROGRAMS" : g_appnm[0],g_napp>1u ? "CHOOSE" : "START",ORANGE,GREY); break;
+                  main_entry(y,i==sel,"TAMA",st,RGB(120,220,120),GREY); } break;
+        case 7: main_entry(y,i==sel,"PROGRESS","LEVEL / FILES / TASK",PROGRESS_COLOR,GREY); break;
+        case 5: main_entry(y,i==sel,"FLASH TOOL","PC FLASH",ORANGE,GREY); break;
+        case 6: main_entry(y,i==sel,"ABOUT",PARAMIX_VERSION,ABOUT_COLOR,GREY); break;
+        default: main_entry(y,i==sel,g_napp>1u ? "PROGRAMS" : g_appnm[0],g_napp>1u ? "CHOOSE" : "START",ORANGE,GREY); break;
       }
     }
     g_small = 0;

@@ -1,4 +1,5 @@
 #include "io.h"
+#include "version.h"
 #include "../../shared/batt.h"
 #include "../../shared/watchdog_reset.h"
 #ifdef FLASH_MY_LAB_ON_PARADISE
@@ -66,6 +67,11 @@ static u32* const g_write_approved=(u32*)0x1801A864u;
 #define COBSO  0x18018000u   /* 8 KB, COBS encoded reply */
 
 #define FLASH_SIZE 0x1000000u
+#define PAU_FAST_WRITE 64u
+#define PAU_REMOTE_RESTART 256u
+#define PAU_FLASH_TOOL_RELOAD 512u
+#define PAU_RESTART_COUNTDOWN ((ANZEIGE && HALTBILD) ? 1024u : 0u)
+#define COMPARE_SECTORS 19u
 #ifdef FLASH_MY_LAB
 #define MY_LAB_RESCUE 0xFF0000u
 #endif
@@ -82,6 +88,9 @@ static u8* const cob  = (u8*)COBSO;
 
 #include "reset_policy.h"
 static ResetPolicy* const g_reset=(ResetPolicy*)0x1801A808u;
+#ifndef FLASH_READ_ONLY
+static u32* const g_remote_restart=(u32*)0x1801A870u;
+#endif
 #ifdef FLASH_MY_LAB_ON_PARADISE
 static u32* const g_written_image=(u32*)0x1801A86Cu;
 #endif
@@ -340,11 +349,13 @@ static u32 cobs_encode(const u8* s, u32 n, u8* o){
 #endif
 #define SCR_H 128u
 #define MASK_W 128u
-#define STATUS_Y 50u
+#define HEADER_Y 7u
+#define STATUS_Y 65u
+#define PROGRESS_END_Y 104u
 #define BAR_X0 16u
 #define BAR_X1 (SCR_W-16u)
-#define BAR_Y0 80u
-#define BAR_Y1 88u
+#define BAR_Y0 85u
+#define BAR_Y1 91u
 #define RGB(r,g,b) ((u16)((((r)>>3)<<11)|(((g)>>2)<<5)|((b)>>3)))
 #define UI_BG RGB(16,16,40)
 #define UI_GREY RGB(140,140,160)
@@ -538,18 +549,31 @@ static void paint_mask(u32 y,const u8 *mask,u32 rows,u16 color){
 #include "../../feld/src/feld/font.h"
 static void paint_text(u32 x,u32 y,const char *s,u16 color){
   for(;*s;s++,x+=6u){
-    const u8 *glyph=g_font[(u8)*s-32u];
-    for(u32 r=0;r<7u;r++)
-      for(u32 c=0;c<5u;c++)
-        if(glyph[r]&(16u>>c)) fb[fb_index(x+c,y+r)]=color;
+    const u8 *glyph=font_columns[font_index[(u8)*s-32u]];
+    for(u32 c=0;c<5u;c++)
+      for(u32 r=0;r<7u;r++)
+        if(glyph[c]&(1u<<r)) fb[fb_index(x+c,y+r)]=color;
   }
 }
 static void paint_battery(u32 mv){
   char label[5]; bat_pct_text(mv,label);
   u32 n=0; while(label[n]) n++;
-  for(u32 y=1;y<8u;y++)
+  for(u32 y=HEADER_Y;y<HEADER_Y+7u;y++)
     for(u32 x=SCR_W-28u;x<SCR_W;x++) fb[fb_index(x,y)]=UI_BG;
-  paint_text(SCR_W-3u-6u*n,1,label,bat_flash_low(mv)?UI_ORANGE:UI_GREY);
+  paint_text(SCR_W-3u-6u*n,HEADER_Y,label,bat_display_color(mv));
+}
+static char *add_number(char *out,u32 n){
+  if(n>=100u) *out++=(char)('0'+n/100u);
+  if(n>=10u) *out++=(char)('0'+(n/10u)%10u);
+  *out++=(char)('0'+n%10u);
+  return out;
+}
+static void paint_version(void){
+  char label[13]="V", *out=label+1;
+  out=add_number(out,(FLASH_TOOL_REVISION>>16)&255u); *out++='.';
+  out=add_number(out,(FLASH_TOOL_REVISION>>8)&255u); *out++='.';
+  out=add_number(out,FLASH_TOOL_REVISION&255u); *out=0;
+  paint_text((SCR_W-6u*(u32)(out-label)+1u)/2u,51,label,UI_GOLD);
 }
 static void paint_reset_hint(u32 mode){
   const u8 *hint=reset_hint_bits[mode];
@@ -560,25 +584,40 @@ static void paint_reset_hint(u32 mode){
   g_reset->ui=mode;
 }
 static void paint_progress(const u8 *status,u32 num,u32 den){
-  u16 color=status==st_done?UI_GREEN:status==st_writing?UI_ORANGE:UI_WHITE;
-  paint_mask(STATUS_Y,status,14,color);
-  u32 fillx=BAR_X0+((BAR_X1-BAR_X0)*num)/(den?den:1);
-  if(fillx>BAR_X1) fillx=BAR_X1;
-  for(u32 y=BAR_Y0-1;y<=BAR_Y1;y++){
-    for(u32 x=BAR_X0-1;x<=BAR_X1;x++){
-      int border=y==BAR_Y0-1 || y==BAR_Y1 || x==BAR_X0-1 || x==BAR_X1;
-      fb[fb_index(x,y)]=border?UI_GREY:x<fillx?UI_GOLD:UI_BG;
+  u16 color=UI_WHITE;
+  if(status==st_reading) color=RGB(135,205,255);
+  else if(status==st_comparing) color=RGB(204,166,255);
+  else if(status==st_writing) color=RGB(255,106,119);
+  else if(status==st_verifying) color=RGB(94,225,216);
+  else if(status==st_done) color=UI_GREEN;
+  paint_mask(STATUS_Y,status,12,color);
+  const u32 fillx=den && num<den ? BAR_X0+((BAR_X1-BAR_X0)*num)/den : BAR_X1;
+  static const u8 inset[]={2,1,0,0,1,2};
+  for(u32 y=BAR_Y0;y<BAR_Y1;y++){
+    const u32 radius=inset[y-BAR_Y0];
+    for(u32 x=BAR_X0;x<BAR_X1;x++){
+      int inside=x>=BAR_X0+radius && x+radius<BAR_X1;
+      int filled=x<fillx && (fillx==BAR_X1 || x+radius<fillx);
+      fb[fb_index(x,y)]=!inside?UI_BG:filled?color:RGB(60,67,92);
     }
+  }
+  for(u32 y=97;y<PROGRESS_END_Y;y++)
+    for(u32 x=0;x<SCR_W;x++) fb[fb_index(x,y)]=UI_BG;
+  if(status!=st_ready){
+    char label[5], *out=add_number(label,den && num<den ? num*100u/den : 100u);
+    *out++='%'; *out=0;
+    paint_text((SCR_W-6u*(u32)(out-label)+1u)/2u,97,label,UI_GREY);
   }
 }
 static void draw(const u8* status, u32 num, u32 den){
 #if ANZEIGE
   for(u32 i=0;i<SCR_W*SCR_H;i++) fb[i]=UI_BG;
-  paint_mask(1,title_paralab,7,UI_GREY);
+  paint_text(7,HEADER_Y,"PARALAB",UI_GREY);
   paint_battery(bat_mv());
-  paint_mask(10,credit_paralab,7,UI_GREY);
-  /* Rows 17-23 leave one small-font line blank below the credit. */
-  paint_mask(24,title_flash_tool,14,UI_ORANGE);
+  for(u32 x=7;x<SCR_W-7u;x++) fb[fb_index(x,19)]=RGB(59,64,92);
+  paint_mask(26,title_flash_tool,12,UI_ORANGE);
+  paint_mask(41,credit_paralab,7,UI_GREY);
+  paint_version();
   paint_progress(status,num,den);
   paint_reset_hint(rp_hint(g_reset));
 #ifdef FLASH_MY_LAB_SD
@@ -615,7 +654,7 @@ static void push_rows(u32 y0, u32 y1){
 /* Redraw the status line and bar and push only that strip. */
 static void draw_live(const u8* status, u32 num, u32 den){
   paint_progress(status,num,den);
-  push_rows(STATUS_Y,BAR_Y1+1);
+  push_rows(STATUS_Y,PROGRESS_END_Y);
 }
 #endif
 
@@ -630,14 +669,16 @@ static void reset_ui_update(void){
 #endif
 #endif
 }
+static u32 reset_c_pressed(void){
+#ifdef FLASH_MY_LAB
+  return (REG(GPIO1)&(1u<<13))==0;
+#else
+  return (REG(GPIO0)&0x400u)==0;
+#endif
+}
 static void reset_poll_hw(void){
   if(!g_reset->allowed) return;
-#ifdef FLASH_MY_LAB
-  u32 pressed=(REG(GPIO1)&(1u<<13))==0;
-#else
-  u32 pressed=(REG(GPIO0)&0x400u)==0;
-#endif
-  if(rp_poll(g_reset,pressed,REG(0x45000304u)) && reset_boot_valid()){
+  if(rp_poll(g_reset,reset_c_pressed(),REG(0x45000304u)) && reset_boot_valid()){
 #ifdef FLASH_MY_LAB_SD
     return_to_menu();
 #else
@@ -651,6 +692,37 @@ static void reset_poll_hw(void){
   }
   reset_ui_update();
 }
+
+#if !defined(FLASH_READ_ONLY) && ANZEIGE && HALTBILD
+static u32 restart_countdown(void){
+  const u32 systick=0xE000E010u;
+  u32 ticks=0;
+  int last=-1, seconds;
+  char label[]="RESTART IN 3";
+  REG(systick+4)=960000u-1u; /* 10 ms at the Flash Tool's 96 MHz clock */
+  REG(systick+8)=0;
+  REG(systick)=5u; /* core clock, polling only */
+  while((seconds=rp_countdown(ticks,reset_c_pressed()))>0){
+    if(seconds!=last){
+      for(u32 y=STATUS_Y;y<118u;y++)
+        for(u32 x=0;x<SCR_W;x++) fb[fb_index(x,y)]=UI_BG;
+      label[11]=(char)('0'+seconds);
+      paint_text((SCR_W-71u)/2u,STATUS_Y,label,UI_ORANGE);
+      paint_text((SCR_W-95u)/2u,111,"C CANCEL RESTART",UI_GREY);
+      push_rows(STATUS_Y,118);
+      last=seconds;
+    }
+    if(REG(systick)&(1u<<16)){
+      ticks++;
+      REG(0x4000800Cu)=0x5AFA55AAu;
+      REG(0x4000900Cu)=0x5AFA55AAu;
+    }
+  }
+  REG(systick)=0;
+  if(seconds<0) return RESTART_CANCELLED;
+  return reset_boot_valid()?0u:1u;
+}
+#endif
 
 /* ============================ PAU1 ============================ */
 static u32 rd32(const u8* p){ return p[0]|(p[1]<<8)|(p[2]<<16)|((u32)p[3]<<24); }
@@ -681,6 +753,43 @@ static u8* reply_head(u8 type, u32 seq, u32 off, u16 status, u16 plen){
 }
 
 #ifndef FLASH_READ_ONLY
+static void drain_uart(void){
+  for(u32 i=0;i<100000u && !(U_LSR & 0x40u);i++) __asm__ volatile("nop");
+}
+static u32 reload_source(u32 expected){
+#ifdef FLASH_MY_LAB
+  const u32 base=0xFC0000u;
+  if(REG(0x60FCF000u)!=0x4C4D5850u || REG(0x60FCF004u)!=0x31305446u ||
+     REG(0x60FC0008u)!=0x4C4D5850u || REG(0x60FC000Cu)!=0x31304453u) return 0;
+#else
+  const u32 base=0xFF0000u;
+#ifdef FLASH_MY_LAB_ON_PARADISE
+  if(REG(0x60000010u)!=MY_LAB_PARADISE_MENU_SOURCE ||
+     REG(0x6019D100u)!=0x4C4D5850u || REG(0x6019D104u)!=0x31504241u ||
+     (REG(MY_LAB_PARADISE_LAUNCH_FROM_FLASH-1u)&0xD000F800u)!=0x9000F000u) return 0;
+#endif
+#endif
+  const volatile u32 *code=(const volatile u32*)(0x60000000u+base), *table=code+0xE000u/4u;
+  u32 sp=code[0], pc=code[1];
+  if(table[0]!=0x494E4F53u || table[1]!=0x56454458u || (table[2]&1u) ||
+     table[4]!=0x60000000u+base || table[5]!=0xE000u || table[9]!=expected ||
+     sp<0x18000000u || sp>0x18020000u || (sp&7u) || !(pc&1u) || pc>=0xE000u) return 0;
+  return crc32_flash(base,0xE000u)==expected ? 0x60000000u+base : 0;
+}
+static void reload_tool(u32 source){
+#ifdef FLASH_MY_LAB_ON_PARADISE
+  ((void(*)(u32))MY_LAB_PARADISE_LAUNCH_FROM_FLASH)(source);
+#else
+  extern const u8 flash_reload_start[], flash_reload_end[];
+  const u32 length=(u32)flash_reload_end-(u32)flash_reload_start;
+  /* Frame reception is finished. RXACC is idle and is outside PRAM. */
+  for(u32 i=0;i<length;i++) rxac[i]=flash_reload_start[i];
+  dsb();
+  __asm__ volatile("isb":::"memory");
+  ((void(*)(u32))(RXACC|1u))(source);
+#endif
+}
+
 /* Check before admitting an entire write job. Once admitted, let the host
  * finish the job, including the boot table and final verification. */
 static int approve_write(u8 type,u32 seq,u32 off){
@@ -699,8 +808,8 @@ static int approve_write(u8 type,u32 seq,u32 off){
 #ifdef FLASH_MY_LAB
   push_fb();
 #else
-  push_rows(1,8);
-  if(low) push_rows(STATUS_Y,BAR_Y1+1u);
+  push_rows(HEADER_Y,HEADER_Y+7u);
+  if(low) push_rows(STATUS_Y,PROGRESS_END_Y);
 #endif
 #endif
   if(low){
@@ -722,11 +831,42 @@ static void handle(const u8* f, u32 flen){
   u32 seq=rd32(f+12), off=rd32(f+16);
   const u8* pl=f+24;
 #ifdef FLASH_READ_ONLY
-  if((type>=8 && type<=13) || type==15){
+  if((type>=8 && type<=13) || type==15 || type==WRITE_SECTOR){
     reply_head(type,seq,off,1,0); send_frame(28); return;
   }
 #endif
 #ifndef FLASH_READ_ONLY
+#if ANZEIGE && HALTBILD
+  if(type==RESTART_COUNTDOWN){
+    u32 status=1;
+    if(off==0u && plen==0u && rp_restart_take(g_remote_restart,g_reset->writing,reset_boot_valid())){
+      status=restart_countdown();
+      if(status){
+        u32 valid=reset_boot_valid();
+        rp_idle(g_reset,1,valid);
+        if(valid && status==RESTART_CANCELLED) *g_remote_restart=RESTART_ARMED;
+        draw(st_done,1,1);
+      }
+    }
+    reply_head(type,seq,off,(u16)status,0); send_frame(28);
+    if(!status){ drain_uart(); reset_system(); }
+    return;
+  }
+#endif
+  if(type==RESTART_DEVICE || type==RELOAD_FLASH_TOOL){
+    u32 reload=type==RELOAD_FLASH_TOOL;
+    u32 ok=off==0u && plen==(reload?4u:0u) &&
+      rp_restart_take(g_remote_restart,g_reset->writing,reset_boot_valid());
+    u32 source=ok && reload ? reload_source(rd32(pl)) : 0;
+    if(reload && !source) ok=0;
+    reply_head(type,seq,off,ok?0:1,0); send_frame(28);
+    if(ok){
+      drain_uart();
+      if(reload) reload_tool(source);
+      reset_system();
+    }
+    return;
+  }
   if(type==9){
     *g_write_approved=0;
     if((f[7]&WRITE_ALLOW_LOW_BATTERY) && off==0u && (plen==36u || plen==40u))
@@ -740,11 +880,17 @@ static void handle(const u8* f, u32 flen){
     if(!(F_DCTL&1u)) flashctl_init();
   }
 #endif
+#ifndef FLASH_READ_ONLY
+  rp_restart_packet(g_remote_restart,type,g_reset->writing);
+#endif
   rp_packet(g_reset,type);
   reset_ui_update();
   if(type==16){ /* RESET_CONTROL: explicit whole-job boundary from the host */
     u32 valid=off==0u && plen==4u && rd32(pl)<=1u;
     u32 ok=valid && rp_idle(g_reset,rd32(pl),reset_boot_valid());
+#ifndef FLASH_READ_ONLY
+    if(valid) rp_restart_idle(g_remote_restart,rd32(pl),ok);
+#endif
     if(valid && (!rd32(pl) || !g_reset->writing)){
 #if ANZEIGE && HALTBILD
       if(rd32(pl) && *g_host_progress) draw_live(st_done,1,1);
@@ -765,7 +911,7 @@ static void handle(const u8* f, u32 flen){
       if(mv) paint_battery(mv);
       draw_live(stages[off],rd32(pl),total);
 #ifndef FLASH_MY_LAB
-      if(mv) push_rows(1,8);
+      if(mv) push_rows(HEADER_Y,HEADER_Y+7u);
 #endif
 #endif
     }
@@ -783,7 +929,7 @@ static void handle(const u8* f, u32 flen){
   if(type==1){ /* HELLO -> INFO 44 bytes */
     u8* p=reply_head(1,seq,off,0,44);
     for(int i=0;i<44;i++) p[i]=0;
-    wr32(p+0, 0x00010000u);  /* appRevision */
+    wr32(p+0, FLASH_TOOL_REVISION);  /* appRevision */
     wr32(p+4, 0x00010000u);  /* loaderRevision */
 #ifdef FLASH_MY_LAB
     p[8]=0xFE;
@@ -806,9 +952,9 @@ static void handle(const u8* f, u32 flen){
 #ifdef FLASH_READ_ONLY
     wr32(p+40, 19 | 32);     /* RESET_CONTROL | READ_ONLY | DISPLAY_PROGRESS | BATTERY_STATUS */
 #elif defined(FLASH_UART_BOOTSTRAP)
-    wr32(p+40, 29 | 32);     /* RESET_CONTROL | RESCUE_BOOTSTRAP | BATTERY_OVERRIDE | DISPLAY_PROGRESS | BATTERY_STATUS */
+    wr32(p+40, 29 | 32 | PAU_FAST_WRITE | PAU_REMOTE_RESTART | PAU_FLASH_TOOL_RELOAD | PAU_RESTART_COUNTDOWN);
 #else
-    wr32(p+40, 25 | 32);     /* RESET_CONTROL | BATTERY_OVERRIDE | DISPLAY_PROGRESS | BATTERY_STATUS */
+    wr32(p+40, 25 | 32 | PAU_FAST_WRITE | PAU_REMOTE_RESTART | PAU_FLASH_TOOL_RELOAD | PAU_RESTART_COUNTDOWN);
 #endif
     send_frame(28+44); return;
   }
@@ -885,6 +1031,15 @@ static void handle(const u8* f, u32 flen){
     send_frame(28+4); return;
   }
 #ifndef FLASH_READ_ONLY
+  if(type==COMPARE_SECTORS){ /* Compare sixteen 4 KiB CRCs in one aligned 64 KiB block. */
+    if(off>=FLASH_SIZE || (off&0xFFFFu) || plen!=64u){
+      reply_head(type,seq,off,1,0); send_frame(28); return;
+    }
+    u16 changed=0;
+    for(u32 i=0;i<16u;i++)
+      if(crc32_flash(off+i*0x1000u,0x1000u)!=rd32(pl+i*4u)) changed|=1u<<i;
+    u8* p=reply_head(type,seq,off,0,2); wr16(p,changed); send_frame(28+2); return;
+  }
   if(type==13){ /* WRITE_STATE -> 16 bytes, tested=1 (skip self test) */
     u8* p=reply_head(13,seq,off,0,16);
     for(int i=0;i<16;i++) p[i]=0; wr32(p+12,1);
@@ -918,14 +1073,17 @@ static void handle(const u8* f, u32 flen){
     for(u32 i=0;i<plen && so+i<0x1000u;i++) sec[so+i]=pl[i];
     u8* p=reply_head(10,seq,off,0,0); send_frame(28+0); return;
   }
-  if(type==11){ /* WRITE_COMMIT: erase sector off, write 4 KB, 8 byte reply */
+  if(type==11 || type==WRITE_SECTOR){ /* Legacy commit or full sector in a CRC-checked frame. */
+    if(type==WRITE_SECTOR && (off>=FLASH_SIZE || (off&0xFFFu) || plen!=0x1000u)){
+      reply_head(type,seq,off,1,0); send_frame(28); return;
+    }
 #ifdef FLASH_MY_LAB
     if(off>=FLASH_SIZE ||
 #ifndef FLASH_UART_BOOTSTRAP
        off>=MY_LAB_RESCUE ||
 #endif
-       (off&0xFFFu) || plen!=4){
-      reply_head(11,seq,off,1,0); send_frame(28); return;
+       (off&0xFFFu) || (type==11 && plen!=4)){
+      reply_head(type,seq,off,1,0); send_frame(28); return;
     }
 #endif
 #if ANZEIGE
@@ -935,12 +1093,14 @@ static void handle(const u8* f, u32 flen){
 #ifdef FW_PRECHECK
     /* 1.6.13 test16: the CRC sent along must match the buffer before anything is erased (a lost or doubled data
        packet): otherwise nothing is written, status 2, the tool sends the sector again */
-    if(plen>=4){
+    if(type==11 && plen>=4){
       u32 want=rd32(pl), have=crc32_buf(0xFFFFFFFFu, sec, 0x1000u)^0xFFFFFFFFu;
       if(have!=want){ u8* p=reply_head(11,seq,off,0,8); wr32(p,have); wr32(p+4,2); send_frame(28+8); return; }
     }
 #endif
     if(!approve_write(type,seq,off)) return;
+    if(type==WRITE_SECTOR)
+      for(u32 i=0;i<0x1000u;i++) sec[i]=pl[i];
     prog_sector_fu(base, SECBUF);            /* erase + program (our own code) */
 #if ANZEIGE && HALTBILD
     /* Bar based on counted sectors (keeps the display moving forward, since the
@@ -953,7 +1113,8 @@ static void handle(const u8* f, u32 flen){
     /* Byte compare on the device: 0 = sector matches, otherwise error status 1 */
     u32 bad=0; flash_read(base, DMABUF, 0x1000u);
     for(u32 i=0;i<0x1000u;i++){ if(dma[i]!=sec[i]){ bad=1; break; } }
-    u8* p=reply_head(11,seq,off,0,8); wr32(p,c); wr32(p+4,bad);
+    *g_remote_restart=bad?RESTART_NONE:RESTART_COMMITTED;
+    u8* p=reply_head(type,seq,off,0,8); wr32(p,c); wr32(p+4,bad);
     send_frame(28+8); return;
   }
   if(type==12){ /* WRITE_FINISH */
@@ -970,9 +1131,12 @@ static void handle(const u8* f, u32 flen){
     send_frame(28+8); return;
   }
 #ifndef FLASH_READ_ONLY
-  if(type==15){ /* CLOCK_SET (1.3.0): seconds counter := payload (only with the RTC running) -> 4 bytes back */
+  if(type==CLOCK_SET){ /* seconds counter := payload (only with the RTC running) -> 4 bytes back */
     u32 ok=0;
-    if(plen>=4 && (REG(0x45000200u) & 0x80u)){ REG(0x45000304u)=rd32(pl); ok=1; }
+    if(plen>=4 && (REG(0x45000200u) & 0x80u)){
+      REG(0x45000304u)=rd32(pl); ok=1;
+      if(!g_reset->writing) *g_remote_restart=RESTART_FINISHED;
+    }
     u8* p=reply_head(15,seq,off,ok?0:1,4); wr32(p, REG(0x45000304u));
     send_frame(28+4); return;
   }
@@ -1101,6 +1265,9 @@ void Reset_Handler(void){
   pin_mux();
   uart_init();
   rp_init(g_reset,reset_boot_valid());
+#ifndef FLASH_READ_ONLY
+  *g_remote_restart=RESTART_NONE;
+#endif
 #ifdef FLASH_MY_LAB_ON_PARADISE
   *g_written_image=0;
 #endif
@@ -1146,6 +1313,13 @@ void Reset_Handler(void){
 
 __attribute__((section(".vectors"), used))
 const void* const g_vectors[] = { (void*)0x1801F000u, (void*)Reset_Handler };
+
+__attribute__((section(".tool_version"), used))
+static const u8 tool_version_tag[] = {
+  'P', 'X', 'M', 'L', 'V', 'E', 'R', '1',
+  FLASH_TOOL_REVISION & 255u, (FLASH_TOOL_REVISION >> 8) & 255u,
+  (FLASH_TOOL_REVISION >> 16) & 255u, (FLASH_TOOL_REVISION >> 24) & 255u,
+};
 
 #ifdef FLASH_UART_BOOTSTRAP
 __attribute__((section(".capabilities"), used))

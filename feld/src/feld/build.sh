@@ -9,7 +9,7 @@ for f in main.c hw.c libc.c flash.c; do
   n=${f%.c}
   case "$n" in
     main|flash|hw) OPT=-Oz ;;
-    libc) OPT=-fno-lto ;; # Keep the ARM runtime symbols available to LTO code generation.
+    libc) OPT="-Oz -fno-lto" ;; # Keep the ARM runtime symbols available to LTO code generation.
     *) OPT= ;;
   esac
   clang $CF $OPT -c "$f" -o "$n.o"
@@ -18,6 +18,7 @@ done
 N=${OUT:-feld}
 ld.lld --gc-sections --icf=safe -T link.ld --no-rosegment $O -o $N.elf
 llvm-objcopy -O binary -j .text $N.elf $N.bin
+python3 gen_version.py "$N.bin"
 case " $XCF " in
   *" -DFELD_MY_LAB "*)
     clang --target=thumbv7m-none-eabi $XCF -c ../stub/my_lab_hook.S -o "$N-hook.o"

@@ -1,38 +1,59 @@
 #!/usr/bin/env python3
-"""Generate compact Flash Tool labels from the Paramix Menu font."""
+"""Generate compact Flash Tool labels from the shared Menu fonts."""
 
 import re
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 FONT = HERE.parents[1] / "feld/src/feld/font.h"
+TITLE_FONT = HERE.parents[1] / "shared/title_font.h"
 ASSETS = HERE / "assets.h"
 HINTS = HERE / "reset_hint.h"
 WIDTH = 128
 TITLE = ("title_paramix", "PARAMIX", 1)
 MY_LAB_TITLE = ("title_paralab", "PARALAB", 1)
 MY_LAB_CREDIT = ("credit_paralab", "By x43x61x69", 1)
-SUBTITLE = ("title_flash_tool", "FLASH TOOL", 2)
+SUBTITLE = ("title_flash_tool", "FLASH TOOL", 12)
 STATUSES = (
-    ("st_ready", "READY", 2),
-    ("st_reading", "READING", 2),
-    ("st_comparing", "COMPARING", 2),
-    ("st_writing", "WRITING", 2),
-    ("st_verifying", "VERIFYING", 2),
-    ("st_done", "DONE", 2),
+    ("st_ready", "READY", 12),
+    ("st_reading", "READING", 12),
+    ("st_comparing", "COMPARING", 12),
+    ("st_writing", "WRITING", 12),
+    ("st_verifying", "VERIFYING", 12),
+    ("st_done", "DONE", 12),
 )
 RESET_HINTS = ("RESET LOCKED", "HOLD C TO RESET", "RELEASE C")
 MENU_HINTS = ("EXIT LOCKED", "HOLD C TO EXIT", "RELEASE C")
 EXTRA_GLYPHS = {"y": (0x00, 0x00, 0x11, 0x11, 0x0F, 0x01, 0x0E)}
+NATIVE_12 = {" ": "00" * 12}
+for char, rows in re.findall(r"/\* ([A-Z]) \*/ \{([^}]*)\}", TITLE_FONT.read_text()):
+    NATIVE_12[char] = bytes(int(row, 16) for row in rows.split(",")).hex()
 
 
 def load_font():
     values = [int(value, 16) for value in re.findall(r"0x[0-9a-fA-F]+", FONT.read_text())]
-    assert len(values) == 96 * 7, "Unexpected font dimensions"
-    return [values[index:index + 7] for index in range(0, len(values), 7)]
+    indices, columns = values[:96], values[96:]
+    assert len(indices) == 96 and len(columns) % 5 == 0
+    glyphs = [columns[index:index + 5] for index in range(0, len(columns), 5)]
+    return [
+        [sum(1 << (4 - x) for x, col in enumerate(glyphs[index]) if col & (1 << y)) for y in range(7)]
+        for index in indices
+    ]
 
 
 def render_mask(label, scale, font):
+    if scale == 12:
+        left = (WIDTH - (len(label) * 10 - 2)) // 2
+        packed = bytearray(WIDTH * 12 // 8)
+        for index, char in enumerate(label):
+            glyph = bytes.fromhex(NATIVE_12[char])
+            assert len(glyph) == 12
+            for y, row in enumerate(glyph):
+                for x in range(8):
+                    if row & (128 >> x):
+                        pixel = y * WIDTH + left + index * 10 + x
+                        packed[pixel // 8] |= 128 >> (pixel % 8)
+        return packed
     text_width = (len(label) * 6 - 1) * scale
     assert text_width <= WIDTH
     left = (WIDTH - text_width) // 2

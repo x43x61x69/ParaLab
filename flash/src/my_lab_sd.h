@@ -52,9 +52,10 @@ static void sd_glyph(u32 x,u32 y,u16 ch,u16 color){
   }
   if(ch<32 || ch>126) ch='?';
   if(ch>='a' && ch<='z') ch-=32; /* The built-in device font is uppercase. */
-  for(u32 row=0;row<7;row++)
-    for(u32 col=0;col<5;col++)
-      if(g_font[ch-32][row]&(16u>>col)) fb[fb_index(x+col,y+row)]=color;
+  const u8 *glyph=font_columns[font_index[ch-32]];
+  for(u32 col=0;col<5;col++)
+    for(u32 row=0;row<7;row++)
+      if(glyph[col]&(1u<<row)) fb[fb_index(x+col,y+row)]=color;
 }
 static void sd_text(u32 x,u32 y,const char *p,u16 color){
   while(*p && x+5<SCR_W){ sd_glyph(x,y,(u8)*p++,color); x+=6; }
@@ -475,7 +476,7 @@ static const char *sd_update(SdFat *fs,const SdEntry *entry,SdWriteOptions optio
 }
 
 static u16 sd_option_color(int enabled){ return enabled?UI_GREEN:UI_GREY; }
-static void sd_confirm(SdFat *fs,const SdEntry *entry){
+static int sd_confirm(SdFat *fs,const SdEntry *entry){
   SdWriteOptions options={1,1};
   u32 selected=0;
   for(;;){
@@ -489,7 +490,7 @@ static void sd_confirm(SdFat *fs,const SdEntry *entry){
     sd_text(5,39+17*selected,">",UI_GOLD);
     push_fb();
     u32 key=sd_wait_key(SD_A|SD_B|SD_C);
-    if(key&SD_C) return;
+    if(key&SD_C) return 0;
     if(key&SD_A){ selected=(selected+1)%3; continue; }
     if(selected==2) break;
     if(selected==0) options.keep_saves=!options.keep_saves;
@@ -500,27 +501,33 @@ static void sd_confirm(SdFat *fs,const SdEntry *entry){
   sd_text(5,43,options.keep_saves?"KEEP DEVICE SAVES":"REPLACE DEVICE SAVES",sd_option_color(options.keep_saves));
   sd_text(5,61,options.only_changes?"WRITE CHANGED SECTORS":"REWRITE WRITABLE SECTORS",sd_option_color(options.only_changes));
   push_fb();
-  if(sd_wait_key(SD_B|SD_C)&SD_C) return;
+  if(sd_wait_key(SD_B|SD_C)&SD_C) return 0;
   u32 changed;
   const char *error=sd_check(fs,entry,options,&changed);
-  if(!error && (changed || !reset_boot_valid()) && bat_flash_low(bat_mv())){
+  int needs_restart=!error && (changed || !reset_boot_valid());
+  if(needs_restart && bat_flash_low(bat_mv())){
     sd_rom_screen("LOW BATTERY","B WRITE ANYWAY  C BACK");
     sd_text(5,49,"POWER LOSS CAN",UI_WHITE);
     sd_text(5,60,"INTERRUPT THE UPDATE",UI_WHITE);
     push_fb();
-    if(sd_wait_key(SD_B|SD_C)&SD_C) return;
+    if(sd_wait_key(SD_B|SD_C)&SD_C) return 0;
   }
   if(!error) error=sd_update(fs,entry,options,changed);
   *sd_previous_keys|=sd_keys();
   if(error){
     sd_message("SD UPDATE",error);
     sd_wait_key(SD_C);
+  } else if(needs_restart && reset_boot_valid()){
+    draw(st_done,1,1);
+    if(!restart_countdown()){ sd_hw_close(); reset_system(); }
+    return 1;
   } else {
     sd_screen("SD UPDATE","B RESTART  C BACK");
     sd_text(5,49,changed?"UPDATE COMPLETE":"ROM UP TO DATE",UI_GREEN);
     push_fb();
-    if(sd_wait_key(SD_B|SD_C)&SD_B){ sd_hw_close(); reset_system(); }
+    if((sd_wait_key(SD_B|SD_C)&SD_B) && reset_boot_valid()){ sd_hw_close(); reset_system(); }
   }
+  return 0;
 }
 typedef struct { SdFat *fs; SdDirectory *dir; SdEntry *entry; int more; } SdScan;
 static int sd_scan_entry(void *arg){
@@ -573,7 +580,7 @@ static int sd_browser(SdFat *fs){
     push_fb();
     u32 key=sd_wait_key(SD_A|SD_B|SD_C);
     if(key&SD_C) return SD_OK;
-    if(key&SD_B){ sd_confirm(fs,&entries[picked]); continue; }
+    if(key&SD_B){ if(sd_confirm(fs,&entries[picked])) return SD_OK; continue; }
     index++;
   }
   sd_wait_key(SD_C);

@@ -96,7 +96,8 @@ const T = {
     deferResidentBanksTitle: 'Preserve All Save Slots',
     deferResidentBanksHelp: 'Separate field resident storage leaves too little space for save slot {f}. Continue with all saves preserved and keep the current shared resident storage?',
     deferResidentBanksAction: 'Keep Saves and Continue',
-    myLabMenuTitle: 'Menu', myLabStock: 'Stock My Lab', myLabComputer: 'Computer → ParaLab',
+    'Paradise Menu': '{editionParadise} Menu', 'My Lab Menu': '{editionMyLab} Menu',
+    myLabMenuTitle: 'Menu', myLabStock: 'Stock {editionMyLab}', myLabComputer: 'Computer → ParaLab',
     myLabMenuDraft: 'ParaLab menu staged',
     myLabInstallHint: 'Choose the device key to add ParaLab to the Computer menu.',
     myLabRefreshHint: 'Update the ParaLab menu in the exported ROM and keep its save.',
@@ -159,13 +160,27 @@ const T = {
     myLabUpdatePatchBad: 'Could not patch update: {error}',
     myLabUpdateReady: 'Package structure and header checksum passed. The device checks authentication.',
     myLabUpdateBad: 'Invalid update package: {error}',
-    neonBagUnavailable: 'This Neon Planets firmware uses an unrecognized item save layout.',
+    neonBagUnavailable: 'This {editionNeon} firmware uses an unrecognized item save layout.',
     paraClear: 'Clear Active ROM Save', paraClearAsk: 'Clear the active Paradise save in the loaded ROM?', paraClearDone: 'Active save cleared. Save the ROM as a new file.', paraClearPending: 'Finish recovering the saved game in the ParaLab menu first.',
-    specialFoodOn: 'Special Food in game', specialFoodHint: 'Adds SPECIALFOOD and RELEASE under CONNECTION. Choose a Neon Planets ROM.',
-    labReleaseOn: 'Send to My Lab in game', labReleaseHint: 'Adds RELEASE under CONNECTION. Choose a Neon Planets ROM for the in-game text.', labReleaseInstalled: 'RELEASE is already installed.', labReleaseUpgrade: 'RELEASE will be updated on export.', labReleaseFail: 'Could not add Lab Invite: {e}',
-    neonDonorPick: 'Choose Neon Planets ROM', neonDonorHint: 'Add 86 Tama and 59 items from Neon Planets.', neonDonorReady: 'Neon source: {name}', neonDonorBad: 'Choose a supported Neon Planets ROM.', neonDonorFail: 'Could not add Neon content: {e}', neonDonorOn: '{editionNeon} content', neonItemsHint: 'Add 59 items from Neon Planets.', neonLocalizeHint: 'Update Tama Files with the original planet names in all languages.',
+    specialFoodOn: 'Special Food in game', specialFoodHint: 'Adds SPECIALFOOD and RELEASE under CONNECTION. Choose a {editionNeon} ROM.',
+    labReleaseOn: 'Send to My Lab in game', labReleaseHint: 'Adds RELEASE under CONNECTION. Choose a {editionNeon} ROM for the in-game text.', labReleaseInstalled: 'RELEASE is already installed.', labReleaseUpgrade: 'RELEASE will be updated on export.', labReleaseFail: 'Could not add Lab Invite: {e}',
+    neonDonorPick: 'Choose {editionNeon} ROM', neonDonorHint: 'Add 86 Tama and 59 items from {editionNeon}.', neonDonorReady: '{editionNeon} source: {name}', neonDonorBad: 'Choose a supported {editionNeon} ROM.', neonDonorFail: 'Could not add {editionNeon} content: {e}', neonDonorOn: '{editionNeon} content', neonItemsHint: 'Add 59 items from {editionNeon}.', neonLocalizeHint: 'Update Tama Files with the original planet names in all languages.',
+    "Adjust care, appearance and age on Neon Planets.": "Adjust care, appearance and age on {editionNeon}.",
+    'Choose a Neon Planets ROM with its native language tables': 'Choose a {editionNeon} ROM with its native language tables',
+    'Choose a Neon Planets ROM for the in-game text': 'Choose a {editionNeon} ROM for the in-game text',
+    'Neon Planets is missing Lab Invite text': '{editionNeon} is missing Lab Invite text',
+    'Special Food text missing from Neon Planets': 'Special Food text missing from {editionNeon}',
+    'Choose an edition 1–6 Paradise ROM and a Neon Planets ROM': 'Choose an edition 1–6 {editionParadise} ROM and a {editionNeon} ROM',
+    'Neon Planets save layout does not match this firmware': '{editionNeon} save layout does not match this firmware',
+    'Neon Planets appearance routine does not match this firmware': '{editionNeon} appearance routine does not match this firmware',
+    'Neon Planets item save layout does not match this firmware': '{editionNeon} item save layout does not match this firmware',
+    'Neon Planets launcher requires the settings ring': '{editionNeon} launcher requires the settings ring',
+    'use the Neon Planets menu tools': 'use the {editionNeon} menu tools',
+    'Neon Planets item catalog does not match this firmware': '{editionNeon} item catalog does not match this firmware',
+    'Neon Planets character preview data is missing': '{editionNeon} character preview data is missing',
+    'menu program too old for Neon Planets': 'menu program too old for {editionNeon}',
     neonProfileHint: 'Update the planet artwork in Tama Files.',
-    appsOnlyOn: 'Programs menu', appsOnlyHint: 'Open ParaLab alongside the Neon Planets game to use programs and the Flash Tool.', neonSaves: 'Three Neon save slots', neonSaveFields: 'New saves use the game’s setup. The game unlocks fields with progress.', neonSaveFull: 'Writing a Neon menu slot requires a complete .tamasave backup.',
+    appsOnlyOn: 'Programs menu', appsOnlyHint: 'Open ParaLab alongside the {editionNeon} game to use programs and the Flash Tool.', neonSaves: 'Three {editionNeon} save slots', neonSaveFields: 'New saves use the game’s setup. The game unlocks fields with progress.', neonSaveFull: 'Writing a {editionNeon} menu slot requires a complete .tamasave backup.',
     neonTamaOn: 'Tama in Programs menu (care, appearance, age)', petPoints: 'Tamapoints', petMission: 'Mission', petMissionAction: 'Completion', petMissionComplete: 'Mark complete', petMissionReset: 'Reset completion',
     open: 'Open ROM', save: 'Save New ROM',
     startTitle: 'Make your ROM your own',
@@ -195,6 +210,30 @@ const T = {
     kOld: 'This DOOM is older and has no own button layout yet. Build it in again with the WAD.',
     device: 'Device', devTitle: 'Device over UART',
     devConnect: 'Connect', devDump: 'Read ROM', devWrite: 'Write new ROM to the device', devOnly: 'Only write changes', devKeep: 'Keep saves', devStop: 'Cancel',
+    devFast: 'Fast UART transfer',
+    devMixedWriteCount: 'Write {small} × 4 KiB and {large} × 64 KiB flash blocks? Progress counts {total} units of 4 KiB.',
+    flashUpgradeTitle: 'Flash Tool Update',
+    flashUseWritable: 'Switch to a Writable Flash Tool',
+    flashUpgradeAsk: 'The connected Flash Tool does not support fast UART transfer. Update it first or continue with standard writing.',
+    flashUpgradeFirst: 'Update Flash Tool…',
+    flashUpgradeStandard: 'Use Standard Writing',
+    flashUpgradeOnly: 'Update the stored Flash Tool over UART? This writes {count} blocks of 4 KiB. The ROM and saves outside the Flash Tool area are preserved.',
+    flashUpgradeReopen: 'On the device, exit Flash Tool and reopen it from the ParaLab Menu. When the device displays READY, reconnect using the same USB adapter.',
+    flashUpgradeStored: 'Flash Tool is written and verified. Reopen it on the device to use the update.',
+    flashUpgradeDone: 'Updated Flash Tool is connected.',
+    flashInspectBoot: 'Checking the device boot header',
+    flashFindMenu: 'Locating the installed ParaLab Menu',
+    flashReadStored: 'Reading the stored Flash Tool',
+    flashReadUpdateSlot: 'Reading the My Lab Flash Tool update slot',
+    flashCompareTool: 'Comparing blocks with the new Flash Tool',
+    flashReloadTool: 'Starting the updated Flash Tool',
+    phwaitTool: 'Waiting for the updated Flash Tool',
+    flashUpgradeStillOld: 'The device is still running the old Flash Tool. Exit it on the device, reopen Flash Tool from the ParaLab Menu, and reconnect.',
+    flashUpgradeParadise: 'Exit the running Flash Tool. On the Planet screen, press A and open {path}. Keep the USB adapter connected, then reconnect to load the new Flash Tool into memory.',
+    flashUpgradeMyLab: 'Install a current writable MLTUPD.BIN through the device’s Settings update. Open the new Flash Tool, wait for READY, and reconnect with the same USB adapter.',
+    flashUpgradePort: 'The replacement Flash Tool comes with an updated My Lab on Paradise ROM. Install that ROM with standard writing first, then reopen Flash Tool and reconnect.',
+    flashUpgradeUnavailable: 'The Flash Tool on the device still does not support fast UART writing.',
+    flashUpgradeMismatch: 'The reconnected device does not match the original write target.',
     devQuickDump: 'Quick Read ROM',
     devQuickDumpHint: 'Base ROM · {n}. Only differing sectors are transferred.',
     fl_quickReadSource: 'Quick Read requires a 16 MB ROM from the same product series as the connected firmware.',
@@ -236,7 +275,7 @@ const T = {
     labDone: 'Transfer acknowledged. Check the garden in {editionMyLab} for the Tama.',
     labError: '{editionMyLab}: {e}. Check the garden before trying again.',
     foodTitle: 'Special Food', foodImport: 'Load {editionMyLab} Food File…', foodSend: 'Wait for {editionNeon}',
-    foodHint: 'Load a decoded My Lab food file and attach the USB-UART adapter to Neon Planets. Start here, then select CONNECTION → SPECIAL FOOD → GET FOOD with an adult Tama. Accepting the transfer starts a new egg.',
+    foodHint: 'Load a decoded {editionMyLab} food file and attach the USB-UART adapter to {editionNeon}. Start here, then select CONNECTION → SPECIAL FOOD → GET FOOD with an adult Tama. Accepting the transfer starts a new egg.',
     foodReady: 'Waiting for {editionNeon} to request food…', foodRun: '{editionNeon} connected…',
     foodConfirm: 'Food data sent. Confirm on {editionNeon}.',
     foodDone: '{editionNeon} confirmed the transfer.', foodDeclined: '{editionNeon} cancelled the transfer.',
@@ -245,20 +284,34 @@ const T = {
     visWait: 'Ready to connect as {ed}. Select {menu} on {editionParadise}, then press B.', visRun: 'Connected. Exchanging data…', visPlay: 'The Tamas are playing together…',
     visDone: 'Visit done ({ed}). For the next one press B on {editionParadise} again.', visErr: 'Stopped: {e}. Press B on {editionParadise} again.', visBadKey: '{editionParadise} does not understand the data.',
     phload: 'Loading flash app', phread: 'Reading', phcompare: 'Comparing', phwrite: 'Writing', phcheck: 'Verifying', phprepare: 'Preparing',
-    devDumped: 'ROM read and saved as {n}. It is now open in the Studio.',
+    phkeepSaves: 'Checking saves to keep', phcopySaves: 'Copying save blocks',
+    phcheckRescue: 'Checking recovery blocks', phplan: 'Planning the flash write',
+    phconfirmWrite: 'Waiting for write confirmation',
+    devRestartNow: 'Restart Device', devRestarting: 'Sending restart command…',
+    devAutoRestarting: 'Restarting in 3 seconds. Press C on the device to stay in Flash Tool.',
+    devRestartKept: 'Automatic restart cancelled. The device is still in Flash Tool.',
+    devRestartSent: 'The device accepted the restart command.',
+    devRestartFailed: 'The restart was not confirmed. If the device is still in Flash Tool, restart it manually.',
+    devDumped: 'ROM read and saved as {n}. It is now open in ROM Lab.',
     devSureFull: 'Without "Keep saves" the save on the device is replaced by the one in the ROM. Write anyway?',
     devMyLabReplace: 'Replace the save and Garden on the device with the data from the ROM?',
     carryUnknown: 'The device does not hold the loaded ROM. A program moves and its save on the device cannot be taken along. Read the ROM from the device first. Write anyway?', carryMiss: 'A program moves and its save on the device cannot be taken along. Back it up in the tab Save first. Write anyway?', devEmuLost: 'Main program on the device: {o}. In the new ROM: {n}. So the save of {o} as the main program starts anew. To keep it, back it up first under "Save". Write anyway?', devEmuNone: 'no emulator', devEmuNew: '{o} with a newly chosen firmware',
     devDone: 'Write verified. {w} sectors written{k}.', devKept: ', {k} save sectors kept',
     devSame: 'Nothing to write, the device already has this ROM.', devErr: 'Error: {e}', devCancelled: 'Cancelled.',
+    fl_noteEdKept: 'The device is {d} and the new ROM is {r}. They use the same firmware, so the device keeps its save and its field ({d}).',
     cleanOn: 'Without the Paradise (clean ROM)', cleanClock: 'Set the clock at the start', cleanClockHint: 'When the clock is missing (new batteries), the menu asks for it when switched on. Without: set the clock in the menu under SETTINGS or in each emulator itself.', emuClockOff: 'Only with "Set the clock at the start" (tab Menu).', emuSess: 'Remember where you left off', emuSessHint: 'The next start continues right there. Without: the game starts anew and loads its own save, as the real device does.', ruleClean: 'Without the Paradise: all programs go to the menu, almost the whole flash is theirs.', cleanHint: 'No Paradise on the device any more, only the menu with your programs. Almost the whole 16 MB is free.', cleanUse: 'After switching on the menu comes up right away. On the first start you set the clock, later under SETTINGS. Leave a program as usual.', cleanWarn: 'The Paradise and its save are lost when writing. Make a backup first.', cleanNoDoom: 'DOOM does not work without the Paradise yet. Please remove DOOM.', doomOne: 'DOOM goes into the menu only once.', cleanSure: 'The device has the Paradise on it. It is deleted, with its save. Do you have a backup of the device? Go on?', cleanLoaded: 'ROM without the Paradise ({ed}) loaded: {n} programs.',
     launchOn: 'Start device for programs only', launchHint: 'The device opens its installed programs after setup.', launchUse: 'After switching on and setting the clock the menu comes up. Wheel selects, B starts. Leave a program as usual, then the menu comes up again.', launchOld: 'This ROM is a start device. Load the original ROM for a normal Paradise.', launchNeed: 'This startup mode requires an installed program.', launchSix: 'A start device does not go with six fields built in. Please load the original ROM.', planLaunch: 'Start device',
     tabFeld: 'Menu', feldOn: 'Multiple Save Slots', bagOn: 'Items and Tamapoints', tamaOn: 'Tama Editor', paramixShortcut: 'Add PARALAB at the end of the game menu', paramixShortcutHint: 'Optional. A + C on the home screen remains available.', gplayOn: 'Play time earns Tamapoints', gplayHint: 'DOOM, Wolfenstein, Game Boy, Master System, Pokémon mini and Arduboy: 10 Tamapoints per minute of play, when going back to the Paradise.', saveSlot: 'Save {n}',
-    sixOn: 'All 6 fields', sixPick: 'Choose Land, Water or Sky ROM', sixHint: 'Adds Land, Water and Sky to Tropical and Glacier. The field pictures come from your own Land, Water or Sky ROM. All ten Lab games are available in every field.',
-    sixNeed: 'All 6 fields still need a Land, Water or Sky ROM.', sixOk: 'Field pictures taken from {n}.', sixBad: '{n} is not a Land, Water or Sky ROM.', sixIn: 'All 6 fields are built in.', sixOff: 'Saving takes Land, Water and Sky out again. Several saves keep working.', sixOffJ: 'Saving takes Sky out again. Several saves keep working.', sixOffField: 'The device is on {f} now. First switch to {s} in the menu.', sixOffSlots: 'The saves stored in the menu are deleted. Continue?', sixFail: 'Fields not built in: {e}', sixNoFw: 'The firmware of this ROM is changed, more fields do not work here.', planSix: 'More fields', sixOnJ: 'Sky as 4th field', sixHintJ: 'Jade Forest already has the Sky pictures.', sixInJ: 'Sky is built in as the 4th field.', sixOld: 'All 6 fields are built in, but an older version. Choose your Land, Water or Sky ROM and everything is updated when you save.', sixOldJ: 'Sky is built in and is updated when you save.', sixPlanet: 'Planet to match the field', sixMenu: 'Game menu Fields: all fields from level 4', sixPlanetNeed: 'Changing this setting needs your Land, Water or Sky ROM again.', sixApp: 'the installed program uses storage required by the additional fields',
+    sixOn: 'All 6 fields', sixPick: 'Choose {editionLand}, {editionWater} or {editionSky} ROM', sixRepairPick: 'Repair walking graphics…', sixHint: 'Adds Land, Water and Sky to {editionTropics} and {editionGlacier}. The field pictures come from your own {editionLand}, {editionWater} or {editionSky} ROM. All ten Lab games are available in every field.',
+    sixSourceReady: 'Source ROM selected: {name}',
+    'more fields need a Tropical, Glacier or Jade Forest ROM with the original firmware': 'More fields need a {editionTropics}, {editionGlacier} or {editionJade} ROM with the original firmware',
+    'unexpected Jade Forest data': 'Unexpected {editionJade} data',
+    'the second ROM must be a Land, Water or Sky ROM': 'The second ROM must be a {editionLand}, {editionWater} or {editionSky} ROM',
+    'the WALKING update needs a Land, Water or Sky ROM': 'Repairing the walking graphics needs a {editionLand}, {editionWater} or {editionSky} ROM',
+    sixNeed: 'All 6 fields still need a {editionLand}, {editionWater} or {editionSky} ROM.', sixOk: 'Field pictures taken from {n}.', sixBad: '{n} is not a {editionLand}, {editionWater} or {editionSky} ROM.', sixIn: 'All 6 fields are built in.', sixOff: 'Saving takes Land, Water and Sky out again. Several saves keep working.', sixOffJ: 'Saving takes Sky out again. Several saves keep working.', sixOffField: 'The device is on {f} now. First switch to {s} in the menu.', sixOffSlots: 'The saves stored in the menu are deleted. Continue?', sixFail: 'Fields not built in: {e}', sixNoFw: 'The firmware of this ROM is changed, more fields do not work here.', planSix: 'More fields', sixOnJ: 'Sky as 4th field', sixHintJ: '{editionJade} already has the Sky pictures.', sixInJ: 'Sky is built in as the 4th field.', sixOld: 'All 6 fields are built in, but an older version. Choose your {editionLand}, {editionWater} or {editionSky} ROM and everything is updated when you save.', sixOldJ: 'Sky is built in and is updated when you save.', sixPlanet: 'Planet to match the field', sixMenu: 'Game menu Fields: all fields from level 4', sixPlanetNeed: 'Changing this setting needs your {editionLand}, {editionWater} or {editionSky} ROM again.', sixApp: 'the installed program uses storage required by the additional fields',
     exitKey: 'Back from programs', exitHint: 'How to get from all programs (emulators and games) back to the Paradise or the menu.', exit0: 'Hold the wheel', exit1: 'Hold wheel and A', exit2: 'Hold wheel and C', exit3: 'Hold the wheel 5 s', feldHint: 'Start a save in a field of your choice and switch between saves.',
     feldUse: 'Open: hold A and C together on the home screen. Wheel selects, B confirms, C goes back.',
-    feldNo: 'Field switch works with Land, Water, Sky (among each other) and Tropical, Glacier (among each other).', feldMissing: 'This build does not contain the menu.',
+    feldNo: 'Field switch works with {editionLand}, {editionWater}, {editionSky} (among each other) and {editionTropics}, {editionGlacier} (among each other).', feldMissing: 'This build does not contain the menu.',
     feldCur: 'Active field: {f}.', feldList: 'Selectable: {s}.', feldStored: 'Saved: {s}.', feldFail: 'Menu not built in: {e}', feldUnknown: 'Edition not recognised.',
     tabWolf: 'Wolf3D', wolfPick: 'Choose game files', wolfHint: 'Choose all files of Wolfenstein 3D together: shareware (.WL1), full version (.WL6) or Spear of Destiny (.SOD). The game goes into the Paramix menu.', wolfNone: 'No game files chosen yet.', wolfShare: 'Shareware', wolfFull: 'Full version', wolfEps: '{n} episodes', wolfEp1: '1 episode', wolfBad: 'Wolfenstein 3D: {e}', wolfNoMain: 'Wolfenstein 3D only in the menu', wolfTurn: 'Turn per wheel step', wolfFixed: 'Always the same: A+C menu. Back (the game is saved): as set in the Menu tab under "Back from programs".', wolfOne: 'There is only one Wolfenstein 3D and one Spear of Destiny in the menu, the new one replaces the old one.', wolfSodN: '21 floors',
     tabGb: 'Game Boy / Color', gbNoMain: 'Game Boy only in the menu', gbPick: 'Choose Games (.gb, .gbc)', gbHint: 'The games go into the Paramix menu. On the device: A+B+C together opens the settings (also Select and sound). Hold the wheel for 2 s to save and go back, the next start continues there. Two Paradise plugged together at the top work like a link cable, e.g. to trade Pokémon.', gbNone2: 'No game chosen yet.', gbKeysTitle: 'Keys', gbKeysDef: 'Default', gbKeysMiss: 'Not assigned: {n}', gbNone: '–', gbRight: 'Right', gbLeft: 'Left', gbUp: 'Up', gbDown: 'Down', gbInA: 'Key A', gbInB: 'Key B', gbInC: 'Key C', gbInWp: 'Wheel press', gbInWu: 'Wheel up', gbInWd: 'Wheel down', gbInAC: 'A + C', gbInBC: 'B + C', gbInAB: 'A + B', gbBad: '{f}: not a Game Boy game', gbColor: '{f}: Game Boy Color only, that does not work', gbNeedRom: 'Open a ROM first (or read it from the device).', t7Old: '{n}: old version, the save can be lost when the battery is changed. Write it again now with "Keep saves".', t18Broken: 'Tama Meets is damaged. Remove Tama Meets and add the firmware again, then write without "Keep saves".', t18Clash: 'the main program would need the room of Tama Meets. Remove Tama Meets first.', tabSms: 'Master System / Game Gear', tabPm: 'Pokémon mini', smsNoMain: 'Master System and Game Gear only in the menu', pmNoMain: 'Pokémon mini only in the menu', abNoMain: 'Arduboy only in the menu', planAb: 'Arduboy', segAb: 'Arduboy', tabAb: 'Arduboy', abPick: 'Choose Games (.hex, .zip)', abHint: 'The games go into the Paramix menu. On the device: A+B+C together opens the settings (also picture size and sound). Hold the wheel for 2 s to save and go back, the next start continues there.', abBad: '{f}: not an Arduboy game', abBig: '{f}: too big for the Arduboy', smsPick: 'Choose Games (.sms, .gg)', smsHint: 'The games go into the Paramix menu. On the device: A+B+C together opens the settings (also Pause and sound). Hold the wheel for 2 s to save and go back, the next start continues there.', smsBad: '{f}: not a Master System or Game Gear game', smsGG: '{f}: Game Gear game, that does not work', smsB1: 'Button 1', smsB2: 'Button 2', smsPause: 'Pause / Start', pmPick: 'Choose Games (.min, .zip)', pmHint: 'The games go into the Paramix menu. On the device: A+B+C together opens the settings (also Power and sound). Hold the wheel for 2 s to save and go back, the next start continues there.', pmBad: '{f}: not a Pokémon mini game', pmBig: '{f}: bigger than 1 MB, that does not work', pmBiosPick: 'Choose Own BIOS', pmBiosDel: 'Remove Own BIOS', pmBiosFree: 'Without an own BIOS the free BIOS of PokeMini runs. Some games run better with the real BIOS.', pmBiosOwn: 'Own BIOS chosen, it is used for all Pokémon mini games.', pmBiosBad: '{f}: not a Pokémon mini BIOS', pmA: 'A', pmB: 'B', pmC: 'C', pmPower: 'Power', pmShake: 'Shake',
@@ -273,7 +326,7 @@ const T = {
     emuPick: 'Choose Firmware or ROM', emuOff: 'Remove Emulator',
     emuHint: 'Colour tamas (TamaEmu), Tama-Go and Friends (T7Emu), Meets and On (T18Emu), first Tamagotchis and Digimon (V1Emu), Connection V3 (V3Emu). The first is the main program, every further one goes to the menu. The filled star marks the main program, a click on an empty star makes another one the main program. Bring your own files.', t7Ok: 'V7 ROM recognised (T7Emu). It is built in on save.', t7OkFr: 'Tamagotchi Friends recognised (T7Emu, test). It is built in on save. There are no figures for it.', t7Has: 'This ROM contains T7Emu.', t7HasFr: 'This ROM contains T7Emu with Tamagotchi Friends.', t7Use: 'Start: hold A and C together on the home screen. Back: hold the wheel (saves). Wheel short: settings and figure. If T7Emu hangs: start with A and C, release them and press the wheel within the first 3 seconds and confirm with A.', t7FigPick: 'Add Figures', t7FigNone: 'No figures yet.', t7FigBad: '{f}: not a figure.', t7FigFull: 'No room left for {f}.', t7FigMax: 'No room for more figures.', t7FigDup: '{f} is already in.', appPick: 'Add Another Emulator', appHint: 'One more Tama-Go or Friends ROM (T7Emu). Started from the menu (A and C), so something in the Menu tab must be switched on.', appNone: 'No other emulators.', appBad: '{f}: not a Tama-Go or Friends ROM.', appBadL: '{f}: neither a Tama-Go or Friends ROM nor a colour Tama or TG18 firmware.', appT18One: 'T18Emu goes only once per ROM.', appHintL: 'In a start device: Tama-Go or Friends ROM, colour Tama firmware (TamaEmu) or TG18 firmware (T18Emu, once only).', ruleLaunch: 'Start device: emulators and DOOM fit together as long as there is room.', appMax: 'At most 12 more emulators.', appNeedMenu: 'More emulators start from the menu: switch on the field switch or items in the Menu tab.', appFail: 'More emulators: {e}', appSix: 'Six fields do not go together with more emulators.', t7SaveBtn: 'T7Emu save (.bin)', saveFor: 'Program', saveMain: 'Main emulator', v1SaveBtn: 'V1Emu save (.bin)', saveT18No: 'T18Emu: backing up its save is not possible here yet.', saveNoBatt: 'This game keeps no save on its cartridge.', saveNone: 'No save yet.', saveWrongFile: 'This file does not fit {n}.', saveCartIn: 'Save for {n} taken over. Now save the ROM or write it to the device. A kept game state is dropped.', t7SaveXDone: 'Save for {n} taken over. Now save the ROM or write it to the device.', t7NoSave: 'The Tama has no save yet.', t7SaveInDone: 'T7Emu save taken over. Now save the ROM or write it to the device.', t7SaveNeed: 'This save requires a ROM with matching Tama-Go support.', saveT18Need: 'This save requires a ROM with matching TG18 support.', saveEmuAny: 'Emulator save (.sav / .bin)',
     emuUse: 'Start: hold A and C together on the home screen. Back: hold the wheel (saves). If TamaEmu hangs: start with A and C, release them and press the wheel within the first 3 seconds and confirm with A. It then starts over from the save the Tama keeps itself.',
-    emuNone: 'No emulator chosen.', petT: 'Change save', feldNeon: 'Neon Planets: the game switches its planets itself. Items, Tamapoints, Tama and programs work.', neonSave: 'Neon Planets: the Studio cannot edit its saves yet.', petOpen: 'Open Paradise Save', petRom: 'Save in the ROM', petClose: 'Close', petRomDone: 'Changed in the ROM. Now save the ROM or write it to the device (without "Keep saves", otherwise the device keeps its save).', petLevel: 'Level', petChar: 'Tama', petCare: 'Fed, happy, healthy, and clean', petSave: 'Save Changed Save', petKeep: 'unchanged', petKid: 'Kid', petYoung: 'Teen', petAdult: 'Adult', petNow: 'In the save: level {l}, Tama {c}, hunger {h}/6, happiness {j}/20{s}.', petSick: ', sick', petOther: 'The save is for another edition than the loaded ROM.', petNoSet: 'The settings block is missing in the save.', petDone: '{n} saved. Send it with "Save to device".', petNothing: 'Nothing changed.', tabSave: 'Save', tabNames: 'Names', cardNoChars: 'no characters on this card', noRoomFrag: 'The ROM has enough free space in total, but the selected content needs a larger contiguous block.', noRoomKB: 'Not enough room: about {k} KB missing. Remove a program. (The top 64 KB stay free for the write protection.)', noRoomAdd: 'No room left for {n}: about {k} KB missing. (The top 64 KB stay free for the write protection.)', eyeMvT: 'Move the eyes', mouthMvT: 'Move the mouth', poseNr: 'Pose {i} of {n}', faceBig: 'Big', faceSmall: 'Small', poseOnly: 'This pose only', poseOnlyHint: 'The arrows move eyes or mouth only in the pose shown. For your own figures where single poses do not fit.', eyeMvHint: 'Applies on the field to Tamas that hatch or grow after writing. The small figure moves half as far.', planEyes: 'Eyes and mouth', namesHint: 'Change names: capitals, digits, space and . & \' ! ? /. Applies to every language with Latin letters on the device.', namesFields: 'Fields', namesChars: 'Tamas', namesItems: 'Items', namesFind: 'Search', namesUndo: 'Reset All', planNames: 'Names', planNamesN: '{n} changed', saveParaOut: 'Paradise save (.tamasave)', saveEmuOut: 'TamaEmu save (.sav)', saveInfo: 'Export takes the saves out of this ROM. An emulator save (TamaEmu .sav or T7Emu .bin) goes into the ROM, then save the ROM or write it to the device. A Paradise save goes straight to the device, connect it above for that.', saveOutT: 'Export', saveInT: 'Import', saveSecProg: 'Programs', saveSecPara: 'Paradise', saveParaOutB: 'Export (.tamasave)', saveParaInB: 'Write to Device (.tamasave)', saveProgInfo: 'Export takes the save of the chosen program out of this ROM. Import puts it into the ROM, then save the ROM or write it to the device.', saveParaInfo: 'Export takes the Paradise save out of this ROM. Write to device goes straight to the device, connect it above for that. Slot: which save.', saveSlotL: 'Slot', slotLive: '{n} (active)', slotEmpty: '{n} (empty)', slotNone: 'There is no save in this slot.', slotField: 'The save is for {a}, the slot for {b}.', slotDevOther: 'The menu on the device does not match the loaded ROM. Load the ROM from the device first.', slotSure: 'The save goes into {n} on the device and replaces the one there. Continue?', slotDone: 'Done: {n} replaced on the device.', slotClearB: 'Clear Slot', slotClearSure: '{n} is deleted on the device. A new game starts there afterwards, the field can be chosen. Continue?', slotClearDone: 'Done: {n} is empty.', saveNoProg: 'No matching program save was found in this ROM.', saveBtnOut: 'Export ({f})', saveBtnIn: 'Import ({f})', saveEmuInDone: 'TamaEmu save taken over ({d}). Now save the ROM or write it to the device.', saveEmuOther: 'The ROM has TamaEmu for {a}, the save is for {b}. Take it anyway?', saveNoRoom: 'This ROM has no room for TamaEmu.', saveEmuBad: 'This is not a fitting save for this program.', saveNoEmu: 'This ROM has no emulator.', saveDone: '{n} saved.', saveNoClock: '{n} saved. The clock is not included, set it in the app if needed.', devSaveRead: 'Back Up Save', devSaveWrite: 'Save to Device', devSaveHint: 'Back up your {editionParadise} save to a .tamasave file, or restore a backup to the connected device. The backup includes the device clock when available.', devSaveSure: 'The save is written to the device ({ed}) and replaces the current one. Continue?', devSaveDone: 'Done: {w} pages written. {c} The device can be restarted.', devSaveClock: 'Clock taken over.', devSaveClockNo: 'Please set the clock on the device.', devSaveGot: 'Backed up: {n}.', fl_saveOtherEd: 'the save is from another edition ({s}), the device is {d}', fl_saveFamily: 'the save does not fit this edition', fl_saveNoSettings: 'the settings block is missing, this is not a complete Paradise save', fl_saveOutside: '{n} pages lie outside the save and are not written', fl_saveIncomplete: 'the save does not hold every page, missing ones stay as on the device', emuUndo: 'Undo Choice', progMain: 'Starts with A and C', progMainL: 'First entry of the menu', progMenu: 'Starts from the menu', progGone: 'will be removed', progUndo: 'Undo', progDel: 'Remove', progNone: 'No emulator yet. Choose firmware or ROM, every further one goes to the menu.', appBadMain: '{f}: colour Tama and TG18 firmware go as a further program only in a start device. Otherwise remove the emulator above with × first.', emuInList: 'In the ROM as further programs: {n}. No need to choose them again.', doomLinkLess: ', {m} MB less with DOOM', emuPack: 'Pack the firmware', emuPackHint: 'Saves room (about 1 MB for an iD L), but the game runs slower.', packWarn: 'Note: the firmware of {n} gets packed so it fits. Packed, the game runs slower. For full speed put fewer programs into the ROM and switch off "Pack the firmware".\n\nContinue anyway?', savePackAsk: 'With this save the firmware only fits packed. Packed, the game runs slower. Switch on "Pack the firmware" and take it?', packNeed: 'This firmware only fits here packed: switch on "Pack the firmware" in the row of TamaEmu.', packFew: 'As the main program the firmware only fits partly packed. At some places the game can run slower because of that. Fully unpacked it runs in a start device as a program in the menu.', packTip: ' Tip: "Pack the firmware" for TamaEmu saves room.', emuNfc: '4U: emulate the NFC chip', emuNfcHint: 'The menu reacts to one press. Unticked it works as before.', emuClock: 'Take the clock from the Paradise at the start', emuClockHint: 'At every start the Paradise\'s time applies. The time in between is not played through.', emuAuto: 'Start when switched on', emuAutoHint: 'Hold the wheel: back to the Paradise, it stays there. Back into the emulator: A and C, or the reset button.', autoHintL: 'Starts at switching on instead of the menu. Hold B while switching on: menu.', emuHas: 'This ROM contains an emulator.', emuBig: 'This firmware is big: the field switch of the menu has no room next to it.', emuUp: 'Saving puts in the new emulator version. With "Keep saves" the save stays.',
+    emuNone: 'No emulator chosen.', petT: 'Change save', feldNeon: '{editionNeon}: the game switches its planets itself. Items, Tamapoints, Tama and programs work.', neonSave: '{editionNeon}: ROM Lab cannot edit its saves yet.', petOpen: 'Open Paradise Save', petRom: 'Save in the ROM', petClose: 'Close', petRomDone: 'Changed in the ROM. Now save the ROM or write it to the device (without "Keep saves", otherwise the device keeps its save).', petLevel: 'Level', petChar: 'Tama', petCare: 'Fed, happy, healthy, and clean', petSave: 'Save Changed Save', petKeep: 'unchanged', petKid: 'Kid', petYoung: 'Teen', petAdult: 'Adult', petNow: 'In the save: level {l}, Tama {c}, hunger {h}/6, happiness {j}/20{s}.', petSick: ', sick', petOther: 'The save is for another edition than the loaded ROM.', petNoSet: 'The settings block is missing in the save.', petDone: '{n} saved. Send it with "Save to device".', petNothing: 'Nothing changed.', tabSave: 'Save', tabNames: 'Names', cardNoChars: 'no characters on this card', noRoomFrag: 'The ROM has enough free space in total, but the selected content needs a larger contiguous block.', noRoomKB: 'Not enough room: about {k} KB missing. Remove a program. (The top 64 KB stay free for the write protection.)', noRoomAdd: 'No room left for {n}: about {k} KB missing. (The top 64 KB stay free for the write protection.)', eyeMvT: 'Move the eyes', mouthMvT: 'Move the mouth', poseNr: 'Pose {i} of {n}', faceBig: 'Big', faceSmall: 'Small', poseOnly: 'This pose only', poseOnlyHint: 'The arrows move eyes or mouth only in the pose shown. For your own figures where single poses do not fit.', eyeMvHint: 'Applies on the field to Tamas that hatch or grow after writing. The small figure moves half as far.', planEyes: 'Eyes and mouth', namesHint: 'Change names: capitals, digits, space and . & \' ! ? /. Applies to every language with Latin letters on the device.', namesFields: 'Fields', namesChars: 'Tamas', namesItems: 'Items', namesFind: 'Search', namesUndo: 'Reset All', planNames: 'Names', planNamesN: '{n} changed', saveParaOut: 'Paradise save (.tamasave)', saveEmuOut: 'TamaEmu save (.sav)', saveInfo: 'Export takes the saves out of this ROM. An emulator save (TamaEmu .sav or T7Emu .bin) goes into the ROM, then save the ROM or write it to the device. A Paradise save goes straight to the device, connect it above for that.', saveOutT: 'Export', saveInT: 'Import', saveSecProg: 'Programs', saveSecPara: 'Paradise', saveParaOutB: 'Export (.tamasave)', saveParaInB: 'Write to Device (.tamasave)', saveProgInfo: 'Export takes the save of the chosen program out of this ROM. Import puts it into the ROM, then save the ROM or write it to the device.', saveParaInfo: 'Export takes the Paradise save out of this ROM. Write to device goes straight to the device, connect it above for that. Slot: which save.', saveSlotL: 'Slot', slotLive: '{n} (active)', slotEmpty: '{n} (empty)', slotNone: 'There is no save in this slot.', slotField: 'The save is for {a}, the slot for {b}.', slotDevOther: 'The menu on the device does not match the loaded ROM. Load the ROM from the device first.', slotSure: 'The save goes into {n} on the device and replaces the one there. Continue?', slotDone: 'Done: {n} replaced on the device.', slotClearB: 'Clear Slot', slotClearSure: '{n} is deleted on the device. A new game starts there afterwards, the field can be chosen. Continue?', slotClearDone: 'Done: {n} is empty.', saveNoProg: 'No matching program save was found in this ROM.', saveBtnOut: 'Export ({f})', saveBtnIn: 'Import ({f})', saveEmuInDone: 'TamaEmu save taken over ({d}). Now save the ROM or write it to the device.', saveEmuOther: 'The ROM has TamaEmu for {a}, the save is for {b}. Take it anyway?', saveNoRoom: 'This ROM has no room for TamaEmu.', saveEmuBad: 'This is not a fitting save for this program.', saveNoEmu: 'This ROM has no emulator.', saveDone: '{n} saved.', saveNoClock: '{n} saved. The clock is not included, set it in the app if needed.', devSaveRead: 'Back Up Save', devSaveWrite: 'Save to Device', devSaveHint: 'Back up your {editionParadise} save to a .tamasave file, or restore a backup to the connected device. The backup includes the device clock when available.', devSaveSure: 'The save is written to the device ({ed}) and replaces the current one. Continue?', devSaveDone: 'Done: {w} pages written. {c} The device can be restarted.', devSaveClock: 'Clock taken over.', devSaveClockNo: 'Please set the clock on the device.', devSaveGot: 'Backed up: {n}.', fl_saveOtherEd: 'the save is from another edition ({s}), the device is {d}', fl_saveFamily: 'the save does not fit this edition', fl_saveNoSettings: 'the settings block is missing, this is not a complete Paradise save', fl_saveOutside: '{n} pages lie outside the save and are not written', fl_saveIncomplete: 'the save does not hold every page, missing ones stay as on the device', emuUndo: 'Undo Choice', progMain: 'Starts with A and C', progMainL: 'First entry of the menu', progMenu: 'Starts from the menu', progGone: 'will be removed', progUndo: 'Undo', progDel: 'Remove', progNone: 'No emulator yet. Choose firmware or ROM, every further one goes to the menu.', appBadMain: '{f}: colour Tama and TG18 firmware go as a further program only in a start device. Otherwise remove the emulator above with × first.', emuInList: 'In the ROM as further programs: {n}. No need to choose them again.', doomLinkLess: ', {m} MB less with DOOM', emuPack: 'Pack the firmware', emuPackHint: 'Saves room (about 1 MB for an iD L), but the game runs slower.', packWarn: 'Note: the firmware of {n} gets packed so it fits. Packed, the game runs slower. For full speed put fewer programs into the ROM and switch off "Pack the firmware".\n\nContinue anyway?', savePackAsk: 'With this save the firmware only fits packed. Packed, the game runs slower. Switch on "Pack the firmware" and take it?', packNeed: 'This firmware only fits here packed: switch on "Pack the firmware" in the row of TamaEmu.', packFew: 'As the main program the firmware only fits partly packed. At some places the game can run slower because of that. Fully unpacked it runs in a start device as a program in the menu.', packTip: ' Tip: "Pack the firmware" for TamaEmu saves room.', emuNfc: '4U: emulate the NFC chip', emuNfcHint: 'The menu reacts to one press. Unticked it works as before.', emuClock: 'Take the clock from the Paradise at the start', emuClockHint: 'At every start the Paradise\'s time applies. The time in between is not played through.', emuAuto: 'Start when switched on', emuAutoHint: 'Hold the wheel: back to the Paradise, it stays there. Back into the emulator: A and C, or the reset button.', autoHintL: 'Starts at switching on instead of the menu. Hold B while switching on: menu.', emuHas: 'This ROM contains an emulator.', emuBig: 'This firmware is big: the field switch of the menu has no room next to it.', emuUp: 'Saving puts in the new emulator version. With "Keep saves" the save stays.',
     emuOk: 'Firmware recognised ({size}). It is built in on save.', emuBad: 'Firmware not recognised: {e}', t18Ok: 'TG18 firmware recognised (T18Emu, Meets/On). It is built in on save.', t18Has: 'This ROM contains T18Emu.', t18Use: 'Start: hold A and C together on the home screen. Back: hold the wheel (saves). If T18Emu hangs: start with A and C, release them, press the wheel within the first 3 seconds and confirm with A. The firmware then starts over from its own save. Experimental: the Tama still runs slower than the real one.',
     emuGone: 'The emulator is removed on save.', emuMissing: 'This build does not contain the emulator program.',
     emuFail: 'Emulator not built in: {e}', savedEmu: 'Saved: {name}',
@@ -500,15 +553,38 @@ function renderBusyDialog() {
   const current = Array.from(busyOperations).pop();
   if (!current) { busyDialog.close(); return; }
   $('busyTitle').textContent = current.title;
+  const detail = $('busyDetail'), bar = $('busyProgress');
+  detail.hidden = !current.phase;
+  const counted = current.total > 0;
+  let amount = '';
+  if (counted) {
+    const format = new Intl.NumberFormat(locale());
+    amount = format.format(current.done / 1024) + ' / ' + format.format(current.total / 1024) + ' KiB';
+    bar.setAttribute('aria-valuemax', current.total);
+    bar.setAttribute('aria-valuenow', current.done);
+    bar.setAttribute('aria-valuetext', amount);
+    bar.style.setProperty('--progress', current.done / current.total * 100 + '%');
+  } else {
+    bar.removeAttribute('aria-valuemax');
+    bar.removeAttribute('aria-valuenow');
+    bar.removeAttribute('aria-valuetext');
+  }
+  if (current.phase) {
+    const label = t(current.phase) + (amount ? ' · ' + amount : '');
+    if (detail.textContent !== label) detail.textContent = label;
+  }
   if (!busyDialog.open) busyDialog.showModal();
 }
-async function busy(title, fn) {
+async function busy(title, fn, detailed = false) {
   const operation = { title };
   busyOperations.add(operation);
   try {
     renderBusyDialog();
     await new Promise(resolve => setTimeout(resolve, 30));
-    return await fn();
+    return detailed ? await fn((phase, done, total) => {
+      Object.assign(operation, { phase, done, total });
+      renderBusyDialog();
+    }) : await fn();
   } finally {
     busyOperations.delete(operation);
     renderBusyDialog();
@@ -867,7 +943,7 @@ function showMyLabTab(tab) {
     $(button.getAttribute('aria-controls')).hidden = !active;
   }
   rememberNavigation({ lab: tab.id });
-  $('labHeading').textContent = tab.textContent;
+  $('labHeading').textContent = toolLabel(tab);
   $('labTool').value = tab.id;
   if (tab.id === 'myLabTabGarden') renderMyLabSlots();
   if (tab.id === 'myLabTabSprites') renderMyLabSprite();
@@ -1009,6 +1085,7 @@ function renderMyLabOverview() {
   $('myLabMenuPlan').textContent = status ? t(status) : $('myLabMenuInfo').textContent;
   const updateAvailable = status === 'myLabMenuAvailable';
   $('myLabUpdateNotice').hidden = !updateAvailable;
+  renderToolAttention('lab', $('myLabTabMenu'), updateAvailable ? ['myLabMenuAvailable'] : []);
   $('myLabMenuChip').parentElement.hidden = updateAvailable;
   $('myLabMenuChip').className = 'chip ' + (menuDraft ? 'new' : menuCurrent ? 'keep' : 'off');
   renderFlashLayout($('myLabLayoutBar'), $('myLabLayoutLegend'), [
@@ -1074,7 +1151,11 @@ function renderMyLabMenu() {
   const labels = ['stock', 'computer', 'settings'].includes(menu.mode) && menu.rows.map(id => romDisplayName(myLabRom.rom, id + 1)).filter(Boolean);
   if (myLabRom.menuCurrent) $('myLabMenuInfo').textContent += ' · ' + t('myLabMenuCurrent');
   $('myLabMenuDetail').hidden = !menu.size;
-  $('myLabMenuDetail').textContent = menu.size ? t('myLabMenuInstalled', { n: menu.size / 1024, crc: t(menu.valid ? 'myLabCrcOk' : 'myLabCrcBad') }) : '';
+  const menuVersion = menu.valid && F.menuVersion(myLabRom.menuDraft?.flashImage || myLabRom.rom, 0x37000, menu.size);
+  $('myLabMenuDetail').textContent = menu.size ? [
+    t('myLabMenuInstalled', { n: menu.size / 1024, crc: t(menu.valid ? 'myLabCrcOk' : 'myLabCrcBad') }),
+    ...(menuVersion ? ['v' + menuVersion] : []),
+  ].join(' · ') : '';
   $('myLabMenuStatusHeading').textContent = myLabRom.menuDraft ? t("Menu After Export") : t("Menu in Loaded ROM");
   $('myLabMenuContents').hidden = !labels?.length;
   $('myLabEntriesHeading').textContent = myLabRom.menuDraft ? t("Computer Menu After Export") : t("Computer Menu Entries");
@@ -1814,13 +1895,22 @@ async function openRomWorkspace(buf, filename, stayOnDevice) {
     // A menu from an older Studio version is rebuilt on save (e.g. 0.9.5 had no item pictures)
     state.feldStale = false;
     if (f) {
-      if (clean) try { const fa = F.feldApps(buf, fe.stub), re = fe.feldc ? F.cleanApply(buf, { apps: fa.apps, dl: fa.dl, mainSrc: fa.mainSrc, auto: fa.auto, noClock: fa.noClock, spot: F.cleanInfo(buf) }, { feld: fe.feldc, stub: fe.stub }) : buf; state.feldStale = re.some((v, i) => v !== buf[i]); } catch (e) { state.feldStale = false; }
+      if (clean) try {
+        const fa = F.feldApps(buf, fe.stub);
+        const re = fe.feldc ? F.cleanApply(buf, { apps: fa.apps, dl: fa.dl, mainSrc: fa.mainSrc, auto: fa.auto, noClock: fa.noClock, spot: F.cleanInfo(buf) }, { feld: fe.feldc, stub: fe.stub }) : buf;
+        const header = new DataView(re.buffer, re.byteOffset, re.byteLength);
+        const length = header.getUint32(0x14, true);
+        if (F.preserveMenuVersion(buf, re, f.off, length))
+          header.setUint32(0x24, C.crc32(re.subarray(f.off, f.off + length)), true);
+        state.feldStale = re.some((v, i) => v !== buf[i]);
+      } catch (e) { state.feldStale = false; }
       else try {
         const embOld = { stub: fe.stub, oldStub: E.embedded() && E.embedded().stub };
         const fa = F.feldApps(buf, fe.stub), low = fa.apps.length ? Math.min(...fa.apps.map((a) => a.src - 0x10000000 + 0x11000)) : 0;
         const dl = f.version >= 7 ? (buf[f.off + 0x334] | buf[f.off + 0x335] << 8 | buf[f.off + 0x336] << 16 | buf[f.off + 0x337] << 24) >>> 0 : 0, dlo = dl ? dl - 0x10000000 + 0x11000 : 0;
         const re = F.feldApply(F.feldStrip(buf, embOld, E), { fields: state.feld, bag: state.bag, tama: !neonRom() && state.tama, neonTama: neonRom() && state.tama, autopilot: state.autopilot, infiniteFuel: state.infiniteFuel, keepAwake: state.keepAwake, appsOnly: state.appsOnly, paramixShortcut: state.paramixShortcut, gplay: state.gplay, saves: state.saves, launch: state.launch, apps: fa.apps, name0: fa.name0, appsLow: low, dl, mainSrc: fa.mainSrc, auto: fa.auto, fieldNames: fieldTexts(buf).map((x) => x.name) }, F.feldSlots(buf, fe.stub), { feld: fe.feld, stub: fe.stub }, E);
         if (dlo) re.set(buf.subarray(dlo, dlo + 0x10000), dlo);   // the flash app stays where it is
+        F.preserveMenuVersion(buf, re, f.off);
         state.feldStale = re.length !== buf.length || re.some((v, i) => v !== buf[i]);
       } catch (e) { state.feldStale = false; }
     } }
@@ -2062,13 +2152,30 @@ for (const tab of paradiseTabs) {
       $('pane-' + item.dataset.tab).hidden = !active;
     }
     rememberNavigation({ paradise: tab.id });
-    $('paradiseHeading').textContent = tab.textContent;
+    $('paradiseHeading').textContent = toolLabel(tab);
     $('paradiseTool').value = tab.id;
     if (tab.dataset.tab === 'all') renderSpriteGrid(Number($('paradiseSpritesPage').value));
     if (tab.dataset.tab === 'lab-items' && state.ctx) renderRomLabItems(false);
     if (tab.dataset.tab === 'zh') renderZhPanel(false);
     if (tab.dataset.tab === 'save') renderResidents();
   };
+}
+
+const toolLabel = tab => (tab.querySelector('[data-tool-label]') || tab).textContent;
+const toolOptionLabel = tab => (tab.hasAttribute('aria-description') ? '⚠ ' : '') + toolLabel(tab);
+
+function renderToolAttention(key, tab, reasons) {
+  const description = reasons.map(reason => t(reason)).join(' ');
+  tab.querySelector('.tool-attention').hidden = !description;
+  if (description) {
+    tab.setAttribute('aria-description', description);
+    tab.title = description;
+  } else {
+    tab.removeAttribute('aria-description');
+    tab.removeAttribute('title');
+  }
+  const option = Array.from($(key + 'Tool').options).find(option => option.value === tab.id);
+  if (option) option.textContent = toolOptionLabel(tab);
 }
 
 // Both navigation layouts activate the same tab and retain its editor state.
@@ -2082,7 +2189,7 @@ function setupToolNavigation(key, tabs) {
       group.label = tab.previousElementSibling.textContent;
       picker.appendChild(group);
     }
-    group.appendChild(new Option(tab.textContent, tab.id));
+    group.appendChild(new Option(toolOptionLabel(tab), tab.id));
     tab.tabIndex = tab.getAttribute('aria-selected') === 'true' ? 0 : -1;
     tab.onkeydown = event => {
       const visible = available.filter(item => !item.hidden);
@@ -2101,13 +2208,13 @@ function setupToolNavigation(key, tabs) {
 
 function updateToolLabels(key, tabs) {
   const picker = $(key + 'Tool');
-  for (const option of picker.options) option.textContent = $(option.value).textContent;
+  for (const option of picker.options) option.textContent = toolOptionLabel($(option.value));
   const groups = tabs.filter(tab => !tab.hasAttribute('data-legacy') && tab.previousElementSibling?.classList.contains('nav-group'));
   Array.from(picker.querySelectorAll('optgroup')).forEach((group, i) => {
     group.label = groups[i].previousElementSibling.textContent;
   });
   const selected = tabs.find(tab => tab.getAttribute('aria-selected') === 'true');
-  if (selected) $(key + 'Heading').textContent = selected.textContent;
+  if (selected) $(key + 'Heading').textContent = toolLabel(selected);
 }
 
 // Options for a sprite that belongs to a character group (eyes keep their length,
@@ -3009,7 +3116,8 @@ function uartWarnInto(box) {
 async function devFree() {
   if (dv.run) { toast(t('uartRun')); return; }
   try { if (dv.io) await dv.io.close(); } catch (e) {}
-  dv.io = null; dv.d = null; dv.loaded = false; $('devProgress').hidden = true; devRender(''); toast(t('uartFreed'));
+  dv.io = null; dv.d = null; dv.loaded = false; dv.restartMessage = null;
+  $('devProgress').hidden = true; devRender(''); toast(t('uartFreed'));
 }
 /* 1.6.9: visits between two Paradise: plugged together at the top, the programs talk over the contacts themselves */
 function pairInto(box, hint) {
@@ -4186,12 +4294,34 @@ function renderFeld() {
     ? t('neonDonorReady', { name: state.neonDonor.name }) : t(neonHint));
   $('sixRow').hidden = !sixCan || la;
   for (const [id, k] of [['sixOnTxt', jade ? 'sixOnJ' : 'sixOn'], ['sixHintTxt', jade ? 'sixHintJ' : 'sixHint']]) { $(id).dataset.t = k; $(id).textContent = t(k); }
-  $('sixOn').checked = (sixIn && !state.sixOff) || !!state.six || !!state.sixWant; $('sixOn').disabled = !fe || !S6.embedded() || neonBuilt;
+  const sixUnavailable = !fe || !S6.embedded();
+  const sixLocked = sixUnavailable || neonBuilt;
+  const repairWalking = neonBuilt && S6.sixStale(si);
+  $('sixOn').checked = (sixIn && !state.sixOff) || !!state.six || !!state.sixWant;
+  $('sixOn').disabled = sixLocked;
   if (neonBuilt && state.feldInit) box.disabled = true;
-  $('btnSix').hidden = jade || (neonBuilt && !S6.sixStale(si)) || (sixIn && !sixOld && sixSame(si));
+  const sixPick = $('btnSix');
+  sixPick.hidden = jade || (neonBuilt && !repairWalking) || (sixIn && !sixOld && sixSame(si));
+  sixPick.disabled = $('fileSix').disabled = sixUnavailable || (neonBuilt && !repairWalking);
+  sixPick.dataset.t = repairWalking ? 'sixRepairPick' : 'sixPick';
+  sixPick.textContent = t(sixPick.dataset.t);
+  const sourceStatus = $('sixSourceStatus');
+  sourceStatus.textContent = state.six ? t('sixSourceReady', { name: state.sixName }) : '';
+  sourceStatus.hidden = !state.six;
+  const attention = [];
+  if (!$('sixRow').hidden && !sixPick.hidden && !sixPick.disabled && !state.six && !state.sixOff) {
+    if (sixOld) attention.push('sixOld');
+    else if (sixIn && !sixSame(si)) attention.push('sixPlanetNeed');
+    else if (!sixIn && state.sixWant && S6.sixCan(rom)) attention.push('sixNeed');
+  }
+  if (!$('neonDonorRow').hidden && neonBuilt && !state.neonDonor) attention.push(neonHint);
+  if (!$('labReleaseRow').hidden && !$('labReleasePick').hidden && !labDonor) {
+    attention.push(specialWanted ? 'specialFoodHint' : 'labReleaseHint');
+  }
+  renderToolAttention('paradise', $('tool-feld'), attention);
   $('sixPlanetRow').hidden = !sixCan || la || !((sixIn && !state.sixOff) || state.six || state.sixWant);
-  $('sixPlanet').checked = state.sixPlanet !== false; $('sixPlanet').disabled = !fe || !S6.embedded() || neonBuilt;
-  $('sixMenu').checked = state.sixMenu !== false; $('sixMenu').disabled = !fe || !S6.embedded() || neonBuilt;
+  $('sixPlanet').checked = state.sixPlanet !== false; $('sixPlanet').disabled = sixLocked;
+  $('sixMenu').checked = state.sixMenu !== false; $('sixMenu').disabled = sixLocked;
   if (!fe) s = t('feldMissing');
   else if (!ed) s = t('feldUnknown');
   else if (state.clean) s = t('cleanUse') + (state.ctx.clean ? '' : '\n' + t('cleanWarn'));
@@ -4220,9 +4350,10 @@ function renderFeld() {
   }
   const installed = installedMenu;
   const menuStatus = t(installed ? 'ParaLab menu installed in this ROM.' : 'No ParaLab menu detected in this ROM.');
+  const menuVersion = installed && F.menuVersion(rom, installed.off);
   $('feldControls').hidden = la || !menuWanted();
   $('feldControls').textContent = t("On the home screen, hold A and C together. Turn the wheel to select, press B to confirm, or C to go back.");
-  renderMenuList('feldStat', [...(fe && ed ? [menuStatus] : []), ...s.split('\n').filter(Boolean)]);
+  renderMenuList('feldStat', [...(fe && ed ? [menuVersion ? menuStatus + ' · v' + menuVersion : menuStatus] : []), ...s.split('\n').filter(Boolean)]);
   renderPlan();
 }
 $('appsOnlyOn').onchange = (e) => { state.appsOnly = e.target.checked; if (state.appsOnly) state.paramixShortcut = true; else if (neonRom()) { state.tama = false; state.bag = false; state.autopilot = false; } renderFeld(); };
@@ -4261,10 +4392,12 @@ $('sixPlanet').onchange = (e) => { state.sixPlanet = e.target.checked; renderFel
 $('sixMenu').onchange = (e) => { state.sixMenu = e.target.checked; renderFeld(); };
 $('fileSix').onchange = async (e) => {
   const f = e.target.files[0]; e.target.value = '';
-  if (!f) return;
+  if (!f || e.target.disabled) return;
+  const context = state.ctx;
   const buf = new Uint8Array(await f.arrayBuffer());
+  if (state.ctx !== context || e.target.disabled) return;
   if (!S6.sixSource(buf)) { toast(t('sixBad', { n: f.name }), true); renderFeld(); return; }
-  state.six = buf; state.sixName = f.name; state.sixWant = true; state.feld = true;
+  state.six = buf; state.sixName = f.name; state.sixWant = true; state.sixOff = false; state.feld = true;
   toast(t('sixOk', { n: f.name }));
   renderFeld(); renderNames();
 };
@@ -4539,7 +4672,7 @@ async function composeBaseRom(deferResidentBanks = false) {
   // 1.6.8: extra fields out again (several saves with the edition's own fields only)
   if (state.sixOff && S6.sixInfo(rom)) {
     const base = F.fieldNames(S6.sixStrip(state.ctx.rom)), now = F.fieldNow(state.ctx.rom);
-    if (now && base.length && !base.includes(now)) { toast(t('sixOffField', { f: now, s: base.join(', ') }), true); return null; }
+    if (now && base.length && !base.includes(now)) { toast(t('sixOffField', { f: fieldName(state.ctx.rom, now), s: base.map(name => fieldName(state.ctx.rom, name)).join(listSeparator()) }), true); return null; }
     if (feldSaved.length && !await deviceDialog(t('sixOffSlots'))) return null;
     rom = S6.sixStrip(RB?.strip(rom) ?? rom); feldSaved = [];
   }
@@ -4656,7 +4789,8 @@ async function composeBaseRom(deferResidentBanks = false) {
         e.code = 'slotResidentBankSpace';
         throw e;
       }
-      toast(t('feldFail', { e: em(e) }), true); return null;
+      toast(e.code === 'slotPoolFull' ? t('fl_slotSpace', e.p) : t('feldFail', { e: em(e) }), true);
+      return null;
     }
   }
   if (state.neonDonor && NT.installed(rom)) {
@@ -4778,8 +4912,10 @@ $('btnSave').onclick = () => busy(t("Exporting ROM"), async () => {
 
 // ------------------------------------------------------------- device (UART)
 const FL = window.ParamixFlash;
+const FLASH_TOOL_REVISION = Number('__FLASH_TOOL_REVISION__');
 const hasFlashApp = !!FL.embedded();
 const dv = { io: null, d: null, writing: false, writeOperation: null, loaded: false, opening: false, connecting: null, reconnecting: false, run: false, cancel: false };
+let clockDevice = null, clockTime = null;
 const canReadLabItems = device => !!device && device.info.editionIdentified !== false &&
   Number.isInteger(device.info.edition) && device.info.edition >= 1 && device.info.edition <= 8;
 const deviceTabs = Array.from($('deviceTabs').querySelectorAll('[role="tab"]'));
@@ -4836,7 +4972,11 @@ function bindDeviceTabs(tabs, select) {
   }
 }
 bindDeviceTabs(deviceTabs, showDeviceTab);
-bindDeviceTabs(uartToolTabs, tab => selectDevicePanel(uartToolTabs, tab));
+bindDeviceTabs(uartToolTabs, tab => {
+  if (!selectDevicePanel(uartToolTabs, tab)) return;
+  if (tab.id === 'deviceClockTitle') renderUartClock();
+  else clockDevice = null;
+});
 let deviceOnlyChanged = $('devOnly').checked, deviceKeepSaves = $('devKeep').checked;
 function deviceWritePlan() {
   const device = dv.d;
@@ -4850,6 +4990,7 @@ function deviceWritePlan() {
   const fixedOptions = !myLab && (bridge || paradiseImage) && !portUpdate;
   const keep = !fixedOptions && deviceKeepSaves;
   const onlyChanged = fixedOptions || deviceOnlyChanged;
+  const fastWrite = !!device?.info.fastWrite && $('devFast').checked;
   const source = myLabRom || state.ctx;
   const paradiseBackup = bridge && !!state.ctx && !!F.edition(state.ctx.rom) && !F.isClean(state.ctx.rom);
   const canWrite = myLab ? !!labImage && !paradiseImage :
@@ -4882,7 +5023,7 @@ function deviceWritePlan() {
   const saves = !device || !canWrite ? '—' : keep ? t(myLab || portUpdate ? 'Keep the device save and Garden.' :
     'Preserve compatible device saves and apply supported workspace save edits.') : t('Replace with save data from the write image.');
   const edition = sourceEdition(!!stagedPort);
-  return { device, source, name, edition, target, content, saves, canWrite, raw, myLab, labImage, paradiseImage, portUpdate, keep, onlyChanged, fixedOptions };
+  return { device, source, name, edition, target, content, saves, canWrite, raw, myLab, labImage, paradiseImage, portUpdate, keep, onlyChanged, fastWrite, fixedOptions };
 }
 
 function renderWriteContent(container, plan) {
@@ -4911,7 +5052,7 @@ function renderWriteReview(plan) {
   $('writeSaves').textContent = plan.saves;
 }
 
-function deviceDialog(message, title = t("Confirm Device Operation"), action = t("Continue"), notice = false, writeMode = null) {
+function deviceDialog(message, title = t("Confirm Device Operation"), action = t("Continue"), notice = false, writeMode = null, alternate = null) {
   const dialog = $('deviceDialog');
   if (dialog.open) return Promise.resolve(false);
   const review = writeMode === 'review';
@@ -4922,11 +5063,17 @@ function deviceDialog(message, title = t("Confirm Device Operation"), action = t
   $('writeSummary').hidden = !review;
   dialog.setAttribute('aria-describedby', (review ? 'writeSummary' : 'deviceDialogMessage') + (writeMode ? ' writeRisk' : ''));
   $('deviceDialogCancel').hidden = notice;
+  $('deviceDialogAlternate').hidden = !alternate;
+  $('deviceDialogAlternate').textContent = alternate || '';
   $('deviceDialogAccept').textContent = action;
   const targetDevice = dv.d;
   dialog.returnValue = '';
   return new Promise(resolve => {
-    dialog.addEventListener('close', () => resolve(dialog.returnValue === 'accept' && dv.d === targetDevice), { once: true });
+    dialog.addEventListener('close', () => {
+      const choice = dialog.returnValue;
+      resolve(dv.d === targetDevice && (choice === 'accept' || (alternate && choice === 'alternate'))
+        ? (alternate ? choice : true) : false);
+    }, { once: true });
     dialog.showModal();
     $(notice ? 'deviceDialogAccept' : 'deviceDialogCancel').focus();
   });
@@ -4936,9 +5083,14 @@ function confirmFlashOperation(message, title = t("Confirm Device Write"), actio
   return deviceDialog(message, title, action, false, 'write');
 }
 
-function confirmFlashWriteCount(count) {
-  const formatted = new Intl.NumberFormat(locale()).format(count);
-  return confirmFlashOperation(t('Write {count} flash blocks of 4 KiB each?', { count: formatted }));
+function confirmFlashWriteCount(count, plan) {
+  const format = new Intl.NumberFormat(locale());
+  if (plan?.large) {
+    return confirmFlashOperation(t('devMixedWriteCount', {
+      small: format.format(plan.small), large: format.format(plan.large), total: format.format(count),
+    }));
+  }
+  return confirmFlashOperation(t('Write {count} flash blocks of 4 KiB each?', { count: format.format(count) }));
 }
 
 function warnDeviceWrite() {
@@ -4950,9 +5102,10 @@ function warnDeviceWrite() {
 
 async function devWriteTask(fn) {
   if (dv.run || dv.writing) return;
+  const device = dv.d;
   dv.writing = true;
   dv.writeOperation = {};
-  try { await devTask(fn); }
+  try { await devTask(fn); await maybeAutoRestart(device); }
   finally { dv.writing = false; dv.writeOperation = null; }
 }
 
@@ -4968,6 +5121,7 @@ function confirmDeviceWrite(plan, image) {
   $('reviewSaves').textContent = plan.saves;
   $('reviewSaves').classList.toggle('replace-saves', !plan.keep);
   $('reviewMode').textContent = plan.onlyChanged ? t("Only changed sectors") : t("Full write");
+  if (plan.fastWrite) $('reviewMode').append(' · ' + t('devFast'));
   $('reviewBytes').textContent = t("{v1} bytes", { v1: changed.toLocaleString(locale()) });
   return deviceDialog('', t("Review Device Write"), t("Continue"), false, 'review');
 }
@@ -4977,12 +5131,18 @@ const DEVICE_ART = {
   1: 'land', 2: 'water', 3: 'sky', 4: 'jade', 5: 'tropics', 6: 'glacier', 8: 'neon',
   [FL.MY_LAB_ON_PARADISE]: 'my-lab-on-paradise', 0xFE: 'my-lab',
 };
+function currentFlashTool(info) {
+  return info?.revision >= FLASH_TOOL_REVISION;
+}
+
 function renderDeviceConnection() {
   const device = dv.d;
   const info = $('devInfo');
+  const revision = device?.info.revision;
+  const toolVersion = revision ? ' · Flash Tool v' + [revision >>> 16, (revision >>> 8) & 255, revision & 255].join('.') : '';
   info.textContent = dv.connecting ? (dv.cancel ? t("Cancelling…") : t("Connecting…")) :
     device ? t('devOn', { ed: connectedEdition(device), mb: device.info.capacity >> 20, l: dv.loaded ? t('devLoaded') : '' }) +
-    (device.info.readOnly ? ' · ' + t('devReadOnly') : '') :
+    toolVersion + (device.info.readOnly ? ' · ' + t('devReadOnly') : '') :
     dv.opening ? t("Choose a USB port…") : dv.run ? t("Connecting…") : t('devNone');
   markDeviceEdition(info, device);
   renderDeviceBattery();
@@ -5005,7 +5165,12 @@ function quickDumpBase() {
 
 let deviceStatus;
 function renderDeviceStatus(fallback = '') {
-  $('devStat').textContent = typeof deviceStatus === 'function' ? deviceStatus() : deviceStatus || fallback;
+  const status = typeof deviceStatus === 'function' ? deviceStatus() : deviceStatus || fallback;
+  $('devStat').textContent = [status, dv.restartMessage && t(dv.restartMessage)].filter(Boolean).join('\n');
+}
+
+function canRestartDevice() {
+  return !!(dv.d?.info.remoteRestart && dv.io && !dv.rescue && !dv.stash && !dv.restartFailed);
 }
 
 function devRender(msg) {
@@ -5028,6 +5193,7 @@ function devRender(msg) {
   $('btnWrite').disabled = !dv.d || dv.run || !canWrite || readOnly;
   $('btnSaveRead').disabled = !dv.d || dv.run;
   $('btnSaveWrite').disabled = !dv.d || dv.run || readOnly;
+  renderUartClock();
   $('btnReadLabItems').disabled = dv.opening || dv.run || !canReadLabItems(dv.d);
   $('btnInstallDeviceLabItems').disabled = dv.opening || dv.run || !canReadLabItems(dv.d) || readOnly || dv.rescue;
   $('btnParaIn').disabled = !dv.d || dv.run || readOnly || myLab || paradiseBridge;
@@ -5037,7 +5203,22 @@ function devRender(msg) {
   $('devOnly').disabled = $('devKeep').disabled = dv.run || plan.fixedOptions;
   $('devOnly').checked = plan.onlyChanged;
   $('devKeep').checked = plan.keep;
-  $('btnDevStop').hidden = !dv.run;
+  $('devFastOption').hidden = !dv.d?.info.fastWrite || readOnly;
+  $('devFast').disabled = $('devFastOption').hidden || dv.run;
+  const upgrade = $('devFlashUpgrade');
+  upgrade.hidden = !dv.d || !dv.io || !!dv.rescue || !!dv.stash || (currentFlashTool(dv.d.info) && !readOnly);
+  upgrade.disabled = dv.run || dv.opening;
+  upgrade.dataset.t = readOnly ? 'flashUseWritable' : 'flashUpgradeTitle';
+  upgrade.textContent = t(upgrade.dataset.t);
+  const remoteRestart = canRestartDevice();
+  const clockRestart = dv.restartReason === 'clock';
+  $('devRestartGuide').hidden = !dv.restartReason || (clockRestart && !remoteRestart) || (dv.run && !dv.restarting);
+  $('devRestartTitle').hidden = clockRestart;
+  $('devRestartTitle').textContent = t(dv.restartReason === 'rom' ? 'Start the Updated ROM' : 'devRestartNow');
+  $('btnDevRestart').hidden = !remoteRestart;
+  $('btnDevRestart').disabled = dv.run || dv.opening;
+  $('devManualRestart').hidden = remoteRestart || clockRestart;
+  $('btnDevStop').hidden = !dv.run || !!dv.restarting;
   $('btnDevStop').disabled = !!dv.cancel;
   $('btnRescueTest').disabled = $('btnRescueBack').disabled = !dv.d || dv.run || myLab || paradiseBridge;
   const edition = dv.d?.info.edition;
@@ -5054,7 +5235,7 @@ function devRender(msg) {
 /* Flasher errors and notes carry a code and an English fallback. */
 function flMsg(x) {
   const key = x?.code && 'fl_' + x.code;
-  if (key && locale() !== 'en') {
+  if (key && (locale() !== 'en' || x.p?.deviceEdition !== undefined)) {
     const variables = x.p?.deviceEdition !== undefined ? {
       d: I18n.edition(romEditionKey(x.p.deviceEdition)) || x.p.d,
       r: I18n.edition(romEditionKey(x.p.romEdition)) || x.p.r,
@@ -5066,12 +5247,17 @@ function flMsg(x) {
 }
 function transferProgress(prefix, done, total, label) {
   const percent = total > 0 ? Math.max(0, Math.min(100, Math.floor(done / total * 1000) / 10)) : null;
-  $(prefix + 'Progress').hidden = percent === null;
+  const indeterminate = prefix === 'dev' && total === 0;
+  $(prefix + 'Progress').hidden = percent === null && !indeterminate;
+  $(prefix + 'Progress').classList.toggle('indeterminate', indeterminate);
+  $(prefix + 'Percent').hidden = indeterminate;
+  $(prefix + 'Meter').setAttribute('aria-label', label);
+  if (indeterminate) $(prefix + 'Meter').removeAttribute('aria-valuenow');
   if (percent !== null) {
     $(prefix + 'Bar').style.setProperty('--end', percent + '%');
-    $(prefix + 'Percent').textContent = percent + '%';
-    $(prefix + 'Meter').setAttribute('aria-valuenow', percent);
-    $(prefix + 'Meter').setAttribute('aria-label', label);
+    const displayPercent = prefix === 'dev' ? Math.round(percent) : percent;
+    $(prefix + 'Percent').textContent = displayPercent + '%';
+    $(prefix + 'Meter').setAttribute('aria-valuenow', displayPercent);
   }
 }
 
@@ -5095,20 +5281,23 @@ function devicePhaseEta(phase, done, total, now) {
 }
 
 function devProg(ph, done, total) {
-  transferProgress('dev', done, total, t('ph' + ph));
+  transferProgress('dev', done, ph === 'confirmWrite' ? null : total, t('ph' + ph));
   const remaining = devicePhaseEta(ph, done, total, performance.now());
   $('devEta').hidden = !remaining;
   $('devEta').textContent = remaining ? t("Stage ETA ~{v1}", { v1: remaining }) : '';
   const big = total >= 0x400000, u = big ? 1 << 20 : 1024;
-  const n = ph === 'write' || (ph === 'check' && total === 1) ?
+  const n = !total ? '' : ph === 'write' || ph === 'copySaves' || ph === 'checkRescue' || ph === 'waitTool' || (ph === 'check' && total === 1) ?
     done + ' / ' + total : (done / u | 0) + ' / ' + (total / u | 0) + (big ? ' MB' : ' KB');
-  deviceStatus = () => t('ph' + ph) + '  ' + n;
+  deviceStatus = () => t('ph' + ph) + (n ? '  ' + n : '');
   renderDeviceStatus();
 }
 async function devTask(fn) {
   devicePhaseSample = null;
   $('devEta').hidden = true;
-  dv.restartNeeded = false;
+  dv.restartReason = null;
+  dv.restartFailed = false;
+  dv.restartAttempted = false;
+  dv.restartMessage = null;
   $('devRestartGuide').hidden = true;
   $('devProgress').hidden = true;
   dv.run = true; dv.cancel = false; devRender('');
@@ -5123,10 +5312,35 @@ async function devTask(fn) {
   finally {
     // Connect creates its device inside fn; arm only after hello and rescue checks finish.
     if (complete && dv.d && dv.d !== initialDevice) { try { await dv.d.resetIdle(true); } catch (_) {} }
+    if (!complete) dv.restartReason = null;
     dv.run = false; devRender();
-    $('devRestartGuide').hidden = !(complete && dv.restartNeeded);
   }
 }
+async function maybeAutoRestart(device) {
+  if (dv.d === device && device?.info.restartCountdown && !dv.restartAttempted) await restartDevice();
+}
+async function restartDevice() {
+  const device = dv.d, io = dv.io;
+  if (!dv.restartReason || !canRestartDevice() || dv.run || dv.opening || device.resetDepth) return;
+  const countdown = device.info.restartCountdown;
+  dv.restartAttempted = true;
+  dv.restarting = dv.run = true;
+  dv.restartMessage = countdown ? 'devAutoRestarting' : 'devRestarting';
+  devRender();
+  let result;
+  try {
+    result = countdown ? await device.restartWithCountdown() : await device.restart() && 'restarting';
+  } catch (_) { /* The device may have restarted before the reply arrived. */ }
+  if (result === 'restarting') {
+    dv.restartReason = null;
+    dv.io = null; dv.d = null; dv.loaded = false;
+    try { await io.close(); } catch (_) {}
+  } else if (result !== 'cancelled') dv.restartFailed = true;
+  dv.restarting = dv.run = false;
+  dv.restartMessage = result === 'restarting' ? 'devRestartSent' : result === 'cancelled' ? 'devRestartKept' : 'devRestartFailed';
+  devRender();
+}
+$('btnDevRestart').onclick = restartDevice;
 const viewScroll = new Map();
 function showDestination(view, newRom = false) {
   const main = document.querySelector('main');
@@ -7238,9 +7452,13 @@ $('btnConn').onclick = async () => {
   let port;
   try { port = await getDevicePort(); } catch (e) { return; }
   finally { dv.opening = false; devRender(); }
+  await connectDevice(port);
+};
+async function connectDevice(port, validate, minimumRevision) {
   // A reconnect must not wait for a lock acknowledgement from the old transport.
   const previousIO = dv.io;
   dv.io = null; dv.d = null; dv.loaded = false;
+  dv.rescue = false; dv.stash = null;
   const controller = new AbortController(), { signal } = controller;
   dv.reconnecting = !!previousIO;
   dv.connecting = controller;
@@ -7250,7 +7468,8 @@ $('btnConn').onclick = async () => {
       signal.throwIfAborted();
       dv.io = await openDevicePort(port);
       signal.throwIfAborted();
-      const { dev, loaded } = await FL.connect(dv.io, FL.embedded(), { signal }, devProg);
+      const { dev, loaded } = await FL.connect(dv.io, FL.embedded(), { signal, minimumRevision }, devProg);
+      if (validate) await validate(dev);
       signal.throwIfAborted();
       dev.confirmLowBattery = async mv => {
         if (dv.cancel || dv.d !== dev) return false;
@@ -7282,7 +7501,90 @@ $('btnConn').onclick = async () => {
       dv.reconnecting = false;
     }
   });
-};
+}
+
+async function upgradeFlashTool(device) {
+  const port = selectedDevicePort;
+  if (!port || !dv.io || dv.rescue || dv.stash || dv.d !== device || dv.run || dv.opening) return false;
+  const edition = device.info.edition;
+  const myLab = edition === 0xFE, ported = edition === FL.MY_LAB_ON_PARADISE;
+  let update = null;
+  let header;
+  try {
+    await busy(t('flashUpgradeTitle'), async progress => {
+      progress('flashInspectBoot');
+      const app = myLab || ported ? MLM.flashToolBinary(ported) : FL.embedded();
+      update = await device.planFlashToolUpdate?.(app, F.embedded()?.stub, progress);
+      if (update || (!myLab && !ported)) header = update?.boot ?? await device.crc(0, 0x1000);
+    }, true);
+  } catch (error) {
+    devRender(() => t('devErr', { e: flMsg(error) }));
+    return false;
+  }
+  if (dv.d !== device || dv.run || dv.opening || port !== selectedDevicePort) return false;
+  if (update && !update.jobs.length && currentFlashTool(device.info)) {
+    $('devFast').checked = !!device.info.fastWrite;
+    devRender(() => t('flashUpgradeDone'));
+    return device.info.fastWrite;
+  }
+  let written = false;
+  if (update?.jobs.length) {
+    const count = update.jobs.length;
+    if (!await confirmFlashOperation(t('flashUpgradeOnly', { count: new Intl.NumberFormat(locale()).format(count) }),
+      t('flashUpgradeTitle'), t('Write to Device'))) return false;
+    if (dv.d !== device || dv.run || dv.opening || port !== selectedDevicePort) return false;
+    await devWriteTask(async () => {
+      written = await device.writeFlashToolUpdate(update, devProg, () => dv.cancel) === count;
+      if (written) deviceStatus = () => t('flashUpgradeStored');
+    });
+    if (!written) return false;
+  }
+  const validate = async next => {
+    const nextEdition = next.info.edition;
+    const knownEditionMatches = device.info.editionIdentified === false ||
+      next.info.editionIdentified === false || nextEdition === edition;
+    const sameTarget = myLab || ported ? nextEdition === edition :
+      nextEdition !== 0xFE && nextEdition !== FL.MY_LAB_ON_PARADISE && knownEditionMatches &&
+      await next.crc(0, 0x1000) === header;
+    if (!sameTarget || (update && (myLab || ported) && await next.crc(0, 0x1000) !== header))
+      throw new Error('flashUpgradeMismatch');
+  };
+  if (written && device.info.flashToolReload) {
+    let reloadAttempted = false;
+    try {
+      await busy(t('flashUpgradeTitle'), async progress => {
+        progress('flashReloadTool');
+        reloadAttempted = true;
+        if (!await device.reloadFlashTool(update)) reloadAttempted = false;
+      }, true);
+    } catch (_) { /* A lost reply can mean the new tool is already starting. */ }
+    if (reloadAttempted) {
+      await connectDevice(port, validate, FLASH_TOOL_REVISION);
+      if (dv.cancel) return false;
+    }
+  }
+  if (dv.d === device || !dv.d) {
+    const current = dv.d;
+    const path = gameMenuPath(['connection', 'download', 'download'], 'Connect → Download → Download', edition === 8 ? 'neon' : 'paradise');
+    const instructions = t(update ? 'flashUpgradeReopen' : myLab ? 'flashUpgradeMyLab' : ported ? 'flashUpgradePort' : 'flashUpgradeParadise', { path });
+    if (!await deviceDialog(instructions, t('flashUpgradeTitle'), t('Reconnect'))) return false;
+    if (dv.d !== current || dv.run || dv.opening || (selectedDevicePort && port !== selectedDevicePort)) return false;
+    await connectDevice(port, validate);
+  }
+  if (!dv.d || dv.rescue || dv.stash) return false;
+  if (update && !currentFlashTool(dv.d.info)) {
+    devRender(() => t('flashUpgradeStillOld'));
+    return false;
+  }
+  if (!dv.d.info.fastWrite || dv.d.info.readOnly) {
+    devRender(() => t('flashUpgradeUnavailable'));
+    return false;
+  }
+  $('devFast').checked = true;
+  if (update) devRender(() => t('flashUpgradeDone'));
+  return true;
+}
+$('devFlashUpgrade').onclick = () => upgradeFlashTool(dv.d);
 function readDeviceRom(quick) {
   const device = dv.d;
   const base = quickDumpBase();
@@ -7363,8 +7665,20 @@ $('devKeep').onchange = () => {
   renderWriteReview(deviceWritePlan());
 };
 $('btnWrite').onclick = async () => {
-  const plan = deviceWritePlan();
-  const { device, labImage, keep, onlyChanged } = plan;
+  let plan = deviceWritePlan();
+  if (!plan.device || dv.run || dv.opening || plan.device.info.readOnly || !plan.canWrite) return;
+  if (!plan.device.info.fastWrite && dv.io && !dv.rescue && !dv.stash) {
+    const choice = await deviceDialog(t('flashUpgradeAsk'), t('flashUpgradeTitle'),
+      t('flashUpgradeFirst'), false, null, t('flashUpgradeStandard'));
+    if (!choice || dv.d !== plan.device || dv.run || dv.opening || (myLabRom || state.ctx) !== plan.source) return;
+    if (choice === 'accept') {
+      if (!await upgradeFlashTool(plan.device)) return;
+      const updated = deviceWritePlan();
+      if (updated.source !== plan.source) return;
+      plan = updated;
+    }
+  }
+  const { device, labImage, keep, onlyChanged, fastWrite } = plan;
   if (!device || dv.run || device.info.readOnly || !plan.canWrite) return;
   if (plan.raw) {
     const screenFit = myLabRom?.screenFit;
@@ -7387,10 +7701,10 @@ $('btnWrite').onclick = async () => {
     await devWriteTask(async () => {
       const confirmParadiseBackupReplacement = () => confirmFlashOperation(t('myLabPortReplacePairingHelp'),
         t('myLabPortReplacePairingTitle'), t('myLabPortReplacePairingWrite'));
-      const result = await device.write(image, { onlyChanged, keepMyLabSaves, confirmParadiseBackupReplacement, confirmWrite: confirmFlashWriteCount }, devProg, () => dv.cancel);
+      const result = await device.write(image, { onlyChanged, fastWrite, keepMyLabSaves, confirmParadiseBackupReplacement, confirmWrite: confirmFlashWriteCount }, devProg, () => dv.cancel);
       if (result.cancelled) { devRender(t('devCancelled')); return; }
       const kept = result.kept ? t('devKept', { k: result.kept }) : '';
-      dv.restartNeeded = result.written > 0;
+      dv.restartReason = result.written > 0 ? 'rom' : null;
       if (result.written) measure('operation', 'write_rom', romEditionKey(device.info.edition));
       devRender(result.written ? t('devDone', { w: result.committed, k: kept }) : t('devSame'));
     });
@@ -7471,7 +7785,7 @@ $('btnWrite').onclick = async () => {
       let img = prepared.rom;
       if (!cleanNew && F.emuType(img) === 't7') { const ck = await device.clockRead(); if (ck && (ck.ctrl & 0x80)) img = E.t7Wall(img, ck.counter, new Date()); }
       if (!cleanNew && F.emuType(img) === 't18') { const ck = await device.clockRead(); if (ck && (ck.ctrl & 0x80)) img = E.t18Wall(img, ck.counter, new Date()); }
-      return device.write(img, { onlyChanged, keep: keepSaves, rescueApp: FL.embedded(), t18Bases: t18Bases(img, fe), onImage: stashPut, confirmWrite: confirmFlashWriteCount }, devProg, () => dv.cancel);
+      return device.write(img, { onlyChanged, fastWrite, keep: keepSaves, rescueApp: FL.embedded(), t18Bases: t18Bases(img, fe), onImage: stashPut, confirmWrite: confirmFlashWriteCount }, devProg, () => dv.cancel);
     };
     let r;
     try {
@@ -7488,14 +7802,14 @@ $('btnWrite').onclick = async () => {
     catch (e) { if (e && e.code === 'noRescueRoom') await deviceDialog(t('fl_noRescueRoom'), t("Write Stopped"), t("Close"), true); else if (e && e.code === 'cancelledWrite') await rescueCheck(); throw e; }
     if (r.cancelled) { devRender(t('devCancelled')); return; }
     await stashDel();
-    dv.restartNeeded = r.written > 0;
+    dv.restartReason = r.written > 0 ? 'rom' : null;
     if (r.written) measure('operation', 'write_rom', romEditionKey(device.info.edition));
     devRender(() => {
       const summary = r.written ? t('devDone', { w: r.committed, k: r.kept ? t('devKept', { k: r.kept }) : '' }) : t('devSame');
       return [summary, ...(r.rescue ? [t('resOn')] : []), ...r.notes.map(flMsg)].join('\n');
     });
   });
-  }); } catch (e) { devRender(t('devErr', { e: flMsg(e) })); }
+  }); await maybeAutoRestart(device); } catch (e) { devRender(t('devErr', { e: flMsg(e) })); }
 };
 /* 1.7.6 PS_DL2: after the plan (the device's run states are in the image): every P's TamaEmu whose guest save got a
  * stamp card change in the Studio takes the same byte into the save copy of its run state. */
@@ -7542,7 +7856,8 @@ $('btnResume').onclick = () => devWriteTask(async () => {
   const r = await dv.d.write(dv.stash, { onlyChanged: true, keep: null, rescueApp: FL.embedded(), confirmWrite: confirmFlashWriteCount }, devProg, () => dv.cancel);
   if (r.cancelled) { devRender(t('devCancelled')); return; }
   await stashDel(); dv.rescue = false; dv.stash = null; $('rescueResume').hidden = true;
-  dv.restartNeeded = true;
+  dv.restartReason = 'rom';
+  dv.restartFailed = !r.written;
   devRender(t('resResumed', { w: r.committed }));
 });
 
@@ -8299,6 +8614,126 @@ $('btnEmuOut').onclick = () => busy(t("Exporting Program Save"), async () => {
 function usesMyLabDeviceSave(d) {
   return d?.info.edition === 0xFE || d?.info.edition === FL.MY_LAB_ON_PARADISE;
 }
+
+function canReadUartClock(device) {
+  return !dv.rescue && !dv.stash && !device?.info.flashError &&
+    (usesMyLabDeviceSave(device) || canReadLabItems(device));
+}
+
+function formatDeviceTime(seconds) {
+  return new Intl.DateTimeFormat(locale(), {
+    dateStyle: 'medium', timeStyle: 'medium', timeZone: 'UTC',
+  }).format(seconds * 1000);
+}
+
+function renderUartClock() {
+  const device = dv.d;
+  if (clockDevice !== device) {
+    clockTime = null;
+    $('deviceClockInput').value = '';
+  }
+  const readable = canReadUartClock(device) && !dv.run && !dv.opening;
+  const writable = readable && !device.info.readOnly && clockTime !== null;
+  $('btnClockRead').disabled = !readable;
+  $('btnClockSync').disabled = $('btnClockSet').disabled = $('deviceClockInput').disabled = !writable;
+  $('deviceClockStatus').textContent = clockTime !== null
+    ? t('Device time when read: {time}', { time: formatDeviceTime(clockTime) })
+    : t(device ? 'Read the clock from the connected device.' : 'Connect Flash Tool to read or set the device clock.');
+  if (readable && clockDevice !== device && !$('uartClockTools').hidden) {
+    queueMicrotask(() => {
+      if (dv.d === device && clockDevice !== device && !dv.run && !$('uartClockTools').hidden)
+        void refreshUartClock();
+    });
+  }
+}
+
+async function readUartClock(device) {
+  const myLab = usesMyLabDeviceSave(device), edition = device.info.edition;
+  let region, pages, page;
+  if (myLab) {
+    region = await device.read(ML.APPDATA_FIRST, ML.DEVICE_SAVE_END - ML.APPDATA_FIRST);
+    page = ML.activeDeviceSave(region, VIS)?.bytes;
+  } else {
+    const addresses = edition === 8 ? SV.NEON_SETTINGS : [SV.SET_A, SV.SET_B];
+    const bytes = await device.read(addresses[0], addresses.length * 0x1000);
+    pages = new Map(addresses.map((address, i) => [address, bytes.subarray(i * 0x1000, (i + 1) * 0x1000)]));
+    page = SV.paradiseClockPage(pages, edition);
+  }
+  if (dv.cancel) throw new Error(t('devCancelled'));
+  const clock = SV.gameClock(page, await device.clockRead(), myLab);
+  return clock && { clock, page, pages, region };
+}
+
+function refreshUartClock() {
+  const device = dv.d;
+  if (!canReadUartClock(device) || dv.run || dv.opening) return;
+  clockDevice = device;
+  clockTime = null;
+  return devTask(async () => {
+    const result = await readUartClock(device);
+    clockTime = result?.clock.now ?? null;
+    if (!result) devRender(() => t('The device clock could not be read. Check that the game has a saved clock and Flash Tool supports clock commands.'));
+  });
+}
+
+async function setUartClock(manualTime) {
+  const device = dv.d;
+  if (!canReadUartClock(device) || device.info.readOnly || clockTime === null || dv.run || dv.opening) return;
+  const message = manualTime === undefined
+    ? t('Set the device clock to the current local time on this computer?')
+    : t('Set the device clock to {time}?', { time: formatDeviceTime(manualTime) });
+  if (!await confirmFlashOperation(message, t('Device Clock'), t('Set Device Time')) || dv.d !== device) return;
+  await devWriteTask(async () => {
+    clockTime = null;
+    const myLab = usesMyLabDeviceSave(device), edition = device.info.edition;
+    if (myLab) await checkMyLabSaveRecovery(device);
+    const live = await readUartClock(device);
+    if (!live) {
+      devRender(() => t('The device clock could not be read. Check that the game has a saved clock and Flash Tool supports clock commands.'));
+      return;
+    }
+    clockTime = live.clock.now;
+    const now = new Date();
+    const target = manualTime ?? Math.floor(now.valueOf() / 1000) - now.getTimezoneOffset() * 60;
+    const changed = SV.changeGameClock(live.page, live.clock, target);
+    if (!changed) {
+      devRender(() => t('This date and time are outside the range supported by the current device clock.'));
+      return;
+    }
+    if (target === live.clock.now) {
+      devRender(() => t('The device is already set to this time.'));
+      return;
+    }
+    const plan = myLab ? ML.planDeviceSavePage(changed, live.region, VIS) : null;
+    const sectors = myLab ? plan && new Map([[plan.off, plan.bytes]]) : SV.planParadiseClock(live.pages, edition, changed);
+    if (!sectors) {
+      devRender(() => t('The device could not create a new clock settings page.'));
+      return;
+    }
+    const publishLast = !myLab && edition !== 8 && live.page === live.pages.get(SV.SET_A) ? new Set([SV.SET_A]) : undefined;
+    clockTime = null;
+    const expectedBase = target - live.clock.counter;
+    await device.writeSectors(sectors, devProg, () => dv.cancel, null, async () => {
+      const verified = await readUartClock(device);
+      if (!verified || verified.clock.now - verified.clock.counter !== expectedBase)
+        throw new Error(t('The new device time could not be verified.'));
+      clockTime = verified.clock.now;
+    }, publishLast);
+    dv.restartReason = 'clock';
+    devRender(() => t(canRestartDevice() ? 'Device time set.' : 'Device time set. Exit Flash Tool and return to the game.'));
+  });
+}
+
+$('btnClockRead').onclick = refreshUartClock;
+$('btnClockSync').onclick = () => setUartClock();
+$('deviceClockForm').onsubmit = event => {
+  event.preventDefault();
+  const value = $('deviceClockInput').value;
+  const seconds = Date.parse(value + 'Z') / 1000;
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value) && Number.isFinite(seconds))
+    void setUartClock(seconds);
+};
+
 async function checkMyLabSaveRecovery(d) {
   if (d.info.edition === FL.MY_LAB_ON_PARADISE) {
     const header = await d.read(0, 0x18);
@@ -8339,6 +8774,7 @@ async function writeMyLabDeviceSave(d, save, cancel) {
   if (page) map.set(page.off, page.bytes);
   const w = map.size ? await d.writeSectors(map, devProg, cancel) : 0;
   const clock = save.clock !== null && await d.clockSet(save.clock);
+  if ((w || clock) && d.info.restartCountdown) dv.restartReason = 'save';
   if (w || clock) measure('operation', 'restore_save', romEditionKey(d.info.edition));
   devRender(t('devSaveDone', { w, c: t(clock ? 'devSaveClock' : 'devSaveClockNo') }));
 }
@@ -8406,7 +8842,7 @@ async function installDeviceLabItems(device, items, pricePreset) {
       await device.writeSectors(writes, devProg, cancel, null, null, publishLast);
       for (const item of changed) storage.set(item.bytes, item.address - layout.start);
       for (const [at, page] of plan.settingsWrites) settings.set(at, page);
-      dv.restartNeeded = true;
+      dv.restartReason = 'items';
     }
     showDeviceLabItems(device, LI.scan(storage, layout.start, C), LI.slotUsage(layout, settings, SV));
     const added = t('Added {count} Lab Items.', { count: plan.additions.length });
@@ -8555,6 +8991,7 @@ $('fileSave').onchange = async (e) => {
     const w = map.size ? await d.writeSectors(map, devProg, () => dv.cancel, FL.embedded(), null, publishLast) : 0;
     const v = SV.paraClock(save);
     const cl = v !== null && await d.clockSet(v);
+    if ((w || cl) && d.info.restartCountdown) dv.restartReason = 'save';
     if (w || cl) measure('operation', 'restore_save', romEditionKey(ed));
     devRender(t('devSaveDone', { w, c: cl ? t('devSaveClock') : t('devSaveClockNo') }));
   });

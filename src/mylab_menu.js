@@ -254,7 +254,7 @@ function build(rom, boot, { feld, flashApp, hook, stub }) {
   if (!M.openRom(rom, C, S) || u32(rom, 8) !== 0x13 || u32(rom, 0x24) !== BOOT_CRC) {
     throw new Error('Expected a supported My Lab v1.0.00 dump');
   }
-  const size = Math.ceil(feld.length / 0x1000) * 0x1000;
+  const size = Math.ceil(F.menuPayload(feld).length / 0x1000) * 0x1000;
   if (!size || size > 0xE000) throw new Error('Invalid My Lab menu size');
   const regions = [[STUB, MENU + size], [STOCK_BOOT, STOCK_BOOT + BOOT_SIZE], [NATIVE_HOOK, NATIVE_HOOK + 0x1000]];
   if (flashApp) regions.push([FL.RESCUE_OFF, rom.length]);
@@ -291,7 +291,7 @@ function updateMenu(rom, { feld, stub, hook, flashApp }) {
   if (!M.isFlashImage(rom, C) || tag(rom, NATIVE_HOOK + 0x100, 8) !== 'PXMLAB02') {
     throw new Error('Expected a native My Lab image with the Computer menu and Flash Tool');
   }
-  const size = Math.ceil(feld.length / 0x1000) * 0x1000;
+  const size = Math.ceil(F.menuPayload(feld).length / 0x1000) * 0x1000;
   const oldSize = u32(rom, NATIVE_HOOK + 0x108);
   if (!size || size > 0xE000 || (size > oldSize &&
       !rom.subarray(MENU + oldSize, MENU + size).every(byte => byte === 0xFF))) {
@@ -313,6 +313,7 @@ function updateMenu(rom, { feld, stub, hook, flashApp }) {
   image.set(template.subarray(MENU, MENU + size), MENU);
   w32(image, STUB, MENU + 0x160);
   w32(image, F.F_LAUNCH | F.F_APPS, MENU + 0x164);
+  if (oldSize === size) F.preserveMenuVersion(rom, image, MENU, size);
   w32(image, size, NATIVE_HOOK + 0x108);
   w32(image, C.crc32(image.subarray(MENU, MENU + size)), NATIVE_HOOK + 0x10C);
   installGarden(image);
@@ -326,9 +327,10 @@ function updateMenu(rom, { feld, stub, hook, flashApp }) {
 function bundled(binary) {
   return Uint8Array.from(atob(binary), c => c.charCodeAt(0));
 }
+const flashToolBinary = ported => bundled(ported ? '__MYLAB_PARADISE_FLASH_B64__' : '__MYLAB_FLASH_B64__');
 const bins = () => ({
   feld: bundled('__MYLAB_MENU_B64__'), hook: bundled('__MYLAB_HOOK_B64__'),
-  stub: bundled('__MYLAB_STUB_B64__'), flashApp: bundled('__MYLAB_FLASH_B64__'),
+  stub: bundled('__MYLAB_STUB_B64__'), flashApp: flashToolBinary(false),
 });
 
 async function decryptBoot(rom, key, subtle = root.crypto?.subtle) {
@@ -499,8 +501,8 @@ async function patchUartUpdateFromRom(packageBytes, rom, deviceKey, subtle = roo
 }
 async function apply(rom, key) {
   const mode = status(rom);
-  if (mode === 'update' && M.hasParadisePortMarker(rom)) return updateParadiseImage(rom, paradiseBins());
-  if (mode === 'update') return updateMenu(rom, bins());
+  if (mode === 'update' && M.hasParadisePortMarker(rom)) return updateParadiseImage(rom, { ...paradiseBins(), flashApp: null });
+  if (mode === 'update') return updateMenu(rom, { ...bins(), flashApp: null });
   if (mode !== 'install') throw new Error('This My Lab ROM does not support menu installation');
   if (!/^(?:0x)?[0-9a-f]{8}$/i.test(key)) throw new Error('Open the matching eight-digit My Lab device key');
   return build(rom, await decryptBoot(rom, parseInt(key, 16)), bins());
@@ -1106,7 +1108,7 @@ function updateParadiseImage(rom, { feld, gamePort, stub, flashApp }) {
     throw new Error('Unexpected My Lab firmware code at 0x' + GAME_PORT.toString(16));
 
   const oldSize = u32(rom, 0x14);
-  const size = Math.ceil(feld.length / 0x1000) * 0x1000;
+  const size = Math.ceil(F.menuPayload(feld).length / 0x1000) * 0x1000;
   if (!size || size > 0xE000 || (size > oldSize &&
       !rom.subarray(MENU + oldSize, MENU + size).every(byte => byte === 0xFF))) {
     throw new Error('The Paradise menu does not fit in the My Lab menu region');
@@ -1136,6 +1138,7 @@ function updateParadiseImage(rom, { feld, gamePort, stub, flashApp }) {
   image.set(template.subarray(MENU, MENU + size), MENU);
   w32(image, STUB, MENU + 0x160);
   w32(image, F.F_LAUNCH | F.F_APPS, MENU + 0x164);
+  if (oldSize === size) F.preserveMenuVersion(rom, image, MENU, size);
   w32(image, size, 0x14);
   w32(image, C.crc32(image.subarray(MENU, MENU + size)), 0x24);
   tableSum(image, 0);
@@ -1159,7 +1162,7 @@ async function forParadise(rom, { feld, flashApp, hook, gamePort, stub }, backup
       C.crc32(rom.subarray(STOCK_BOOT, STOCK_BOOT + BOOT_SIZE)) !== BOOT_CRC) {
     throw new Error('Expected a My Lab v1.0.00 image with the Computer menu and Flash Tool');
   }
-  const size = Math.ceil(feld.length / 0x1000) * 0x1000;
+  const size = Math.ceil(F.menuPayload(feld).length / 0x1000) * 0x1000;
   const oldSize = u32(rom, NATIVE_HOOK + 0x108);
   if (!size || size > 0xE000 || (size > oldSize &&
       !rom.subarray(MENU + oldSize, MENU + size).every(byte => byte === 0xFF))) {
@@ -1228,6 +1231,6 @@ async function createParadiseImage(rom, backup, key) {
   return forParadise(rom, paradiseBins(), backup);
 }
 
-root.ParamixMyLabMenu = { screenFitSupport, screenFitState, screenFitChanged, withScreenFit, hasMenuBars, withMenuBars, hasCornerLayout, withCornerLayout, hasLegacySettingsLayout, hasSettingsLayout, withSettingsLayout, forParadise, createParadiseImage, validateParadiseBackup, build, updateMenu, updateParadiseImage, installGarden, removeColdRescue, tableSum, patchBytes, addMyLabLabel, menuTemplate, decryptBoot, status, apply, uartProbeRom, packUartUpdate, patchUartUpdate, patchUartUpdateFromRom, createUartUpdate };
+root.ParamixMyLabMenu = { screenFitSupport, screenFitState, screenFitChanged, withScreenFit, hasMenuBars, withMenuBars, hasCornerLayout, withCornerLayout, hasLegacySettingsLayout, hasSettingsLayout, withSettingsLayout, forParadise, createParadiseImage, validateParadiseBackup, build, updateMenu, updateParadiseImage, installGarden, removeColdRescue, tableSum, patchBytes, addMyLabLabel, menuTemplate, decryptBoot, status, apply, uartProbeRom, packUartUpdate, patchUartUpdate, patchUartUpdateFromRom, createUartUpdate, flashToolBinary };
 if (typeof module !== 'undefined') module.exports = root.ParamixMyLabMenu;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -4,7 +4,7 @@
 
 # ParaLab
 
-An offline ROM studio for **Tamagotchi Paradise** and **My Lab**. Explore characters and sprites, edit a copy of your ROM, back up saves, and prepare device updates or experimental My Lab firmware for Paradise hardware. ROMs, saves, and device keys are processed locally in your browser.
+An offline ROM Lab for **Tamagotchi Paradise** and **My Lab**. Explore characters and sprites, edit a copy of your ROM, back up saves, and prepare device updates or experimental My Lab firmware for Paradise hardware. ROMs, saves, and device keys are processed locally in your browser.
 
 **Open ParaLab in your browser:** [https://x43x61x69.github.io/ParaLab/](https://x43x61x69.github.io/ParaLab/)
 
@@ -75,6 +75,7 @@ To update an existing v0.1.89 port, open its exported ROM in ParaLab v0.2.1 or l
 | 🔌 **ROM Transfer** | Connect with a USB-UART adapter. Use **Read ROM** or **Quick Read ROM** to save a backup, or **Review and Write…** to check the prepared image and target before writing. |
 | 💾 **Save Backup & Restore** | Read or restore supported saves over UART. |
 | 📦 **Downloaded Lab Items** | Use **Read Lab Items** to preview, edit, or export items. Choose **Add from Lab Item Catalog…** to install selected items directly through a connected Flash Tool. |
+| 🕒 **Device Clock** | Read the device time in Flash Tool. With a writable Flash Tool, set a date and time manually or sync to the computer’s local time, then return to the game. |
 | 🤝 **Playdate** | Choose a ROM character, import a character file, or reuse a visitor saved in your browser. Use the hidden-character presets to track visits from different editions. Select an adult visitor to try a breeding Playdate. |
 | 🎁 **Send Gift · Send Lab Item** | Browse gifts by Paradise edition or preview Lab Items and edit their prices before sending. |
 

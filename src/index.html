@@ -327,6 +327,7 @@ __STUDIO_LAYOUT__
     </aside>
     <div class="device-dialog-actions">
       <button type="submit" class="btn" value="cancel" id="deviceDialogCancel">Cancel</button>
+      <button type="submit" class="btn" value="alternate" id="deviceDialogAlternate" hidden></button>
       <button type="submit" class="btn primary" value="accept" id="deviceDialogAccept"></button>
     </div>
   </form>
@@ -612,8 +613,9 @@ __ANALYTICS_CARD__
             </li>
           </ol>
           <section class="restart-guide" id="devRestartGuide" hidden>
-            <h3>Start the Updated ROM</h3>
-            <ol><li>Unplug the UART adapter from the top of the Tamagotchi.</li>
+            <h3 id="devRestartTitle">Start the Updated ROM</h3>
+            <button type="button" class="btn small primary" id="btnDevRestart" data-t="devRestartNow" hidden></button>
+            <ol id="devManualRestart"><li>Unplug the UART adapter from the top of the Tamagotchi.</li>
               <li data-sentence="sentenceUartRestart">Press and release the <strong data-sentence-part="reset">Reset</strong> button on the back of the Tamagotchi once. Alternatively, remove the batteries and put them back in.</li></ol>
           </section>
         </section>
@@ -622,6 +624,7 @@ __ANALYTICS_CARD__
             <button type="button" class="tab" id="romTransferTitle" role="tab" aria-selected="true" aria-controls="uartRomTools">ROM Transfer</button>
             <button type="button" class="tab" id="deviceSaveTools" role="tab" aria-selected="false" aria-controls="uartSaveTools" tabindex="-1">Save Backup &amp; Restore</button>
             <button type="button" class="tab" id="deviceLabItemsTitle" role="tab" aria-selected="false" aria-controls="uartLabItems" tabindex="-1">Downloaded Lab Items</button>
+            <button type="button" class="tab" id="deviceClockTitle" role="tab" aria-selected="false" aria-controls="uartClockTools" tabindex="-1" data-t="Device Clock">Device Clock</button>
           </div>
           <section id="uartRomTools" role="tabpanel" aria-labelledby="romTransferTitle">
             <div class="rom-transfer-cards">
@@ -644,6 +647,8 @@ __ANALYTICS_CARD__
                 <div class="tools">
                   <label class="check"><input type="checkbox" id="devOnly" checked> <span data-t="devOnly"></span></label>
                   <label class="check"><input type="checkbox" id="devKeep" checked> <span data-t="devKeep"></span></label>
+                  <label class="check" id="devFastOption" hidden><input type="checkbox" id="devFast"> <span data-t="devFast"></span></label>
+                  <button type="button" class="btn small" id="devFlashUpgrade" data-t="flashUpgradeTitle" hidden></button>
                 </div>
                 <p class="write-note">Back up the ROM first. Keep the device powered on throughout the write.</p>
                 <button class="btn small primary" id="btnWrite" disabled>Review and Write…</button>
@@ -672,6 +677,18 @@ __ANALYTICS_CARD__
             </div>
             <p class="hint" id="deviceLabItemsStatus" role="status" hidden></p>
             <div id="deviceLabItems" hidden></div>
+          </section>
+          <section id="uartClockTools" role="tabpanel" aria-labelledby="deviceClockTitle" hidden>
+            <p id="deviceClockStatus" role="status"></p>
+            <div class="tools">
+              <button type="button" class="btn small" id="btnClockRead" data-t="Read Device Time" disabled></button>
+              <button type="button" class="btn small" id="btnClockSync" data-t="Sync to Computer Time" disabled></button>
+            </div>
+            <form class="tools" id="deviceClockForm">
+              <label for="deviceClockInput" data-t="Set Date and Time"></label>
+              <input type="datetime-local" id="deviceClockInput" min="2025-01-01T00:00" max="2099-12-31T23:59" required disabled>
+              <button type="submit" class="btn small primary" id="btnClockSet" data-t="Set Device Time" disabled></button>
+            </form>
           </section>
         </div>
       </div>
@@ -979,7 +996,7 @@ __ANALYTICS_CARD__
           <ol class="session-steps" id="foodHint">
             <li data-t="Connect the USB-UART adapter to {editionNeon}.">Connect the USB-UART adapter to Neon Planets.</li>
             <li data-sentence="sentenceFoodWait">Select <b data-sentence-part="wait" data-t="foodSend">Wait for Paradise</b> below and choose the adapter.</li>
-            <li data-sentence="sentenceFoodDevice">With an adult Tama, open <b data-sentence-part="path" data-rom-term="connection specialFood getFood" data-rom-profile="neon">CONNECTION → SPECIAL FOOD → GET FOOD</b>.</li>
+            <li data-sentence="sentenceFoodDevice">On <span data-sentence-part="neon" data-edition-label="neon">Neon Planets</span>, use an adult Tama to open <b data-sentence-part="path" data-rom-term="connection specialFood getFood" data-rom-profile="neon">CONNECTION → SPECIAL FOOD → GET FOOD</b>.</li>
           </ol>
           <p class="food-effect" data-t="Accepting the food on {editionNeon} starts a new egg.">Accepting the food on Neon Planets starts a new egg.</p>
           <button class="btn primary" id="btnFoodSend" type="button" data-t="foodSend" aria-describedby="foodHint" disabled></button>
@@ -994,7 +1011,7 @@ __ANALYTICS_CARD__
     <div class="launch" id="romDropZone">
       <div class="instrument"><img src="__DEVICE_ART_paradise-blueprint__" width="1080" height="720" alt="Three-quarter view of a virtual pet device with a side dial, drafting guides and a castle marked Paradise."></div>
       <div class="launch-copy">
-        <h1>ROM Studio</h1>
+        <h1>ROM Lab</h1>
         <p data-t="Explore characters, edit saves and build a custom ROM for your {editionParadise} or {editionMyLab}.">Explore characters, edit saves and build a custom ROM for your Tamagotchi Paradise or My Lab.</p>
         <button class="drop" id="drop"><strong>Open ROM</strong><span aria-hidden="true">↗</span></button>
         <small>Or drop a .bin file anywhere on this card.</small>
@@ -1036,7 +1053,7 @@ __ANALYTICS_CARD__
       <button class="tab" id="myLabTabSprites" role="tab" aria-controls="myLabSprites" aria-selected="false" tabindex="-1" data-t="tabAll"></button>
       <span class="nav-group" role="presentation">Device &amp; Data</span>
       <button class="tab" id="myLabTabGarden" role="tab" aria-controls="myLabGarden" aria-selected="false" tabindex="-1" data-rom-term="garden" data-rom-profile="my-lab">Garden</button>
-      <button class="tab" id="myLabTabMenu" role="tab" aria-controls="myLabMenu" aria-selected="false" tabindex="-1" data-t="myLabMenuTitle"></button>
+      <button class="tab" id="myLabTabMenu" role="tab" aria-controls="myLabMenu" aria-selected="false" tabindex="-1"><span data-tool-label data-t="myLabMenuTitle"></span><span class="tool-attention" aria-hidden="true" hidden>!</span></button>
       <button class="tab" id="myLabTabSave" role="tab" aria-controls="myLabSave" aria-selected="false" tabindex="-1" data-t="tabSave"></button>
       <button class="tab" id="myLabTabUpdate" role="tab" aria-controls="myLabUpdate" aria-selected="false" tabindex="-1" data-t="myLabUpdateHeading"></button>
       <span class="nav-group" role="presentation">Language</span>
@@ -1132,7 +1149,7 @@ __ANALYTICS_CARD__
       </dialog>
     </section>
     <section id="myLabMenu" role="tabpanel" aria-labelledby="myLabTabMenu" hidden>
-      <header class="menu-intro"><h2>My Lab Menu</h2><p>Review the device menu and manage the ParaLab entry for this ROM.</p></header>
+      <header class="menu-intro"><h2 data-t="My Lab Menu">{editionMyLab} Menu</h2><p>Review the device menu and manage the ParaLab entry for this ROM.</p></header>
       <section class="menu-status"><h3 id="myLabMenuStatusHeading">Menu Status</h3>
         <p class="menu-state" role="status" id="myLabMenuInfo"></p>
         <p class="hint" id="myLabMenuDetail" hidden></p>
@@ -1276,7 +1293,7 @@ __ANALYTICS_CARD__
       <button class="tab" role="tab" data-legacy data-tab="pm" aria-selected="false" data-t="tabPm"></button>
       <button class="tab" role="tab" data-legacy data-tab="ab" aria-selected="false" data-t="tabAb"></button>
       <span class="nav-group" role="presentation">Device &amp; Data</span>
-      <button class="tab" role="tab" data-tab="feld" aria-selected="false" data-t="tabFeld"></button>
+      <button class="tab" role="tab" data-tab="feld" aria-selected="false"><span data-tool-label data-t="tabFeld"></span><span class="tool-attention" aria-hidden="true" hidden>!</span></button>
       <button class="tab" role="tab" data-tab="save" aria-selected="false" data-t="tabSave"></button>
       <button class="tab" role="tab" data-tab="lab-items" aria-selected="false">Lab Items</button>
       <span class="nav-group" role="presentation">Language</span>
@@ -1524,7 +1541,7 @@ __ANALYTICS_CARD__
       <p class="hint"><a href="#license">License</a></p>
     </div>
     <div class="pane" id="pane-feld" hidden>
-      <header class="menu-intro"><h2>Paradise Menu</h2><p data-sentence="sentenceMenuExport">Choose the tools to include on your Paradise. Use <a data-sentence-part="save" href="#btnSave" data-t="save">Save New ROM</a> to export your choices.</p></header>
+      <header class="menu-intro"><h2 data-t="Paradise Menu">{editionParadise} Menu</h2><p data-sentence="sentenceMenuExport">Choose the tools to include on your <span data-sentence-part="device" data-edition-label="paradise">Tamagotchi Paradise</span>. Use <a data-sentence-part="save" href="#btnSave" data-t="save">Save New ROM</a> to export your choices.</p></header>
       <section class="menu-status" aria-label="ROM status"><h3>ROM Status</h3><ul id="feldStat"></ul></section>
       <section class="menu-group">
         <h3 class="menu-heading">Gameplay Tools</h3>
@@ -1547,8 +1564,9 @@ __ANALYTICS_CARD__
         <h3 class="menu-heading">Fields and Planets</h3>
         <div class="tools" id="sixRow" hidden>
           <label class="check"><input type="checkbox" id="sixOn"> <span id="sixOnTxt" data-t="sixOn"></span></label>
-          <button class="btn small" id="btnSix" data-t="sixPick"></button>
+          <button class="btn small" id="btnSix" data-t="sixPick" aria-describedby="sixSourceStatus"></button>
           <input type="file" id="fileSix" accept=".bin,.BIN" hidden>
+          <span class="hint six-source-status" id="sixSourceStatus" role="status" hidden></span>
           <span class="hint" id="sixHintTxt" data-t="sixHint"></span>
         </div>
         <div class="tools" id="sixPlanetRow" hidden>
@@ -1556,7 +1574,7 @@ __ANALYTICS_CARD__
           <label class="check"><input type="checkbox" id="sixMenu" checked> <span data-t="sixMenu"></span></label>
         </div>
         <div class="tools" id="neonDonorRow" hidden>
-          <strong>Neon Planets Content</strong>
+          <strong data-t="neonDonorOn"></strong>
           <button class="btn small" id="neonDonorPick" data-t="neonDonorPick"></button>
           <input type="file" id="neonDonorFile" accept=".bin,.BIN" hidden>
           <span class="hint" id="neonDonorStat"></span>
@@ -1646,7 +1664,8 @@ __ANALYTICS_CARD__
 </dialog>
 <dialog class="loading-dialog" id="busy" aria-labelledby="busyTitle">
   <h2 id="busyTitle" aria-live="polite"></h2>
-  <div class="rom-loading-track" aria-hidden="true"><i></i></div>
+  <p id="busyDetail" role="status" hidden></p>
+  <div class="rom-loading-track" id="busyProgress" role="progressbar" aria-labelledby="busyTitle" aria-describedby="busyDetail"><i></i></div>
 </dialog>
 <footer class="app-footer">
   <div class="footer-inner">

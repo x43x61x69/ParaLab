@@ -3,6 +3,33 @@
 const fs = require('fs');
 const path = require('node:path');
 const v = fs.readFileSync(__dirname + '/VERSION', 'utf8').trim();
+const menuVersion = fs.readFileSync(path.join(__dirname, 'feld/VERSION'), 'utf8').trim();
+const menuBuildTag = Buffer.alloc(32);
+menuBuildTag.write('PMXBLD:' + v);
+const flashVersionSource = fs.readFileSync(path.join(__dirname, 'flash/src/version.h'), 'utf8');
+const flashRevision = Number(flashVersionSource.match(/^#define FLASH_TOOL_REVISION (0x[0-9a-fA-F]+)u$/m)?.[1]);
+if (!Number.isInteger(flashRevision) || flashRevision <= 0 || flashRevision > 0xFFFFFF)
+  throw new Error('Invalid Flash Tool version in flash/src/version.h');
+const flashVersionTag = Buffer.alloc(12);
+flashVersionTag.write('PXMLVER1');
+flashVersionTag.writeUInt32LE(flashRevision, 8);
+
+function menuBinary(file) {
+  const binary = fs.readFileSync(path.join(__dirname, file));
+  if (!binary.subarray(-32).equals(menuBuildTag))
+    throw new Error(file + ' does not match VERSION; rebuild the menu binary');
+  const payload = binary.subarray(0, -32);
+  if (!payload.includes(Buffer.from('PMXVER:' + menuVersion + '\0')))
+    throw new Error(file + ' does not match feld/VERSION; rebuild the menu binary');
+  return payload;
+}
+
+function flashBinary(file) {
+  const binary = fs.readFileSync(path.join(__dirname, file));
+  if (!binary.includes(flashVersionTag))
+    throw new Error(file + ' does not match flash/src/version.h; rebuild the Flash Tool');
+  return binary;
+}
 const brandIcon = fs.readFileSync(path.join(__dirname, 'src/paralab-icon.svg'), 'utf8').trim();
 let html = fs.readFileSync(__dirname + '/src/index.html', 'utf8')
   .replaceAll('__BRAND_ICON__', 'data:image/svg+xml,' + encodeURIComponent(brandIcon))
@@ -37,9 +64,8 @@ for (const [name, file] of Object.entries({
   PARADISE_MENU: 'feld/feld-mylab-paradise.bin', PARADISE_HOOK: 'feld/feld-mylab-paradise-hook.bin',
   PARADISE_FLASH: 'flash/flashapp-mylab-paradise.bin', PARADISE_GAME: 'feld/my-lab-paradise-game.bin',
 })) {
-  const binary = fs.readFileSync(path.join(__dirname, file));
-  if ((name === 'MENU' || name.endsWith('_MENU')) && !binary.includes(Buffer.from('PMXVER:' + v + '\0')))
-    throw new Error(file + ' does not match VERSION; rebuild the menu binary');
+  const binary = (name === 'MENU' || name.endsWith('_MENU')) ? menuBinary(file) :
+    file.startsWith('flash/') ? flashBinary(file) : fs.readFileSync(path.join(__dirname, file));
   myLabMenu = myLabMenu.replaceAll('__MYLAB_' + name + '_B64__', binary.toString('base64'));
 }
 const labRelease = fs.readFileSync(__dirname + '/src/lab_release.js', 'utf8')
@@ -88,6 +114,7 @@ html = html.replace(/__GUIDE_([a-z.-]+)__/g, (_, file) => {
 const webDirectory = web ? 'catalog-v' + v : null;
 const { config: catalogConfig, assets: catalogAssets } = require('./tools/build_catalog.js').buildCatalog(__dirname, webDirectory);
 const app = fs.readFileSync(__dirname + '/src/app.js', 'utf8')
+  .replace('__FLASH_TOOL_REVISION__', String(flashRevision))
   .replace('__FOOD_ARCHIVE__', fs.readFileSync(__dirname + '/six/special-food/food-item.arc2').toString('base64'))
   .replace('/*__COLLECTION_REFERENCE__*/ {}', () => JSON.stringify(require('./src/collection_reference.json')))
   .replace('/*__CATALOG_CONFIG__*/ {}', () => JSON.stringify(catalogConfig).replaceAll('<', '\\u003c'));
@@ -130,13 +157,10 @@ let feld = fs.readFileSync(__dirname + '/src/feld.js', 'utf8');
 {
   const d = (f) => fs.readFileSync(__dirname + '/feld/' + f).toString('base64');
   for (const f of ['feld.bin', 'stub_feld_tpl.bin']) if (!fs.existsSync(__dirname + '/feld/' + f)) throw new Error('feld/' + f + ' is missing');
-  for (const name of ['feld.bin', 'feldc.bin']) {
-    if (!fs.readFileSync(__dirname + '/feld/' + name).includes(Buffer.from('PMXVER:' + v + '\0')))
-      throw new Error('ParaLab menu version does not match VERSION; run sh feld/src/feld/build.sh first');
-  }
-  feld = feld.replace('__FELD_B64__', d('feld.bin')).replace('__FELD_STUB_B64__', d('stub_feld_tpl.bin'))
+  feld = feld.replace('__FELD_B64__', menuBinary('feld/feld.bin').toString('base64'))
+    .replace('__FELD_STUB_B64__', d('stub_feld_tpl.bin'))
     .replace('__FELD_CARE_B64__', d('paradise-care.bin'));
-  if (fs.existsSync(__dirname + '/feld/feldc.bin')) feld = feld.replace('__FELDC_B64__', d('feldc.bin'));   // 1.7.2 CLEAN_ROM: menu for ROMs without the Paradise
+  feld = feld.replace('__FELDC_B64__', menuBinary('feld/feldc.bin').toString('base64'));
 }
 // Six fields: helper page (source in six/src)
 let six = fs.readFileSync(__dirname + '/src/six.js', 'utf8');
@@ -160,12 +184,8 @@ for (const [name, source] of [['legacy LZ4', lz4], ['Neon transplant', neon]]) {
   new Function(source);
 }
 // Flash app for the device tab (our own code, source in flash/src)
-let flash = fs.readFileSync(__dirname + '/src/flash.js', 'utf8');
-{
-  const f = __dirname + '/flash/flashapp.bin';
-  if (!fs.existsSync(f)) throw new Error('flash/flashapp.bin is missing');
-  flash = flash.replace('__FLASH_APP_B64__', fs.readFileSync(f).toString('base64'));
-}
+const flash = fs.readFileSync(__dirname + '/src/flash.js', 'utf8')
+  .replace('__FLASH_APP_B64__', flashBinary('flash/flashapp.bin').toString('base64'));
 // every script must parse (a stray quote in a text broke the whole page once)
 {
   const vm = require('vm');

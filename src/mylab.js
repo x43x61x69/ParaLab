@@ -387,8 +387,12 @@ function readDeviceSaveBackup(bytes, core, visit) {
   return { page: latest.bytes, data: bytes.subarray(DEVICE_HEADER, appStart), dataStart,
     clock: clock === 0xFFFFFFFF ? null : clock };
 }
+function activeDeviceSave(current, visit) {
+  return latestPage(appPages(current, visit));
+}
+
 function planDeviceSavePage(page, current, visit) {
-  const latest = latestPage(appPages(current, visit));
+  const latest = activeDeviceSave(current, visit);
   if (latest && page.subarray(8).every((byte, i) => byte === latest.bytes[i + 8])) return null;
   if (latest?.sequence === 0xFFFFFFFF) throw new Error('The My Lab save sequence is full');
   // Commit the restored settings to the next ring page. The last valid page
@@ -403,6 +407,6 @@ root.ParamixMyLab = { sheetChanges, encodeSpriteSlot, applySpriteChanges, isMyLa
   paradiseBackupRecord, PARADISE_BACKUP_OFFSET, PARADISE_BACKUP_LENGTH, openRom, inspectUpdate, UPDATE_NAME, UPDATE_MAX,
   saveInfo, saveBackup, readBackup, collectCharacters, gardenAppearance, editGardenSlot, editRomSave, saveRecoveryPending,
   DEVICE_SAVE_FIRST, DEVICE_SAVE_END, APPDATA_FIRST: SAVE, GARDEN_FIRST: GARDEN,
-  GARDEN_END: GARDEN + SLOTS * RECORD_SIZE, deviceSaveBackup, readDeviceSaveBackup, planDeviceSavePage };
+  GARDEN_END: GARDEN + SLOTS * RECORD_SIZE, deviceSaveBackup, readDeviceSaveBackup, activeDeviceSave, planDeviceSavePage };
 if (typeof module !== 'undefined') module.exports = root.ParamixMyLab;
 })(typeof window !== 'undefined' ? window : globalThis);

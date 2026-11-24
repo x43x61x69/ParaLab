@@ -110,7 +110,7 @@ TC_INIT static void display_power(void){
      As in the FU, 0x45000210..218 get the current contents of the GPIO
      data registers (the emulator had returned 0 there). */
   for(unsigned i=0;i<DISP_POWER_N;i++){
-    u32 a=disp_power_seq[i][0], v=disp_power_seq[i][1];
+    u32 a=disp_power_address[disp_power_seq[i][0]], v=disp_power_value[disp_power_seq[i][1]];
     if(a>=0x45000210u && a<=0x45000218u) v=REG(0x4001803Cu + ((a-0x45000210u)>>2)*0x1000u);
     REG(a)=v;
   }

@@ -7,6 +7,7 @@ SECTIONS {
     . = DEFINED(FLASH_CODE_ORIGIN) ? FLASH_CODE_ORIGIN : .;
     *(.text*)
     *(.rodata*)
+    KEEP(*(.tool_version))
     . = ALIGN(4);
   }
   /DISCARD/ : { *(.data*) *(.bss*) *(COMMON) *(.comment) *(.ARM.*) *(.note*) }

@@ -3,13 +3,15 @@
  * boundary can re-arm after traffic. CANCEL/HELLO never clear a write latch. */
 #ifndef FLASH_RESET_POLICY_H
 #define FLASH_RESET_POLICY_H
+#define WRITE_SECTOR 18u
+#define CLOCK_SET 15u
 typedef struct {
   u32 start, allowed, writing, release, phase, ui;
 } ResetPolicy;
 static void rp_activity(ResetPolicy *s){ s->allowed=0; s->phase=0; s->release=1; }
 static void rp_init(ResetPolicy *s,u32 valid){ s->writing=0; s->ui=99; rp_activity(s); s->allowed=valid; }
 static void rp_packet(ResetPolicy *s,u32 type){
-  if(type==9u || type==10u || type==11u) s->writing=1;
+  if(type==9u || type==10u || type==11u || type==WRITE_SECTOR) s->writing=1;
   if(type==12u) s->writing=0;
 }
 static int rp_idle(ResetPolicy *s,u32 allow,u32 valid){
@@ -30,4 +32,33 @@ static int rp_poll(ResetPolicy *s,u32 pressed,u32 now){
   return 0;
 }
 static u32 rp_hint(const ResetPolicy *s){ return !s->allowed || s->writing ? 0u : s->phase==2u ? 2u : 1u; }
+
+/* UART receive disarms the physical button. Remote restart has a separate
+ * latch so it survives reception of its own command. */
+#define RESTART_DEVICE 23u
+#define RELOAD_FLASH_TOOL 24u
+#define RESTART_COUNTDOWN 25u
+#define RESTART_CANCELLED 2u
+#define RESTART_TICKS_PER_SECOND 100u
+#define RESTART_SECONDS 3u
+static int rp_countdown(u32 ticks,u32 pressed){
+  if(pressed) return -1;
+  if(ticks>=RESTART_TICKS_PER_SECOND*RESTART_SECONDS) return 0;
+  return (int)(RESTART_SECONDS-ticks/RESTART_TICKS_PER_SECOND);
+}
+enum { RESTART_NONE, RESTART_COMMITTED, RESTART_FINISHED, RESTART_ARMED };
+static void rp_restart_packet(u32 *state,u32 type,u32 writing){
+  if(type==12u) *state=writing && *state==RESTART_COMMITTED ? RESTART_FINISHED : RESTART_NONE;
+  else if(type==9u || (type!=16u && *state>=RESTART_FINISHED &&
+          !(type==CLOCK_SET && *state==RESTART_FINISHED))) *state=RESTART_NONE;
+}
+static void rp_restart_idle(u32 *state,u32 allow,u32 ok){
+  if(!allow || !ok) *state=RESTART_NONE;
+  else if(*state==RESTART_FINISHED) *state=RESTART_ARMED;
+}
+static int rp_restart_take(u32 *state,u32 writing,u32 valid){
+  int ok=*state==RESTART_ARMED && !writing && valid;
+  *state=RESTART_NONE;
+  return ok;
+}
 #endif

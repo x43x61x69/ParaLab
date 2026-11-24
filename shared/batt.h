@@ -46,6 +46,16 @@ static inline u32 bat_pct(u32 mv) {
   return mv >= BAT_FULL_MV ? 100u : mv <= BAT_EMPTY_MV ? 0u :
     (mv - BAT_EMPTY_MV) * 100u / (BAT_FULL_MV - BAT_EMPTY_MV);
 }
+static inline u16 bat_display_color(u32 mv) {
+#define BAT_RGB(r,g,b) ((u16)(((r)>>3)<<11 | ((g)>>2)<<5 | ((b)>>3)))
+  if (!mv) return BAT_RGB(140,140,160);
+  u32 percent = bat_pct(mv);
+  if (percent >= 60u) return BAT_RGB(120,220,120);
+  if (percent >= 30u) return BAT_RGB(255,200,60);
+  if (percent >= 15u) return BAT_RGB(255,170,40);
+  return BAT_RGB(255,80,80);
+#undef BAT_RGB
+}
 static inline int bat_flash_low(u32 mv) { return mv && mv < BAT_FLASH_MIN_MV; }
 /* "100%" (or "--%" without a reading) into s (5 bytes). */
 static inline void bat_pct_text(u32 mv, char *s)

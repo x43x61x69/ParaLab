@@ -19,9 +19,17 @@ output=${OUT:-$output}
 build_dir=$(mktemp -d "${TMPDIR:-/tmp}/paramix-flash.XXXXXX")
 trap 'rm -rf "$build_dir"' EXIT
 clang --target="$target" -mcpu="$cpu" -mthumb -ffreestanding -nostdlib "$opt" -fno-common -DFW_PRECHECK $variant -c fw.c -o "$build_dir/fw.o"
-ld.lld -T link.ld --no-rosegment $layout "$build_dir/fw.o" -o "$build_dir/fw.elf"
+set -- "$build_dir/fw.o"
+case "$variant" in
+  *FLASH_READ_ONLY*|*FLASH_MY_LAB_ON_PARADISE*) ;;
+  *)
+    clang --target="$target" -mcpu="$cpu" $variant -c reload.S -o "$build_dir/reload.o"
+    set -- "$@" "$build_dir/reload.o"
+    ;;
+esac
+ld.lld -T link.ld --no-rosegment $layout "$@" -o "$build_dir/fw.elf"
 llvm-objcopy -O binary "$build_dir/fw.elf" "$output"
-if [ "${1:-}" = --my-lab-read-only ]; then
+if [ "$variant" = '-DFLASH_MY_LAB -DFLASH_READ_ONLY' ]; then
   clang --target=thumbv7m-none-eabi -c ../../feld/src/stub/my_lab_uart_entry.S -o "$build_dir/uart-entry.o"
   llvm-objcopy -O binary -j .text "$build_dir/uart-entry.o" ../../feld/my-lab-uart-entry.bin
 fi

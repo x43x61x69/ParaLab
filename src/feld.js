@@ -475,6 +475,35 @@ function feldFind(rom, tpl) {
   return null;
 }
 
+function menuVersion(rom, off, size = 0x10000) {
+  return new TextDecoder().decode(rom.subarray(off, off + size))
+    .match(/PMXVER:([0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?)\x00/)?.[1] || '';
+}
+
+function menuPayload(artifact) {
+  const tail = String.fromCharCode(...artifact.subarray(-32));
+  return /^PMXBLD:[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?\x00+$/.test(tail)
+    ? artifact.subarray(0, -32) : artifact;
+}
+
+// Older Menu builds used the ParaLab web release number for their display.
+// Keep those bytes when the rebuilt program differs only in version strings.
+function preserveMenuVersion(rom, rebuilt, off, size = 0x10000) {
+  const oldVersion = menuVersion(rom, off, size), newVersion = menuVersion(rebuilt, off, size);
+  if (!oldVersion || oldVersion === newVersion || oldVersion.length !== newVersion.length) return;
+  const before = rom.subarray(off, off + size), after = rebuilt.subarray(off, off + size);
+  if (before.length !== after.length) return;
+  const oldTag = new TextEncoder().encode(oldVersion + '\0'), newTag = new TextEncoder().encode(newVersion + '\0');
+  for (let i = 0; i < after.length; i++) {
+    if (after[i] === newTag[0] && after[i + newTag.length - 1] === 0 &&
+        newTag.every((byte, j) => after[i + j] === byte && before[i + j] === oldTag[j])) {
+      i += newTag.length - 1;
+    } else if (after[i] !== before[i]) return;
+  }
+  rebuilt.set(before, off);
+  return true;
+}
+
 /** More programs of the menu (version 5): { name0, apps: [{ src, name }] } (empty without). */
 function feldApps(rom, tpl) {
   const f = feldFind(rom, tpl), r = { name0: '', apps: [] };
@@ -1181,8 +1210,9 @@ function sixPoolTail(rom, limit = 0xFF0000) {
  * opts: { fields, bag, appsOnly }, saved: feldSlots() of the source ROM,
  * emb: { feld, stub } (embedded), E: ParamixEmu. Returns a new image.
  */
-function feldApply(rom, opts, saved, emb, E) {
+function feldApply(rom, opts, saved, emb, E, placeCatalogAfterAssets = false) {
   if (rom.length !== 0x1000000) throw new Error('the Paradise image must be 16 MB');
+  const payload = menuPayload(emb.feld);
   const out = new Uint8Array(rom);
   const S = root.ParamixSettings || (typeof require !== 'undefined' ? require('./settings.js') : null);
   const H = root.ParamixHomeMenu || (typeof require !== 'undefined' ? require('./home_menu.js') : null);
@@ -1232,7 +1262,7 @@ function feldApply(rom, opts, saved, emb, E) {
   const tab = E.sceneTable(out);
   if (!tab.PSID_HOME) throw new Error('home screen not found');
   const prev = E.installedOrigs(out, tab);
-  const kind = appKind(out), fsz = page(emb.feld.length);
+  const kind = appKind(out), fsz = page(payload.length);
   const stubOff = prev || kind ? STUB_OFF : freeStubOff(out, codeEnd, fsz);
   if (!prev && !isFF(out, stubOff, 0x1000)) throw new Error('no room for the launcher');
   const catList = bag ? itemCatalog(out) : [];
@@ -1258,7 +1288,7 @@ function feldApply(rom, opts, saved, emb, E) {
   if (doom) while (prog + fsz + csz + tsz <= doomEnd && !isFF(out, prog, fsz + csz + tsz)) prog += 0x1000;
   let codeCat = csz, catOff = cat.length ? prog + fsz : 0, catEnd = 0;
   const progEnd = Math.min(stubOff === STUB_OFF ? FELD_END : CODE_END, codeEnd);
-  if (!doom && prog + fsz + csz + tsz > progEnd && cat.length) {
+  if (!doom && cat.length && (placeCatalogAfterAssets || prog + fsz + csz + tsz > progEnd)) {
     // Keep the emulator save region at C0000 intact. Put references in unused
     // flash behind assets, reserving them before allocating any save slots.
     catOff = Math.max(SLOT_BASE, page(assetEnd(out))); catEnd = catOff + csz;
@@ -1315,7 +1345,7 @@ function feldApply(rom, opts, saved, emb, E) {
   }
   if (fields) for (let i = 0; i < nslots; i++) if (!isFF(out, slotAddr(fs, i), slotSize)) throw new Error('the area for the saves is in use');
   // Program with settings
-  const f = new Uint8Array(emb.feld);
+  const f = new Uint8Array(payload);
   const ci = findWord(f, FELD_MAGIC);
   if (ci < 0 || u32(f, ci + 4) < 3) throw new Error('settings block of the menu missing');
   const template = u32(f, ci + 620);
@@ -1391,6 +1421,12 @@ function feldApply(rom, opts, saved, emb, E) {
       const i = s.index;
       if (i < 0 || i >= nslots) continue;
       try { slotPlace(out, g, i, s, used); } catch (cause) {
+        // Equal-sized slots can waste different amounts in the two regions.
+        // Retry from the input image so the first placement leaves no writes behind.
+        if (cause.code === 'slotPoolFull' && P.six && !doom && codeCat) {
+          try { return feldApply(rom, opts, saved, emb, E, true); }
+          catch { /* Report the original slot failure if relocation did not fit. */ }
+        }
         const error = new Error(neonSaves ? 'stored save ' + (i + 1) + ' does not fit here' : 'the stored save of ' + cap(P.names[i]) + ' does not fit here', { cause });
         error.code = cause.code;
         error.p = { f: i + 1 };
@@ -1474,7 +1510,7 @@ function cleanApply(rom, opts, emb) {
   const sp = opts.spot || { feld: FELD_OFF, clock: CLOCK_SEC }, FO = sp.feld;
   if (String.fromCharCode(...out.subarray(0, 8)) !== 'SONIXDEV') throw new Error('load table missing');
   const ed = edition(out); if (!ed) throw new Error('edition not recognised');
-  const f = new Uint8Array(emb.feld), ci = findWord(f, FELD_MAGIC);
+  const f = new Uint8Array(menuPayload(emb.feld)), ci = findWord(f, FELD_MAGIC);
   if (ci < 0 || u32(f, ci + 4) < 10) throw new Error('menu program too old for a ROM without the Paradise');
   if (f.length > 0xE000) throw new Error('menu program too big');
   // settings: no fields, items or Tama; the programs, DOWNLOAD, the clock sector
@@ -1528,4 +1564,7 @@ function embedded() {
 function emuType(rom) { const m = u32(rom, APP_OFF + 0x140); return m === 0x37584D50 ? 't7' : m === 0x38584D50 ? 't18' : m === 0x31584D50 ? 'v1' : m === PMXC && appKind(rom) === 2 ? 'tama' : ''; }
 root.ParamixFeld = { F_KEEP_AWAKE, keepAwakeSupport, poolCount, slotRanges, sixPoolTail, F_RING, F_RESIDENT_BANKS, F_NO_SHORTCUT, F_APPS, F_NEON_EDIT, F_NEON_TAMA, F_NEON_SAVES, CARE_AUTOPILOT_PATCH, CARE_FUEL_PATCH, careOptions, careSupport, neonSlotRange, neonActive, neonSwitchPending, neonAppearance, neonBagLayout, languagePatchPages, F_GPLAY, GPLAY, CLEAN_ROM, F_CLEAN, CLOCK_SEC, cleanReserved, cleanInfo, cleanBase, cleanApply, isClean, saveSlots, fieldOfSettings, lzPack, lzUnpack, slotPages, slotBuild, poolUsed, slotParse, FIELD_TEXT, characters, F_TAMA, F_SAVES, F_LAUNCH, isLaunch, launchRestore, emuType, familyOf, isSix, slotAddr, slotReadAsync, slotPlace, poolAddr, textTabelle, zeichenkette, edition, feldId, canFields, fieldNames, fieldNow, feldFind, feldSlots, feldStrip, feldApply, feldApps, appKind, itemCatalog, embedded, NAMES, F_FIELDS, F_BAG };
 if (typeof module !== 'undefined') module.exports = root.ParamixFeld;
+root.ParamixFeld.menuPayload = menuPayload;
+root.ParamixFeld.menuVersion = menuVersion;
+root.ParamixFeld.preserveMenuVersion = preserveMenuVersion;
 })(typeof window !== 'undefined' ? window : globalThis);

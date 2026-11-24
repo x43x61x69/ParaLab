@@ -41,6 +41,12 @@ picker.value = locale;
 const editionTokens = {
   editionParadise: 'paradise',
   editionMyLab: 'my-lab',
+  editionLand: 'land',
+  editionWater: 'water',
+  editionSky: 'sky',
+  editionJade: 'jade',
+  editionTropics: 'tropics',
+  editionGlacier: 'glacier',
   editionNeon: 'neon',
 };
 

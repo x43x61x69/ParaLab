@@ -325,6 +325,69 @@ function paraSettings(save, edition) {
   }
   return null;
 }
+// Device clocks store local calendar time without a time zone. UTC arithmetic
+// keeps an entered date and time independent of the browser's DST rules.
+const CLOCK_EPOCH = Date.UTC(2025, 0, 1) / 1000;
+const CLOCK_LIMIT = Date.UTC(2100, 0, 1) / 1000;
+const DAY_SECONDS = 86400;
+
+function calendarFields(date) {
+  return [date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate(),
+    date.getUTCHours(), date.getUTCMinutes(), date.getUTCSeconds()];
+}
+
+function savedCalendar(page) {
+  const fields = Array.from({ length: 6 }, (_, i) => u16(page, 0x1C + i * 2));
+  const [year, month, day, hour, minute, second] = fields;
+  const date = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+  return calendarFields(date).every((value, i) => value === fields[i]) ? date.getTime() / 1000 : NaN;
+}
+
+function gameClock(page, rtc, myLab = false) {
+  if (!page || (rtc?.ctrl & 0x87) !== 0x80) return null;
+  const offset = myLab ? 0x14 : 0x0C;
+  const days = u32(page, offset), seconds = u32(page, offset + 4);
+  const base = CLOCK_EPOCH + days * DAY_SECONDS + seconds;
+  const now = base + rtc.counter;
+  const calendar = savedCalendar(page);
+  const saved = myLab ? base + u32(page, 0x28) : calendar;
+  if (!Number.isFinite(calendar) || seconds >= DAY_SECONDS || base >= CLOCK_LIMIT || now >= CLOCK_LIMIT ||
+      saved < CLOCK_EPOCH || saved > now + 5 || now - saved > 366 * DAY_SECONDS ||
+      (myLab && (saved > now || Math.floor(saved / DAY_SECONDS) !== Math.floor(calendar / DAY_SECONDS)))) return null;
+  return { now, saved, offset, counter: rtc.counter };
+}
+
+function changeGameClock(page, clock, target) {
+  const base = target - clock.counter - CLOCK_EPOCH;
+  const saved = target - (clock.now - clock.saved);
+  if (!Number.isInteger(target) || base < 0 || target >= CLOCK_LIMIT || saved < CLOCK_EPOCH || saved >= CLOCK_LIMIT)
+    return null;
+  const out = Uint8Array.from(page);
+  w32(out, clock.offset, Math.floor(base / DAY_SECONDS));
+  w32(out, clock.offset + 4, base % DAY_SECONDS);
+  calendarFields(new Date(saved * 1000)).forEach((value, i) => {
+    const offset = 0x1C + i * 2;
+    out[offset] = value & 255;
+    out[offset + 1] = value >>> 8;
+  });
+  return out;
+}
+
+function paradiseClockPage(pages, edition) {
+  return paraSettings({ pages }, edition);
+}
+
+function planParadiseClock(pages, edition, page) {
+  if (edition === 8) {
+    const ring = neonSettings(pages);
+    if (!ring || ring.generation === 0xFFFFFFFF) return null;
+    w32(page, NEON_GENERATION, ring.generation + 1);
+    sealSettings(page);
+    return new Map([[NEON_SETTINGS[(ring.index + 1) % NEON_SETTINGS.length], page]]);
+  }
+  sealSettings(page);
+  return new Map([[SET_A, page], [SET_B, page.slice()]]);
+}
 /** What the save says about the pet: { level, id, stage, hunger, happy, sick } or null. */
 function paraPet(save, edition) {
   const p = paraSettings(save, edition), o = PET[family(edition)]; if (!p || !o) return null;
@@ -497,6 +560,7 @@ function t7SaveIn(img, save, base = 0xC0000) {
   return out;
 }
 
-root.ParamixSaves = { paraPet, paraPetSet, neonSaveLayout, neonSettings, neonProgress, neonProgressSet, paraClear, paraWrite, t7SaveOut, t7SaveIn, t7SaveCheck, T7_EE, idPage, region, residentRanges, paraRanges, family, settingsOk, sealSettings, crc16arc, paraFromImage, paraEncode, paraDecode, paraCheck, paraClock, emuCfg, emuGuestAsync, lzGoneApply, KINDS, NEON_SETTINGS, NEON_GENERATION, SET_A, SET_B };
+root.ParamixSaves = { paraPet, paraPetSet, neonSaveLayout, neonSettings, neonProgress, neonProgressSet, paraClear, paraWrite, t7SaveOut, t7SaveIn, t7SaveCheck, T7_EE, idPage, region, residentRanges, paraRanges, family, settingsOk, sealSettings, crc16arc, paraFromImage, paraEncode, paraDecode, paraCheck, paraClock, emuCfg, emuGuestAsync, lzGoneApply, KINDS, NEON_SETTINGS, NEON_GENERATION, SET_A, SET_B,
+  gameClock, changeGameClock, paradiseClockPage, planParadiseClock };
 if (typeof module !== 'undefined') module.exports = root.ParamixSaves;
 })(typeof window !== 'undefined' ? window : globalThis);
