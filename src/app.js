@@ -113,6 +113,7 @@ const T = {
     myLabScreenFit: 'Screen correction',
     myLabScreenFitHint: 'Adjusts the layout of some game screens so less content is cut off on {editionParadise}.',
     myLabScreenFitUnsupported: 'Screen correction requires a supported My Lab firmware build and compatible screen resources.',
+    myLabPortPreparationFailed: 'Could not prepare the {editionMyLab} port for {editionParadise}. Check that the ROM uses supported firmware.',
     myLabPortStage: 'Include Port in Write and Export',
     myLabPortDone: 'Port ready. Review a device write or export the ROM from Workspace.',
     myLabPortPreparing: 'Preparing Ported ROM',
@@ -401,6 +402,10 @@ function em(x) {
   const message = x && typeof x === 'object' ? (x.message || String(x)) : String(x || '');
   const pack = /^(.+) only fits packed$/.exec(message);
   return pack ? t('{name} only fits packed (big save): in the Emulator tab switch on "Pack the firmware" in its row, or remove another program', { name: pack[1] }) : t(message);
+}
+function myLabPortError(error) {
+  const message = em(error);
+  return locale() !== 'en' && message === (error?.message || error) ? t('myLabPortPreparationFailed') : message;
 }
 
 function activeRomProfile() {
@@ -3891,7 +3896,7 @@ async function myLabPrepareMenu(ctx, key) {
     renderMyLabChangeStatus();
     devRender();
   } catch (error) {
-    if (myLabRom === ctx) toast(em(error), true);
+    if (myLabRom === ctx) toast(ctx.menu.mode === 'paradise' ? myLabPortError(error) : em(error), true);
   } finally {
     ctx.menuBusy = false;
     if (myLabRom === ctx) {
@@ -3947,7 +3952,7 @@ function renderMyLabPort() {
   $('myLabParadiseBuilder').hidden = !action;
   $('myLabPortUnsupported').hidden = !!action || existingPort;
   $('myLabPortKeyRow').hidden = !myLabPortNeedsKey(myLabRom);
-  $('myLabPortStatus').textContent = myLabRom.portStatus ? em(myLabRom.portStatus) :
+  $('myLabPortStatus').textContent = myLabRom.portStatus ? myLabPortError(myLabRom.portStatus) :
     myLabRom.portDraft ? t('myLabPortDone') : '';
   $('myLabPortSwitch').checked = !!myLabRom.portDraft;
   $('myLabPortBackup').disabled = $('myLabPortKey').disabled = !!myLabRom.portBusy;

@@ -880,12 +880,11 @@ class Paradise {
       if (u32(stubEntry, 0) !== 0x4604B672) return null;
       if (native) {
         const menuLength = u32(hook, 8);
-        if (!menuLength || menuLength > RESCUE_CODE || menuLength % SECTOR ||
-            await this.crc(0x37000, menuLength) !== u32(hook, 12)) return null;
-        const menu = await this.read(0x37000, SECTOR);
+        if (!menuLength || menuLength > RESCUE_CODE || menuLength % SECTOR) return null;
+        const menu = await readStage('flashFindMenu', 0x37000, menuLength);
         // Recognize the fork's native Menu, which already checks the separate
-        // update slot and falls back to the original tool if its CRC fails.
-        if (u32(menu, 0x140) !== 0x444c4546 || u32(menu, 0x160) !== 0x36000 ||
+        // update slot. Older builds place the version tag near the end.
+        if (crc32(menu) !== u32(hook, 12) || u32(menu, 0x140) !== 0x444c4546 || u32(menu, 0x160) !== 0x36000 ||
             !/PMXVER:(?:0\.\d+\.\d+\0|1\.7\.6-plus\.\d+\0)/.test(new TextDecoder().decode(menu))) return null;
       }
     } else {

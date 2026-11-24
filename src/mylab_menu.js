@@ -843,6 +843,7 @@ function editScreenFit(image, enabled, legacyCode) {
 const screenFitOperations = {
   'mylab-1.0.00-retail': legacyCode => ({
     status, state: screenFitState, prepareWheel: installParadiseWheel,
+    upgradeLegacyGameCode: upgradeLegacyParadiseGameCode,
     normalizeSceneWheel: image => setSceneWheel(image, false),
     edit: (copy, on) => editScreenFit(copy, on, legacyCode),
   }),
@@ -853,12 +854,14 @@ function screenFitSupport(image, legacyCode, firmwareOnly = false) {
 function requireScreenFitPort(image, legacyCode) {
   const compatibility = screenFitSupport(image, legacyCode);
   if (!compatibility.supported || compatibility.source !== 'paradise')
-    throw new Error(compatibility.reason || 'Screen corrections require a supported My Lab on Paradise ROM');
-  return compatibility.profileId;
+    throw new Error('Screen corrections require a supported My Lab on Paradise ROM', { cause: compatibility.reason });
+  return compatibility;
 }
-function withScreenFit(image, enabled, legacyCode) {
+function withScreenFit(image, enabled, legacyCode, gamePort) {
   if (enabled === null) return image;
-  const profileId = requireScreenFitPort(image, legacyCode);
+  const { profileId, legacyPort } = requireScreenFitPort(image, legacyCode);
+  if (legacyPort && enabled) image = upgradeLegacyParadiseGame(image,
+    gamePort || bundled('__MYLAB_PARADISE_GAME_B64__'));
   return screenFitOperations[profileId](legacyCode).edit(image, enabled);
 }
 
@@ -1083,12 +1086,43 @@ function installParadiseSleep(image, hasParkHook = false, hasWheelWakeHook = fal
   patchBytes(image, snapshot, hasWheelWakeHook ? wheelWake : '00f0cbff', wheelWake);
 }
 
+// Early ports predate the current presenter, wheel and sleep hooks. Apply the
+// same checked transitions to a temporary copy during profile verification.
+function upgradeLegacyParadiseGameCode(image) {
+  patchBytes(image, GAME_XIP + 0x44F12, 'c1f21050', 'c1f25550');
+  patchBytes(image, GAME_XIP + 0x536D4, '0021', '0121');
+  patchBytes(image, GAME_XIP + 0x53790, '80b5c1f7', '00207047');
+  const waitForFrame = GAME_XIP + 0x537C0;
+  patchBytes(image, waitForFrame, '80b500bf', branch(waitForFrame, GAME_PORT + 0x10));
+  for (const [offset, before, after] of [[0x1C426, '1d20', '0a20'],
+    [0x1C43A, '1e20', '0b20'], [0x1C446, '1f20', '0920']])
+    patchBytes(image, GAME_XIP + offset, before, after);
+  installParadiseWheel(image);
+  installParadiseP23(image);
+  installParadiseMutedNotes(image);
+  installParadiseSleep(image);
+}
+
+function upgradeLegacyParadiseGame(rom, gamePort) {
+  if (!gamePort.length || gamePort.length > 0x1000)
+    throw new Error('The Paradise game adapter does not fit in the available flash region');
+  const image = Uint8Array.from(rom);
+  upgradeLegacyParadiseGameCode(image);
+  setSceneWheel(image);
+  for (const offset of [BOOT_PORT, GAME_PORT]) {
+    image.fill(0xFF, offset, offset + 0x1000);
+    image.set(gamePort, offset);
+  }
+  return image;
+}
+
 function updateParadiseImage(rom, { feld, gamePort, stub, flashApp }) {
   if (!M.isParadiseFlashImage(rom, C) || !gamePort.length || gamePort.length > 0x1000)
     throw new Error('Invalid Paradise boot or rescue layout');
   const compatibility = screenFitSupport(rom);
   if (compatibility.profileId !== 'mylab-1.0.00-retail')
     throw new Error('Unsupported My Lab firmware for Paradise port updates');
+  if (compatibility.legacyPort) rom = upgradeLegacyParadiseGame(rom, gamePort);
   // Upgrade earlier cameras before checking the boot and game adapters.
   // The standalone experiment also needs its adapter hook restored.
   if (compatibility.supported && labPan.isLegacy(rom)) {

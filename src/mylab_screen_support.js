@@ -66,7 +66,7 @@ const profiles = new Map([
     sleepDiagnostic: { offset: 0x19D108, crc: 0xD24EFE8B },
     xip: 0x111000,
     gameChunks,
-    adapter: { game: 0x19E000, boot: 0x45000, crcs: adapterCrcs },
+    adapter: { game: 0x19E000, boot: 0x45000, crcs: adapterCrcs, legacyCrc: 0xCF4A0E9D },
     display: { entry: 0x1647A4, native: 0xB082B580, paradise: 0xBC2CF039 },
   }]],
 ]);
@@ -148,14 +148,17 @@ function inspectProfile(rom, profile, version, operations, firmwareOnly) {
     const state = port ? operations.state(rom) : false;
     const plain = port || !firmwareOnly ? Uint8Array.from(rom) : rom;
     const normalized = port ? operations.edit(plain, false) : plain;
-    if (port) operations.normalizeSceneWheel(normalized);
-    if (!gameChunks.every((allowed, i) => allowed.includes(crc(normalized, xip + i * CHUNK, CHUNK))))
-      return fail('Unrecognized My Lab game program');
+    let legacyPort = false;
     if (port) {
       const gameAdapter = crc(normalized, adapter.game, 4096);
-      if (!adapter.crcs.includes(gameAdapter) || gameAdapter !== crc(normalized, adapter.boot, 4096))
+      legacyPort = gameAdapter === adapter.legacyCrc;
+      if ((!legacyPort && !adapter.crcs.includes(gameAdapter)) || gameAdapter !== crc(normalized, adapter.boot, 4096))
         return fail('Unrecognized Paradise display adapter');
+      if (legacyPort) operations.upgradeLegacyGameCode(normalized);
+      operations.normalizeSceneWheel(normalized);
     }
+    if (!gameChunks.every((allowed, i) => allowed.includes(crc(normalized, xip + i * CHUNK, CHUNK))))
+      return fail('Unrecognized My Lab game program');
     profileId = profile.id;
     portSupported = !port;
     if (!port && firmwareOnly) return { supported: false, state: null, version, source, profileId, portSupported };
@@ -172,7 +175,7 @@ function inspectProfile(rom, profile, version, operations, firmwareOnly) {
     for (let i = 0; i < normalized.length; i++) {
       if (normalized[i] !== restored[i]) return fail('My Lab screen corrections do not restore the original data');
     }
-    return { supported: true, state, version, source, profileId, portSupported };
+    return { supported: true, state, version, source, profileId, portSupported, legacyPort };
   } catch (error) {
     return fail(error instanceof Error ? error.message : 'Unrecognized My Lab screen layout');
   }
