@@ -385,7 +385,7 @@ function readDeviceSaveBackup(bytes, core, visit) {
   if (!latest) throw new Error('No valid My Lab save in this backup');
   const clock = u32(bytes, 12);
   return { page: latest.bytes, data: bytes.subarray(DEVICE_HEADER, appStart), dataStart,
-    clock: clock === 0xFFFFFFFF ? null : clock };
+    clock: clock === 0xFFFFFFFF ? null : clock, ring: bytes.subarray(appStart, -4) };
 }
 function activeDeviceSave(current, visit) {
   return latestPage(appPages(current, visit));
@@ -402,11 +402,202 @@ function planDeviceSavePage(page, current, visit) {
   return { off: SAVE + index * PAGE, bytes: stamp(page, sequence, visit) };
 }
 
+const MENU_SLOT_FIRST = 0xA6C000, MENU_SLOT_CONTROL = 0xC64000;
+const MENU_BANK_SIZE = PAGE + SLOT_GARDEN_SIZE + PAGES * PAGE;
+function menuSaveSlots(control, headers, visit) {
+  if (tag(control, 0, 8) !== 'PXMLSV01') return null;
+  const slots = [null, null];
+  let generation = 0;
+  for (const [index, header] of headers.entries()) {
+    const slot = u32(header, 4), sequence = u32(header, 8), flags = u32(header, 16);
+    const crc = u32(header, 28);
+    if (u32(header, 0) !== 0x42534C4D || slot > 1 || !sequence || flags > 1 ||
+        (crc ^ u32(header, 32)) !== -1 || crc !== visit.crc16(header.subarray(0, 28))) continue;
+    if (!slots[slot] || slots[slot].sequence < sequence)
+      slots[slot] = { index, sequence, cleared: !!flags, crc: u32(header, 12) };
+    generation = Math.max(generation, sequence);
+  }
+  return { slots, generation };
+}
+function menuSaveBank(index) { return MENU_SLOT_FIRST + index * MENU_BANK_SIZE; }
+function readMenuSave(bank, data, core, visit) {
+  if (!bank || bank.cleared) return null;
+  if (data.length !== MENU_BANK_SIZE - PAGE || core.crc32(data) !== bank.crc)
+    throw new Error('Stored save checksum mismatch');
+  const ring = data.subarray(SLOT_GARDEN_SIZE);
+  const latest = latestPage(appPages(ring, visit));
+  if (!latest) throw new Error('No valid My Lab save in this backup');
+  return { page: latest.bytes, data: data.subarray(0, SLOT_GARDEN_SIZE), dataStart: SLOT_GARDEN_FIRST,
+    clock: null, ring };
+}
+function planMenuSave(slots, slot, save, core, visit) {
+  if (!slots || ![0, 1].includes(slot) || slots.generation === 0xFFFFFFFF ||
+      !save.data || save.dataStart > SLOT_GARDEN_FIRST || save.dataStart + save.data.length < GARDEN_END_ADDRESS)
+    throw new Error('This save cannot be written to the selected slot');
+  const index = [0, 1, 2].find(i => !slots.slots.some(bank => bank?.index === i));
+  const data = new Uint8Array(MENU_BANK_SIZE - PAGE).fill(255);
+  const garden = SLOT_GARDEN_FIRST - save.dataStart;
+  data.set(save.data.subarray(garden, garden + SLOT_GARDEN_SIZE));
+  if (save.ring) data.set(save.ring, SLOT_GARDEN_SIZE);
+  const latest = save.ring && latestPage(appPages(save.ring, visit));
+  data.set(stamp(save.page, latest?.sequence ?? 1, visit), SLOT_GARDEN_SIZE + (latest?.index ?? 0) * PAGE);
+  const head = new Uint8Array(PAGE).fill(255), header = view(head), info = saveInfo(save.page);
+  [0x42534C4D, slot, slots.generation + 1, core.crc32(data), 0, info.points, info.level].forEach(
+    (value, i) => header.setUint32(i * 4, value, true));
+  const crc = visit.crc16(head.subarray(0, 28));
+  header.setUint32(28, crc, true);
+  header.setUint32(32, ~crc, true);
+  return { address: menuSaveBank(index), data, head };
+}
+const GARDEN_END_ADDRESS = GARDEN + SLOTS * RECORD_SIZE;
+function editorBackup(save, core, visit) {
+  if (!save.data) return saveBackup(save.page, visit);
+  const gardenOnly = save.dataStart === SLOT_GARDEN_FIRST;
+  const out = new Uint8Array(DEVICE_HEADER + save.data.length + PAGES * PAGE + 4).fill(255);
+  const header = view(out), start = DEVICE_HEADER + save.data.length;
+  out.set(new TextEncoder().encode(BACKUP_MAGIC));
+  header.setUint32(8, gardenOnly ? 3 : 2, true);
+  header.setUint32(12, save.clock ?? 0xFFFFFFFF, true);
+  out.set(save.data, DEVICE_HEADER);
+  if (save.ring) out.set(save.ring, start);
+  const latest = save.ring && latestPage(appPages(save.ring, visit));
+  out.set(save.page, start + (latest?.index ?? 0) * PAGE);
+  header.setUint32(out.length - 4, core.crc32(out.subarray(0, -4)), true);
+  return out;
+}
+function editorGarden(save, visit) {
+  if (!save.data) return [];
+  const start = GARDEN - save.dataStart;
+  return Array.from({ length: SLOTS }, (_, slot) =>
+    readSlot(save.data.subarray(start + slot * RECORD_SIZE, start + (slot + 1) * RECORD_SIZE), slot, visit));
+}
+function editActiveRomSave(data, save, visit) {
+  const result = Uint8Array.from(data), offset = SAVE - DEVICE_SAVE_FIRST;
+  if (save.data) result.set(save.data, save.dataStart - DEVICE_SAVE_FIRST);
+  const changed = planDeviceSavePage(save.page, result.subarray(offset), visit);
+  if (changed) result.set(changed.bytes, changed.off - DEVICE_SAVE_FIRST);
+  return readSaveRegion(result, visit);
+}
+function editorCatalog(rom, core) {
+  const entries = core.arc2Parse(rom, MAIN_ASSETS).ents;
+  const file = entries[0], config = rom.subarray(MAIN_ASSETS + file.offset, MAIN_ASSETS + file.offset + file.ulen);
+  const start = 2 * u32(config, 0x28), end = 2 * u32(config, 0x2C);
+  if (start < 0x34 || end - start !== 139 * 0x2E || end > config.length) return [];
+  const english = core.textTablesOf(rom, MAIN_ASSETS)?.tabs?.[1];
+  const latin = ' 0123456789+-ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+  const result = [];
+  for (let at = start; at < end; at += 0x2E) {
+    const id = u16(config, at), type = u16(config, at + 0x16), pic = u16(config, at + 0x18);
+    if (type !== 13 && (![1, 9, 10, 11, 12, 14].includes(type) || pic === 65535)) continue;
+    const name = english ? core.txtWords(english, u16(config, at + 2))
+      .map(code => latin[code - 305] || ({375:'&', 376:"'", 381:'.', 382:'/'})[code] || ' ').join('').trim() : '';
+    result.push({ id, name, text: u16(config, at + 2), pic: pic === 65535 ? 0 : pic + 1, decoration: type === 13, max: 10 });
+  }
+  return result;
+}
+const CRAFT_SLOT_SIZE = 0x4000, CRAFT_SLOTS = 30;
+function decorationPackage(data, core) {
+  if (tag(data, 0, 4) !== 'ARC2' || data.length < 32 || u32(data, 12) < 1) return null;
+  const end = 16 + u32(data, 8), offset = u32(data, 20), length = u32(data, 28);
+  if (end > data.length || u32(data, 16) || offset < 32 || offset % 4 || length < 0x50 ||
+      offset + length > end || core.arc2Checksum(data, 0, end - 16) !== u32(data, 4)) return null;
+  const idOffset = u32(data, offset + 0x4C) * 2;
+  if (idOffset < 0x50 || idOffset + 2 > length) return null;
+  return { id: u16(data, offset + idOffset), bytes: data.subarray(0, end) };
+}
+function editorPlanetDecorations(save, rom, core) {
+  if (save.dataStart !== DEVICE_SAVE_FIRST || !save.data) throw new Error('This save does not contain crafted items.');
+  const data = Uint8Array.from(save.data), owned = new Set(), free = [];
+  for (let i = 0; i < CRAFT_SLOTS; i++) {
+    const start = i * CRAFT_SLOT_SIZE, record = data.subarray(start, start + CRAFT_SLOT_SIZE);
+    if (record.every(byte => byte === 255)) free.push(start);
+    else {
+      const entry = decorationPackage(record, core);
+      if (entry) owned.add(entry.id);
+    }
+  }
+  const entries = core.arc2Parse(rom, MAIN_ASSETS).ents;
+  const additions = [];
+  for (let i = 0; i < 10; i++) {
+    if (owned.has(i + 230)) continue;
+    const archive = entries[13 + i], at = MAIN_ASSETS + archive.offset;
+    const raw = rom.subarray(at, at + archive.ulen), entry = core.arc2Parse(raw, 0).ents[0];
+    const packageData = decorationPackage(raw.subarray(entry.offset, entry.offset + entry.ulen), core);
+    if (!packageData || packageData.id !== 230 + i || packageData.bytes.length > PAGE) throw new Error('Planet decorations unavailable');
+    additions.push(packageData.bytes);
+  }
+  if (additions.length > free.length) throw new Error('Craft storage is full');
+  additions.forEach((entry, i) => data.set(entry, free[i]));
+  return additions.length ? { ...save, data } : save;
+}
+function editorInfo(save) {
+  const page = save.page, items = [];
+  for (let i = 0; i < 200; i++) {
+    const count = (page[0x21C + (i >> 1)] >> ((i & 1) * 4)) & 15;
+    if (count) items.push({ id: u16(page, 0x8C + i * 2), count, slot: i });
+  }
+  return { ...saveInfo(page), items, decoration: u16(page, 0x37E) || 0x5208,
+    treasures: u32(page, 0x388), roster: Array.from({ length: ROSTER_COUNT }, (_, i) =>
+      !!(page[ENCOUNTERS + (i >> 3)] & (1 << (i & 7)))) };
+}
+function editorSet(save, changes, visit, catalog = []) {
+  const page = Uint8Array.from(save.page), bytes = view(page);
+  const number = (value, max, min = 0) => {
+    if (!Number.isInteger(value) || value < min || value > max) throw new Error('Save value out of range');
+    return value;
+  };
+  if (changes.points !== undefined) bytes.setUint32(POINTS, number(changes.points, 99999), true);
+  if (changes.level !== undefined) page[LEVEL] = number(changes.level, 5, 1);
+  if (changes.decoration !== undefined) {
+    if (!catalog.some(item => item.decoration && item.id === changes.decoration)) throw new Error('Choose a valid option.');
+    bytes.setUint16(0x37E, number(changes.decoration, 65534, 1), true);
+  }
+  for (const group of ['treasures', 'roster'])
+    if (changes[group]?.some(([, value]) => typeof value !== 'boolean')) throw new Error('Choose a valid option.');
+  const ownedSlots = new Set(editorInfo(save).items.map(item => item.slot));
+  for (const [slot, count] of changes.items || []) {
+    if (!ownedSlots.has(slot)) throw new Error('Choose a valid option.');
+    const offset = 0x21C + (number(slot, 199) >> 1), shift = (slot & 1) * 4;
+    page[offset] = (page[offset] & ~(15 << shift)) | (number(count, 10) << shift);
+  }
+  for (const [id, count] of changes.addItems || []) {
+    if (!catalog.some(item => !item.decoration && item.id === id)) throw new Error('Choose a valid option.');
+    number(count, 10, 1);
+    const owned = editorInfo({ page }).items.find(item => item.id === id);
+    if (owned) continue;
+    let slot = 0;
+    while (slot < 200 && ((page[0x21C + (slot >> 1)] >> ((slot & 1) * 4)) & 15)) slot++;
+    if (slot === 200) throw new Error('Bag is full');
+    bytes.setUint16(0x8C + 2 * slot, number(id, 65534, 1), true);
+    const offset = 0x21C + (slot >> 1), shift = (slot & 1) * 4;
+    page[offset] = (page[offset] & ~(15 << shift)) | (number(count, 10, 1) << shift);
+  }
+  for (const [index, value] of changes.treasures || []) {
+    const mask = 1 << number(index, 29);
+    bytes.setUint32(0x388, value ? u32(page, 0x388) | mask : u32(page, 0x388) & ~mask, true);
+  }
+  for (const [index, value] of changes.roster || []) {
+    const offset = number(index, ROSTER_COUNT - 1) >> 3, mask = 1 << (index & 7);
+    page[ENCOUNTERS + offset] = value ? page[ENCOUNTERS + offset] | mask : page[ENCOUNTERS + offset] & ~mask;
+    if (!value) page[0x2B2 + offset] &= ~mask;
+  }
+  return page.every((byte, i) => byte === save.page[i]) ? save : { ...save, page: stamp(page, u32(page, 4), visit) };
+}
+function editorSetGarden(save, slot, bytes, visit) {
+  if (!Number.isInteger(slot) || !editorGarden(save, visit)[slot]?.bytes || !visit.verifyGhost(bytes) || u16(bytes, 0xfc) !== 5)
+    throw new Error('Invalid Garden visitor');
+  const data = Uint8Array.from(save.data);
+  data.set(bytes.subarray(0, u32(bytes, 0x10C)), GARDEN - save.dataStart + slot * RECORD_SIZE);
+  return { ...save, data };
+}
+
 root.ParamixMyLab = { sheetChanges, encodeSpriteSlot, applySpriteChanges, isMyLab, isFlashImage, isParadiseFlashImage, hasParadisePortMarker,
   hasParadisePortBoot, PARADISE_PORT_MARKER_OFFSET,
   paradiseBackupRecord, PARADISE_BACKUP_OFFSET, PARADISE_BACKUP_LENGTH, openRom, inspectUpdate, UPDATE_NAME, UPDATE_MAX,
   saveInfo, saveBackup, readBackup, collectCharacters, gardenAppearance, editGardenSlot, editRomSave, saveRecoveryPending,
   DEVICE_SAVE_FIRST, DEVICE_SAVE_END, APPDATA_FIRST: SAVE, GARDEN_FIRST: GARDEN,
-  GARDEN_END: GARDEN + SLOTS * RECORD_SIZE, deviceSaveBackup, readDeviceSaveBackup, activeDeviceSave, planDeviceSavePage };
+  GARDEN_END: GARDEN + SLOTS * RECORD_SIZE, deviceSaveBackup, readDeviceSaveBackup, activeDeviceSave, planDeviceSavePage,
+  menuSaveSlots, menuSaveBank, planMenuSave, readMenuSave, MENU_SLOT_CONTROL, MENU_BANK_SIZE,
+  editorBackup, editActiveRomSave, editorCatalog, editorPlanetDecorations, editorInfo, editorSet, editorGarden, editorSetGarden };
 if (typeof module !== 'undefined') module.exports = root.ParamixMyLab;
 })(typeof window !== 'undefined' ? window : globalThis);

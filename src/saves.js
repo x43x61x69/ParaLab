@@ -439,6 +439,312 @@ function paraPetSet(save, edition, ch) {
   return Object.assign({}, save, { pages });
 }
 
+// Save editor offsets mirror the on-device Menu, including the CRC prefix.
+const EDITOR_LAYOUTS = {
+  gen1: { points: 0xB4, bag: 0x240, poop: 0x140, timers: 0x170, elapsed: 0x18A, stars: 0x1DC, active: 0xDEE000, table: 0x94214 },
+  jade: { points: 0xB4, bag: 0x244, poop: 0x144, timers: 0x174, elapsed: 0x18E, stars: 0x1E0, active: 0xDEE000, table: 0x9954C },
+  gen3: { points: 0xC0, bag: 0x270, poop: 0x150, timers: 0x188, elapsed: 0x1A2, stars: 0x20C, active: 0xDCE000, table: 0xACBB8 },
+  neon: { points: 0xC0, bag: 0x284, poop: 0x151, timers: 0x190, elapsed: 0x1AA, stars: 0x220, active: 0xE4E000, table: 0xAE954 },
+};
+const MISSION_NAMES = [
+  'Feed Meals', 'Feed Snacks', 'Clean Tamas', 'Play Wins', 'Clean Poop', 'Collect Poop',
+  'Fast Collections', 'Visit Planets', 'Put to Sleep', 'Wake Tamas', 'Connections', 'Send Gifts',
+  'Minigame Wins', 'Earn Points', 'Breeding', 'Egg Hunt Wins', 'Egg Food Types', 'Chef Meals',
+  'Land Adults', 'Water Adults', 'Sky Adults', 'Tama Colors',
+];
+const MISSION_TARGETS = [500, 500, 100, 100, 100, 1000, 10, 7, 50, 50, 100, 50, 100, 99999, 50, 50, 18, 12, 16, 16, 16, 16];
+const MISSION_OFFSETS = [0xB8, 0xBA, 0xBC, 0xBE, 0xC0, 0xC2, 0xC4, 0xC6, 0xC8, 0xCA, 0xCC, 0xCE, 0xD0, 0xD4, 0xD8, 0xDA, 0xDC, 0xDF, 0xE1, 0xE3, 0xE5, 0xE7];
+function saveEditorBit(page, bit, value) {
+  const at = bit >> 3, mask = 1 << (bit & 7);
+  if (value === undefined) return !!(page[at] & mask);
+  page[at] = value ? page[at] | mask : page[at] & ~mask;
+}
+function editorNumber(value, max, min = 0) {
+  if (!Number.isInteger(value) || value < min || value > max) throw new Error('Save value out of range');
+  return value;
+}
+function editorCellFields(page, at, config) {
+  if (page[at] > 11) return null;
+  const ids = [...page.subarray(at + 1, at + 1 + page[at])];
+  const split = config?.split;
+  const legacy = split && page[0xF0F] !== 0x5A && page[0xF04] === 1;
+  return ids.map(id => legacy && id < 3 && (config.ids.length === 6 || id === 1) ? id + 3 : id);
+}
+function editorLayoutConfig(save, config) {
+  if (config) return config;
+  const page = paraSettings(save, save.edition);
+  if (page?.[0xF0F] !== 0x5A) return null;
+  const kind = family(save.edition);
+  if (kind === 'gen3') return { ids: [0, 1, 2, 3, 4, 5], split: true };
+  if (kind === 'jade') return { ids: [0, 1, 2, 4], split: true };
+  return null;
+}
+function paradiseEditorAppearance(edition, rom) {
+  const layout = EDITOR_LAYOUTS[family(edition)];
+  return !!rom && u32(rom, layout.table) === 0x60000000 + layout.active;
+}
+function paradiseEditorInfo(save, config) {
+  config = editorLayoutConfig(save, config);
+  const kind = family(save.edition), layout = EDITOR_LAYOUTS[kind], pet = PET[kind];
+  const neon = kind === 'neon', progress = neon && neonProgress(save), page = paraSettings(save, save.edition);
+  if (!page || (neon && !progress)) return null;
+  const tama = paraPet(save, save.edition), at = pet.tama, delta = neon ? 1 : 0;
+  const shift = kind === 'gen3' ? 12 : 0, starShift = neon ? 13 : 4, starMax = neon ? 1023 : 255;
+  const items = [];
+  for (let i = 0; i < 640; i++) {
+    const id = u16(page, layout.bag + i * 2);
+    if (!neon && !id) break;
+    const count = (page[layout.bag + 0x500 + (i >> 1)] >> ((i & 1) * 4)) & 15;
+    const reserved = neon ? (page[layout.bag + 0x500 + 320 + (i >> 1)] >> ((i & 1) * 4)) & 15 : 0;
+    if (id && id !== 65535 && count) items.push({ id, count, reserved, slot: i });
+  }
+  const cells = editorCellFields(page, at + 0x21, config);
+  return {
+    ...tama, alive: tama.id > 0 && tama.id < 65535 && tama.stage >= 2 && tama.stage <= 5 && (!neon || progress.canCare),
+    eyeId: u16(page, at + 6), color: (page[at + 0x19] & 31), age: u16(page, at + 0xC), points: u32(page, layout.points),
+    cleanliness: page[at + 0x14] & 16 ? 0 : Math.max(0, 3 - page[pet.dirt]),
+    fuel: page[at + 0x1B], poop: page[layout.poop], meals: page[at + 0x3A + delta],
+    happinessCount: page[at + 0x3B + delta], mistakes: page[at + 0x1E], vitamin: !!(page[at + 0x14] & 2),
+    autopilot: page[0xF80] === 0xC7 ? (page[0xF81] === 15 ? 47 : page[0xF81] & 63) : 0,
+    autopilotStored: page[0xF80] === 0xC7 && (page[0xF81] & 0xC0) === 0x80,
+    awake: page[0xFC0] === 0xA7, planetTravel: neon && page[0xFC4] === 0xB6,
+    planet: neon ? page[0x207] : null, planets: neon ? page[0x89] & 7 : null,
+    cells: cells && (config?.ids || [0, 1, 2]).map(id => ({ id, count: cells.filter(value => value === id).length })),
+    items,
+    book: (config?.roster || []).map(entry => ({ ...entry, unlocked: saveEditorBit(page, entry.bit) })),
+    missions: MISSION_NAMES.map((name, i) => ({ name: neon && i >= 18 && i <= 20 ?
+      ['Cosmic Tamas', 'New Tama Kinds', 'Tama Planet Kinds'][i - 18] : name,
+      ...(neon ? progress.missions[i] : { complete: saveEditorBit(page, (0xF4 + shift) * 8 + i) }) })),
+    stars: Array.from({ length: 5 }, (_, slot) => {
+      const word = u32(page, layout.stars + slot * 4);
+      return { slot, used: !!(word & 1), age: (word >> starShift) & starMax, cause: (word >> 1) & 7 };
+    }),
+  };
+}
+function editParadiseMission(page, kind, index, complete) {
+  editorNumber(index, MISSION_NAMES.length - 1);
+  if (kind === 'neon') { neonMissionSet(page, { index, complete }); return; }
+  const shift = kind === 'gen3' ? 12 : 0, flag = (0xF4 + shift) * 8 + index;
+  if (saveEditorBit(page, flag) === complete) return;
+  const offset = MISSION_OFFSETS[index] + shift, target = MISSION_TARGETS[index];
+  if (index >= 16) {
+    for (let i = 0; i < target; i++) saveEditorBit(page, offset * 8 + i, complete);
+  } else if (index === 13) {
+    const count = u32(page, offset);
+    w32(page, offset, complete ? Math.max(count, target) : Math.min(count, target - 1));
+  } else {
+    const count = u16(page, offset), value = complete ? Math.max(count, target) : Math.min(count, target - 1);
+    page[offset] = value & 255;
+    page[offset + 1] = value >> 8;
+  }
+  for (let i = 0; i < 3; i++) saveEditorBit(page, flag - i * 32, complete);
+}
+function editorClearEvent(page, at, event) {
+  const byte = event >> 3, mask = ~(1 << (event & 7));
+  page[at - 10 + byte] &= mask;
+  page[at - 5 + byte] &= mask;
+}
+function paradiseEditorSet(save, changes, config) {
+  config = editorLayoutConfig(save, config);
+  const e = save.edition, kind = family(e), pet = PET[kind], layout = EDITOR_LAYOUTS[kind], neon = kind === 'neon';
+  const base = paraSettings(save, e), info = paradiseEditorInfo(save, config);
+  if (!base || !info) throw new Error('the save has no settings block');
+  for (const key of ['care', 'sick', 'clearPoop', 'vitamin', 'awake', 'planetTravel'])
+    if (changes[key] !== undefined && typeof changes[key] !== 'boolean') throw new Error('Choose a valid option.');
+  for (const group of ['missions', 'book'])
+    if (changes[group]?.some(([, value]) => typeof value !== 'boolean')) throw new Error('Choose a valid option.');
+  const page = Uint8Array.from(base), pages = new Map(save.pages), at = pet.tama, delta = neon ? 1 : 0;
+  if (changes.appearance) {
+    const { body, eyes, color, stage } = changes.appearance;
+    if (!info.alive || !config?.appearance) throw new Error('Invalid Appearance');
+    editorNumber(body, 4999, 1001); editorNumber(eyes, 4999, 1001); editorNumber(stage, 5, 2);
+    const knownCharacter = id => config.characters?.some(character => character.id === id && character.stage === stage);
+    if ((body !== info.id || stage !== info.stage) && !knownCharacter(body) ||
+        (eyes !== info.eyeId || stage !== info.stage) && !knownCharacter(eyes))
+      throw new Error('Choose a valid option.');
+    if (color !== 31) editorNumber(color, 15);
+    const source = pages.get(layout.active);
+    if (source?.length !== PAGE || (neon && u32(source, 0x10C) !== 0xFF000000 &&
+        (u16(source, 0x10A) !== info.id || (u32(source, 0) + u32(source, 4)) >>> 0)))
+      throw new Error('Invalid Appearance');
+    const record = Uint8Array.from(source);
+    w32(record, 0x10C, 0xFF000000);
+    pages.set(layout.active, record);
+    page[at + 4] = body & 255; page[at + 5] = body >> 8;
+    page[at + 6] = eyes & 255; page[at + 7] = eyes >> 8;
+    page[at + 0x19] = (page[at + 0x19] & ~31) | color;
+    if (stage !== info.stage) {
+      page[at + 0x18] = (page[at + 0x18] & ~0x1C) | (stage << 2);
+      if (!neon) {
+        page.fill(0, at + 0x48, at + 0x4C);
+        page[at + 0x14] &= 16;
+        page.fill(0, at + 0x15, at + 0x18);
+        page.fill(0, at - 12, at - 10);
+        page.fill(0, at + 0x20, at + 0x2E);
+        for (const event of [1, 19, 20, 28]) editorClearEvent(page, at, event);
+      }
+    }
+  }
+  if (changes.level !== undefined) {
+    const level = editorNumber(changes.level, 10);
+    page[pet.level] = !neon && level > info.level ? (base[pet.level] & 0xF0) | level : level * 17;
+  }
+  if (changes.points !== undefined) w32(page, layout.points, editorNumber(changes.points, 99999));
+  if (changes.care) careForPet(page, pet);
+  if (changes.age !== undefined) {
+    const age = editorNumber(changes.age, 999);
+    page[at + 0xC] = age & 255;
+    page[at + 0xD] = age >> 8;
+  }
+  if (!neon && changes.hunger === 6) {
+    editorClearEvent(page, at, 0x11);
+    page.fill(0, at + 0x40, at + 0x42);
+    const timer = pet.illnessTimers + 8;
+    page.fill(0, timer, timer + 4);
+  }
+  if (!neon && changes.happy === 20) editorClearEvent(page, at, 0x12);
+  for (const [key, offset, max] of [['hunger', 0x1C, 6], ['happy', 0x1D, 20], ['fuel', 0x1B, 60],
+    ['meals', 0x3A + delta, 99], ['happinessCount', 0x3B + delta, 99]]) {
+    if (changes[key] !== undefined) page[at + offset] = editorNumber(changes[key], max);
+  }
+  if (changes.cleanliness !== undefined) {
+    const dirt = 3 - editorNumber(changes.cleanliness, 3);
+    page[pet.dirt] = dirt;
+    page[at + 0x14] = (page[at + 0x14] & ~16) | (dirt === 3 ? 16 : 0);
+  }
+  if (changes.sick !== undefined) {
+    page[at + 0x10] = changes.sick ? 2 : 0;
+    page.fill(0, pet.illnessTimers, pet.illnessTimers + 8);
+    page[at - 9] &= ~12;
+    page[at - 4] &= ~12;
+  }
+  if (changes.clearPoop) {
+    page.fill(0, layout.timers, layout.timers + 12);
+    page.fill(0, layout.poop, layout.poop + 2);
+    page.fill(0, layout.elapsed, layout.elapsed + 2);
+    for (const origin of [at - 10, at - 5]) { page[origin + 1] &= ~64; page[origin + 2] &= ~1; }
+  }
+  if (changes.vitamin !== undefined)
+    page[at + 0x14] = changes.vitamin ? (page[at + 0x14] & 16) | 2 : page[at + 0x14] & ~2;
+  if (changes.mistakes !== undefined) {
+    const count = editorNumber(changes.mistakes, 255), visible = Math.min(count, 6);
+    for (let i = 0; i < 6; i++) {
+      if (i >= visible) page[at + 0x34 + i] = 0;
+      else if (i >= page[at + 0x33] || !page[at + 0x34 + i]) page[at + 0x34 + i] = 0x11;
+    }
+    page[at + 0x33] = visible;
+    page[at + 0x1E] = count;
+  }
+  if (changes.autopilot !== undefined && config?.autopilot) {
+    page[0xF80] = 0xC7;
+    page[0xF81] = 128 | editorNumber(changes.autopilot, 63);
+  }
+  if (changes.awake !== undefined && config?.awake) {
+    page[0xFC0] = changes.awake ? 0xA7 : 0;
+    page[at - 2] &= ~4;
+  }
+  if (changes.planetTravel !== undefined && neon && config?.planetTravel)
+    page[0xFC4] = changes.planetTravel ? 0xB6 : 0;
+  if (changes.cells) {
+    const start = at + 0x21, known = config?.ids || [0, 1, 2], before = editorCellFields(page, start, config);
+    if (!before) throw new Error('Invalid field Cells');
+    const counts = new Map(changes.cells);
+    const rest = before.filter(id => !counts.has(id));
+    for (const [id, count] of counts) {
+      if (!known.includes(id)) throw new Error('Invalid Cell field');
+      rest.push(...Array(editorNumber(count, 11)).fill(id));
+    }
+    editorNumber(rest.length, 11);
+    if (config?.split && page[0xF0F] !== 0x5A) {
+      page.fill(0, 0xF10, known.length === 6 ? 0xF71 : 0xF11);
+      page[0xF0F] = 0x5A;
+    }
+    page[start] = rest.length;
+    page.set(rest, start + 1);
+  }
+  for (const [index, complete] of changes.missions || []) editParadiseMission(page, kind, index, complete);
+  if (neon && (changes.planet !== undefined || changes.planets !== undefined)) {
+    const planet = editorNumber(changes.planet ?? info.planet, 2);
+    const access = editorNumber(changes.planets ?? info.planets, 7);
+    if (!(access & (1 << planet))) throw new Error('Unlock the current planet before selecting it');
+    page[0x89] = (page[0x89] & ~7) | access;
+    if (planet !== info.planet) {
+      page[0x207] = planet;
+      page.fill(0, 0x162, 0x168);
+      if ((page[pet.level] & 15) === 4) page[pet.level] = 0x45;
+    }
+  }
+  for (const [bit, unlocked] of changes.book || []) {
+    const entry = config?.roster?.find(entry => entry.bit === bit);
+    if (!entry) throw new Error('Unknown Tama File entry');
+    saveEditorBit(page, bit, unlocked);
+    if (!unlocked) saveEditorBit(page, entry.viewed, false);
+  }
+  for (const [slot, edit] of changes.stars || []) {
+    const old = info.stars[editorNumber(slot, 4)], offset = layout.stars + slot * 4;
+    const index = layout.stars - 4, latest = (page[index] >> 3) & 7;
+    if ((edit.create !== undefined && typeof edit.create !== 'boolean') ||
+        (edit.remove !== undefined && typeof edit.remove !== 'boolean') || (edit.create && (old.used || edit.remove)))
+      throw new Error('Choose a valid option.');
+    if (edit.remove) {
+      if (!info.alive && latest === slot) throw new Error('Cannot remove the current memorial');
+      w32(page, offset, u32(page, offset) & ~1);
+      if (latest === slot) for (let n = 1; n < 5; n++) {
+        const other = (slot + 5 - n) % 5;
+        if (!(u32(page, layout.stars + other * 4) & 1)) continue;
+        page[index] = (page[index] & ~0x38) | (other << 3);
+        break;
+      }
+      continue;
+    }
+    if (!old.used && !edit.create) throw new Error('The past Tama slot is empty');
+    if (edit.create) page[index] = (page[index] & ~7) | ((slot + 1) % 5);
+    const shift = neon ? 13 : 4, max = neon ? 1023 : 255;
+    const age = editorNumber(edit.age ?? old.age, max);
+    const cause = edit.cause === undefined ? old.cause : editorNumber(edit.cause, 4, 1);
+    const mask = (max << shift) | 0x100E, current = edit.create ? 1 : u32(page, offset);
+    w32(page, offset, (current & ~mask) | (age << shift) | (age > 29 ? 0x1000 : 0) | (cause << 1));
+  }
+  for (const [slot, count] of changes.items || []) {
+    if (!info.items.some(item => item.slot === slot)) throw new Error('The item slot is empty');
+    const offset = layout.bag + 0x500 + (slot >> 1), shift = (slot & 1) * 4;
+    const old = (page[offset] >> shift) & 15;
+    const max = neon ? (config?.itemLimits?.get(u16(page, layout.bag + slot * 2)) ?? (old + ((page[offset + 320] >> shift) & 15))) -
+      ((page[offset + 320] >> shift) & 15) : 15;
+    page[offset] = (page[offset] & ~(15 << shift)) | (editorNumber(count, Math.max(0, max)) << shift);
+  }
+  for (const [id, count] of changes.addItems || []) {
+    const item = config?.catalog?.find(entry => entry.id === id && !entry.fixed);
+    const max = item && (neon ? item.max : 15);
+    if (!max || !Number.isInteger(id) || id < 5000 || id > 8999) throw new Error('Unknown item');
+    editorNumber(count, max, 1);
+    const counts = layout.bag + 0x500;
+    let target = -1;
+    for (let slot = 0; slot < 640; slot++) {
+      const item = u16(page, layout.bag + slot * 2), shift = (slot & 1) * 4;
+      const held = (page[counts + (slot >> 1)] >> shift) & 15;
+      const reserved = neon && ((page[counts + 320 + (slot >> 1)] >> shift) & 15);
+      if (id === item && (held || reserved || !neon)) { target = slot; break; }
+      if (target === -1 && (neon ? !held && !reserved : !item)) target = slot;
+      if (!neon && !item) break;
+    }
+    if (target < 0) throw new Error('Bag is full');
+    const entry = layout.bag + target * 2, offset = counts + (target >> 1), shift = (target & 1) * 4;
+    if (u16(page, entry) === id && ((page[offset] >> shift) & 15)) continue;
+    const reserved = neon ? (page[offset + 320] >> shift) & 15 : 0;
+    if (reserved && u16(page, entry) === id) continue;
+    page[entry] = id & 255;
+    page[entry + 1] = id >> 8;
+    page[offset] = (page[offset] & ~(15 << shift)) | (count << shift);
+  }
+  if (pages.size === save.pages.size && [...pages].every(([address, data]) => data === save.pages.get(address)) &&
+      page.every((byte, i) => byte === base[i])) return save;
+  const settings = planParadiseClock(save.pages, e, page);
+  if (!settings) throw new Error('the Neon settings generation cannot be advanced');
+  for (const [address, data] of settings) pages.set(address, data);
+  return { ...save, pages };
+}
+
 // ---------------------------------------------------------------- TamaEmu
 const APP_CFG = 0xA0140, PMXC = 0x43584D50, PG_MAGIC = 0x50584D50, PG_MAX = 64;
 const KINDS = { 0: { dev: 'pc', size: 0x400000, app: 'plus-color' }, 1: { dev: 'idl', size: 0x800000, app: 'idl' },
@@ -561,6 +867,6 @@ function t7SaveIn(img, save, base = 0xC0000) {
 }
 
 root.ParamixSaves = { paraPet, paraPetSet, neonSaveLayout, neonSettings, neonProgress, neonProgressSet, paraClear, paraWrite, t7SaveOut, t7SaveIn, t7SaveCheck, T7_EE, idPage, region, residentRanges, paraRanges, family, settingsOk, sealSettings, crc16arc, paraFromImage, paraEncode, paraDecode, paraCheck, paraClock, emuCfg, emuGuestAsync, lzGoneApply, KINDS, NEON_SETTINGS, NEON_GENERATION, SET_A, SET_B,
-  gameClock, changeGameClock, paradiseClockPage, planParadiseClock };
+  gameClock, changeGameClock, paradiseClockPage, planParadiseClock, paradiseEditorInfo, paradiseEditorSet, paradiseEditorAppearance, paradiseEditorDefaultConfig: editorLayoutConfig };
 if (typeof module !== 'undefined') module.exports = root.ParamixSaves;
 })(typeof window !== 'undefined' ? window : globalThis);

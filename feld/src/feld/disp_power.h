@@ -1,13 +1,14 @@
 // LCD power-up register writes captured from the Flash Utility.
 // Keep the write order and repeated writes. Each step indexes the address and
 // value tables separately to avoid storing the same 32-bit words repeatedly.
-__attribute__((section(".initdata"))) static const unsigned int disp_power_address[]={
-  0x45000020, 0x45000210, 0x45000214, 0x45000218, 0x45000204, 0x45000200,
-  0x4003a000, 0x4003a004, 0x40038000, 0x40038014, 0x40038018, 0x40038004,
-  0x40038008, 0x4003800c, 0x40038010, 0x40007034, 0x4001803c, 0x4001903c,
-  0x4001a03c, 0x40018004, 0x40018000, 0x40018008, 0x40019004, 0x40019000,
-  0x40019008, 0x4001a004, 0x4001a000, 0x4001a008, 0x40003000, 0x40003018,
-  0x4000301c, 0x40003020, 0x40003024, 0x40003014, 0x40003008, 0x4000303c
+// Word offsets from 0x45000000 for the first six registers and from
+// 0x40000000 for the remaining registers.
+__attribute__((section(".initdata"))) static const unsigned short disp_power_address[]={
+  0x0008, 0x0084, 0x0085, 0x0086, 0x0081, 0x0080, 0xe800, 0xe801,
+  0xe000, 0xe005, 0xe006, 0xe001, 0xe002, 0xe003, 0xe004, 0x1c0d,
+  0x600f, 0x640f, 0x680f, 0x6001, 0x6000, 0x6002, 0x6401, 0x6400,
+  0x6402, 0x6801, 0x6800, 0x6802, 0x0c00, 0x0c06, 0x0c07, 0x0c08,
+  0x0c09, 0x0c05, 0x0c02, 0x0c0f,
 };
 
 __attribute__((section(".initdata"))) static const unsigned int disp_power_value[]={
@@ -26,28 +27,47 @@ __attribute__((section(".initdata"))) static const unsigned int disp_power_value
   0x0000001f
 };
 
-__attribute__((section(".initdata"))) static const unsigned char disp_power_seq[][2]={
-  {0,0}, {1,1}, {2,1}, {3,1}, {4,1}, {5,2}, {4,1}, {5,2}, {0,3}, {6,4}, {7,4}, {7,5},
-  {8,1}, {9,6}, {10,7}, {9,6}, {11,8}, {12,9}, {13,10}, {14,10}, {8,11}, {8,1}, {9,6}, {10,7},
-  {9,6}, {11,8}, {12,9}, {13,10}, {14,10}, {8,11}, {8,1}, {9,6}, {10,7}, {9,6}, {11,12}, {12,9},
-  {13,10}, {14,10}, {8,11}, {8,1}, {15,1}, {8,1}, {9,6}, {10,7}, {9,6}, {11,12}, {12,9}, {13,10},
-  {14,10}, {8,11}, {8,1}, {9,6}, {10,7}, {9,6}, {11,8}, {12,9}, {13,10}, {14,10}, {8,11}, {8,1},
-  {9,6}, {10,7}, {9,6}, {11,8}, {12,9}, {13,10}, {14,10}, {8,11}, {8,1}, {16,13}, {17,14}, {18,13},
-  {19,15}, {20,16}, {21,17}, {19,15}, {20,16}, {21,18}, {19,15}, {20,19}, {21,20}, {19,15}, {20,19}, {21,18},
-  {19,15}, {20,21}, {21,22}, {19,15}, {20,21}, {21,18}, {19,15}, {20,23}, {21,24}, {19,15}, {20,23}, {21,18},
-  {19,25}, {20,26}, {21,18}, {19,15}, {20,26}, {21,27}, {19,11}, {20,28}, {21,27}, {19,15}, {20,28}, {21,29},
-  {19,15}, {20,30}, {21,29}, {19,15}, {20,30}, {21,29}, {19,15}, {20,31}, {21,32}, {19,15}, {20,31}, {21,29},
-  {19,15}, {20,33}, {21,34}, {19,15}, {20,33}, {21,29}, {19,15}, {20,35}, {21,36}, {19,15}, {20,35}, {21,29},
-  {19,15}, {20,37}, {21,38}, {19,15}, {20,37}, {21,29}, {19,15}, {20,39}, {21,40}, {19,15}, {20,39}, {21,29},
-  {19,15}, {20,41}, {21,42}, {19,15}, {20,41}, {21,29}, {19,15}, {20,43}, {21,44}, {19,15}, {20,43}, {21,29},
-  {22,45}, {23,14}, {24,46}, {22,47}, {23,14}, {24,46}, {22,47}, {23,48}, {24,49}, {22,47}, {23,48}, {24,46},
-  {22,47}, {23,50}, {24,51}, {22,47}, {23,50}, {24,46}, {22,47}, {23,52}, {24,53}, {22,47}, {23,52}, {24,46},
-  {22,54}, {23,14}, {24,46}, {22,47}, {23,14}, {24,46}, {22,47}, {23,55}, {24,56}, {22,47}, {23,55}, {24,46},
-  {22,57}, {23,14}, {24,46}, {22,47}, {23,14}, {24,46}, {22,47}, {23,58}, {24,59}, {22,47}, {23,58}, {24,46},
-  {22,47}, {23,60}, {24,61}, {22,47}, {23,60}, {24,46}, {22,47}, {23,62}, {24,63}, {22,47}, {23,62}, {24,46},
-  {22,47}, {23,64}, {24,65}, {22,47}, {23,64}, {24,46}, {25,1}, {26,16}, {27,66}, {25,1}, {26,16}, {27,67},
-  {25,1}, {26,19}, {27,68}, {25,1}, {26,19}, {27,67}, {25,1}, {26,21}, {27,69}, {25,1}, {26,21}, {27,67},
-  {25,1}, {26,23}, {27,70}, {25,1}, {26,23}, {27,67}, {28,1}, {29,1}, {30,1}, {31,1}, {32,1}, {33,1},
-  {28,71}, {34,1}, {35,72}, {28,10}, {22,47}, {23,55}, {24,56}, {22,47}, {23,55}, {24,46}
+// Pack two 12-bit writes in three bytes. Each index selects a register
+// and one of its 73 possible values (36 * 73 < 4096).
+#define DISP_POWER_VALUES (sizeof(disp_power_value)/sizeof(disp_power_value[0]))
+#define DISP_WRITE(address,value) ((address)*DISP_POWER_VALUES+(value))
+#define DISP_PAIR(a,b,c,d) { (DISP_WRITE(a,b)&255u), \
+  ((DISP_WRITE(a,b)>>8)|(DISP_WRITE(c,d)&15u)<<4), (DISP_WRITE(c,d)>>4) }
+__attribute__((section(".initdata"))) static const unsigned char disp_power_seq[][3]={
+  DISP_PAIR(0,0,1,1), DISP_PAIR(2,1,3,1), DISP_PAIR(4,1,5,2), DISP_PAIR(4,1,5,2),
+  DISP_PAIR(0,3,6,4), DISP_PAIR(7,4,7,5), DISP_PAIR(8,1,9,6), DISP_PAIR(10,7,9,6),
+  DISP_PAIR(11,8,12,9), DISP_PAIR(13,10,14,10), DISP_PAIR(8,11,8,1), DISP_PAIR(9,6,10,7),
+  DISP_PAIR(9,6,11,8), DISP_PAIR(12,9,13,10), DISP_PAIR(14,10,8,11), DISP_PAIR(8,1,9,6),
+  DISP_PAIR(10,7,9,6), DISP_PAIR(11,12,12,9), DISP_PAIR(13,10,14,10), DISP_PAIR(8,11,8,1),
+  DISP_PAIR(15,1,8,1), DISP_PAIR(9,6,10,7), DISP_PAIR(9,6,11,12), DISP_PAIR(12,9,13,10),
+  DISP_PAIR(14,10,8,11), DISP_PAIR(8,1,9,6), DISP_PAIR(10,7,9,6), DISP_PAIR(11,8,12,9),
+  DISP_PAIR(13,10,14,10), DISP_PAIR(8,11,8,1), DISP_PAIR(9,6,10,7), DISP_PAIR(9,6,11,8),
+  DISP_PAIR(12,9,13,10), DISP_PAIR(14,10,8,11), DISP_PAIR(8,1,16,13), DISP_PAIR(17,14,18,13),
+  DISP_PAIR(19,15,20,16), DISP_PAIR(21,17,19,15), DISP_PAIR(20,16,21,18), DISP_PAIR(19,15,20,19),
+  DISP_PAIR(21,20,19,15), DISP_PAIR(20,19,21,18), DISP_PAIR(19,15,20,21), DISP_PAIR(21,22,19,15),
+  DISP_PAIR(20,21,21,18), DISP_PAIR(19,15,20,23), DISP_PAIR(21,24,19,15), DISP_PAIR(20,23,21,18),
+  DISP_PAIR(19,25,20,26), DISP_PAIR(21,18,19,15), DISP_PAIR(20,26,21,27), DISP_PAIR(19,11,20,28),
+  DISP_PAIR(21,27,19,15), DISP_PAIR(20,28,21,29), DISP_PAIR(19,15,20,30), DISP_PAIR(21,29,19,15),
+  DISP_PAIR(20,30,21,29), DISP_PAIR(19,15,20,31), DISP_PAIR(21,32,19,15), DISP_PAIR(20,31,21,29),
+  DISP_PAIR(19,15,20,33), DISP_PAIR(21,34,19,15), DISP_PAIR(20,33,21,29), DISP_PAIR(19,15,20,35),
+  DISP_PAIR(21,36,19,15), DISP_PAIR(20,35,21,29), DISP_PAIR(19,15,20,37), DISP_PAIR(21,38,19,15),
+  DISP_PAIR(20,37,21,29), DISP_PAIR(19,15,20,39), DISP_PAIR(21,40,19,15), DISP_PAIR(20,39,21,29),
+  DISP_PAIR(19,15,20,41), DISP_PAIR(21,42,19,15), DISP_PAIR(20,41,21,29), DISP_PAIR(19,15,20,43),
+  DISP_PAIR(21,44,19,15), DISP_PAIR(20,43,21,29), DISP_PAIR(22,45,23,14), DISP_PAIR(24,46,22,47),
+  DISP_PAIR(23,14,24,46), DISP_PAIR(22,47,23,48), DISP_PAIR(24,49,22,47), DISP_PAIR(23,48,24,46),
+  DISP_PAIR(22,47,23,50), DISP_PAIR(24,51,22,47), DISP_PAIR(23,50,24,46), DISP_PAIR(22,47,23,52),
+  DISP_PAIR(24,53,22,47), DISP_PAIR(23,52,24,46), DISP_PAIR(22,54,23,14), DISP_PAIR(24,46,22,47),
+  DISP_PAIR(23,14,24,46), DISP_PAIR(22,47,23,55), DISP_PAIR(24,56,22,47), DISP_PAIR(23,55,24,46),
+  DISP_PAIR(22,57,23,14), DISP_PAIR(24,46,22,47), DISP_PAIR(23,14,24,46), DISP_PAIR(22,47,23,58),
+  DISP_PAIR(24,59,22,47), DISP_PAIR(23,58,24,46), DISP_PAIR(22,47,23,60), DISP_PAIR(24,61,22,47),
+  DISP_PAIR(23,60,24,46), DISP_PAIR(22,47,23,62), DISP_PAIR(24,63,22,47), DISP_PAIR(23,62,24,46),
+  DISP_PAIR(22,47,23,64), DISP_PAIR(24,65,22,47), DISP_PAIR(23,64,24,46), DISP_PAIR(25,1,26,16),
+  DISP_PAIR(27,66,25,1), DISP_PAIR(26,16,27,67), DISP_PAIR(25,1,26,19), DISP_PAIR(27,68,25,1),
+  DISP_PAIR(26,19,27,67), DISP_PAIR(25,1,26,21), DISP_PAIR(27,69,25,1), DISP_PAIR(26,21,27,67),
+  DISP_PAIR(25,1,26,23), DISP_PAIR(27,70,25,1), DISP_PAIR(26,23,27,67), DISP_PAIR(28,1,29,1),
+  DISP_PAIR(30,1,31,1), DISP_PAIR(32,1,33,1), DISP_PAIR(28,71,34,1), DISP_PAIR(35,72,28,10),
+  DISP_PAIR(22,47,23,55), DISP_PAIR(24,56,22,47), DISP_PAIR(23,55,24,46),
 };
-#define DISP_POWER_N (sizeof(disp_power_seq)/sizeof(disp_power_seq[0]))
+#undef DISP_PAIR
+#undef DISP_WRITE
+#define DISP_POWER_N (2u*sizeof(disp_power_seq)/sizeof(disp_power_seq[0]))

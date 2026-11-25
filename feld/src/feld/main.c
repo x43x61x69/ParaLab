@@ -73,6 +73,9 @@ static const char menu_font_tag[]="PMXFONT3";
 #define F_KEEP_AWAKE 0x8000u
 #define AWAKE_ON 0xA7u
 #define AWAKE_SAVE 0xFC0u
+#define F_NEON_TRAVEL 0x20000u
+#define NEON_TRAVEL_SAVE 0xFC4u
+#define NEON_TRAVEL_ON 0xB6u
 #define F_NEON_TAMA 0x800u           /* verified Neon appearance rebuild support */
 #ifdef FELD_CLEAN
 #define F_NEON_SAVES 0u             /* launcher-only build has no native saves */
@@ -2410,18 +2413,22 @@ static void tama_menu(void){
 #ifndef FELD_CLEAN
   if(edit_rows && nfields() && resident_layout()) edit_rows=6u;
 #endif
-  u32 n=edit_rows+!!(g_cfg.flags & F_KEEP_AWAKE);
+  u32 travel_row=edit_rows+!!(g_cfg.flags & F_KEEP_AWAKE);
+  u32 n=travel_row+!!(g_cfg.flags & F_NEON_TRAVEL);
   u32 sel=0;
+  int height=n>=7u?13:17;
   for(;;){
     rect(0,0,FELD_SCREEN_W,FELD_SCREEN_H,BG); menu_title(1,"TAMA");
     for(u32 i=0;i<n;i++){
-      int height=n>6u?15:n==6u?17:20;
       int y=13+(int)i*height;
       if(i==sel) rect(0,y,128,y+height,RGB(60,60,110));
-      if(i==edit_rows){
-        const char *labels=(const char*)fl(g_cfg.stub_off+0xF40u);
-        text(3,y,labels+(g_set[AWAKE_SAVE]==AWAKE_ON?0:10),WHITE,1);
-        text(9,y+7,labels+20,GREY,1);
+      if(i>=edit_rows){
+        int travel=i==travel_row;
+        const char *labels=(const char*)fl(g_cfg.stub_off+(travel?0xF9Cu:0xF40u));
+        if(!travel) text(9,y+7,labels+20,GREY,1);
+        if(travel ? g_set[NEON_TRAVEL_SAVE]!=NEON_TRAVEL_ON : g_set[AWAKE_SAVE]!=AWAKE_ON)
+          labels+=travel?17:10;
+        text(3,y,labels,WHITE,1);
         continue;
       }
       char value[24]; tama_value(i,value);
@@ -2442,9 +2449,11 @@ static void tama_menu(void){
     if(k==1 || k==K_A){ sel=wrap_step(sel,k==K_A?1:g_step,0,n-1u); continue; }
     if(k==K_BACK) return;
     if(k!=K_OK) continue;
-    if(sel==edit_rows){
-      g_set[AWAKE_SAVE]=g_set[AWAKE_SAVE]==AWAKE_ON?0u:AWAKE_ON;
-      g_set[g_cfg.tama_off-2u]&=(u8)~4u; /* End a baby nap already in progress. */
+    if(sel>=edit_rows){
+      int travel=sel==travel_row;
+      u32 off=travel?NEON_TRAVEL_SAVE:AWAKE_SAVE, marker=travel?NEON_TRAVEL_ON:AWAKE_ON;
+      g_set[off]=g_set[off]==marker?0u:marker;
+      if(!travel) g_set[g_cfg.tama_off-2u]&=(u8)~4u; /* End a baby nap already in progress. */
       set_commit();
       continue;
     }
@@ -2804,7 +2813,7 @@ static void main_menu(void){
   if(fields || (g_cfg.flags & F_NEON_SAVES)) kinds[n++]=0;
   if(g_cfg.flags & F_BAG) kinds[n++]=1;
   if(g_cfg.flags & (F_BAG|F_NEON_EDIT)) kinds[n++]=2;
-  if(tama_ok() || (g_cfg.flags & F_KEEP_AWAKE)) kinds[n++]=4;
+  if(tama_ok() || (g_cfg.flags & (F_KEEP_AWAKE|F_NEON_TRAVEL))) kinds[n++]=4;
   if(tama_ok() || progress_neon_start() || (g_cfg.flags & F_NEON_EDIT)) kinds[n++]=7;
   if(g_napp) kinds[n++]=3;
   u32 sel = g_napp ? n-1u : 0u;       /* keep the installed program selected */

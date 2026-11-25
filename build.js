@@ -115,6 +115,7 @@ html = html.replace(/__GUIDE_([a-z.-]+)__/g, (_, file) => {
 const webDirectory = web ? 'catalog-v' + v : null;
 const { config: catalogConfig, assets: catalogAssets } = require('./tools/build_catalog.js').buildCatalog(__dirname, webDirectory);
 const app = fs.readFileSync(__dirname + '/src/app.js', 'utf8')
+  .replace('/*__SAVE_EDITOR__*/', () => fs.readFileSync(path.join(__dirname, 'src/save_editor.js'), 'utf8'))
   .replace('__FLASH_TOOL_REVISION__', String(flashRevision))
   .replace('__FOOD_ARCHIVE__', fs.readFileSync(__dirname + '/six/special-food/food-item.arc2').toString('base64'))
   .replace('/*__COLLECTION_REFERENCE__*/ {}', () => JSON.stringify(require('./src/collection_reference.json')))

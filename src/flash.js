@@ -714,7 +714,7 @@ class Paradise {
     return reply;
   }
   /** Write and verify 4 KB sectors. Publish referenced data before its settings. */
-  async writeSectors(map, progress, cancel, guard, finishCheck, publishLast) {
+  async writeSectors(map, progress, cancel, guard, finishCheck, publishLast, myLabSlot = false) {
     this.ready();
     if (this.info.readOnly) throw new Error('The connected Flash Tool is read-only');
     const myLabSave = this.info.edition === 0xFE || this.info.edition === MY_LAB_ON_PARADISE;
@@ -723,8 +723,16 @@ class Paradise {
       .map((s) => [s, map.get(s)]), extra = 0;
     if (myLabSave) {
       const ML = root.ParamixMyLab || require('./mylab.js');
-      if (jobs.some(([s, data]) => !Number.isInteger(s) || s % SECTOR || s < ML.DEVICE_SAVE_FIRST ||
-          s >= ML.DEVICE_SAVE_END || data.length !== SECTOR)) throw new Error('Invalid My Lab save sector');
+      const from = myLabSlot ? ML.menuSaveBank(0) : ML.DEVICE_SAVE_FIRST;
+      const end = myLabSlot ? ML.MENU_SLOT_CONTROL : ML.DEVICE_SAVE_END;
+      if (jobs.some(([s, data]) => !Number.isInteger(s) || s % SECTOR || s < from ||
+          s >= end || data.length !== SECTOR)) throw new Error('Invalid My Lab save sector');
+      if (myLabSlot && jobs.length && (!publishLast?.size || publishLast.size !== 1 ||
+          ![0, 1, 2].some(index => {
+            const bank = ML.menuSaveBank(index);
+            return publishLast.has(bank) && map.has(bank) &&
+              jobs.every(([address]) => address >= bank && address < bank + ML.MENU_BANK_SIZE);
+          }))) throw new Error('Invalid My Lab save slot write');
     }
     // test15: with the rescue start on the device, its own table is off while the pages are written, back last
     if (!myLabSave && guard && PARA_RESCUE && RESCUE_FIRST && !map.has(0)) {

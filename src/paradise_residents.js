@@ -27,11 +27,12 @@ function sumWords(b, from, to) {
   return sum;
 }
 
-function nativeGhost(record) {
+function nativeGhost(record, memorial = false) {
   if (!(record instanceof Uint8Array) || record.length < SPRITES) return null;
   const length = u32(record, 0x10C);
   const id = u16(record, 0x10A) || u16(record, 0x0E);
-  if (!id || id === 0xFFFF || u16(record, 0xFC) !== 5 ||
+  const stage = u16(record, 0xFC);
+  if (!id || id === 0xFFFF || (memorial ? stage < 2 || stage > 5 : stage !== 5) ||
       length < SPRITES || length > RECORD || length > record.length || length % 4 ||
       ((u32(record, 0) + u32(record, 4)) >>> 0) !== 0 ||
       sumWords(record, 8, length) !== u32(record, 0)) return null;
@@ -88,8 +89,9 @@ function build(visitor, core, appearance) {
   return native;
 }
 /** Rebuild preview-only body layers from the same ROM. */
-function preview(record, visitor, core) {
-  const ghost = nativeGhost(record);
+function preview(record, visitor, core, memorial = false) {
+  if (record instanceof Uint8Array && V.verifyGhost(record)) return record;
+  const ghost = nativeGhost(record, memorial);
   if (!ghost) return null;
   if (V.verifyGhost(ghost.bytes)) return ghost.bytes;
   if (!visitor || visitor.character.id !== ghost.id) return null;
@@ -228,6 +230,20 @@ function inspect(rom) {
   return { edition: data.edition, fields, currentField, current: active ? { id: active.id, bytes: active.bytes } : null };
 }
 
+function memorial(rom, slot, appearance) {
+  const data = info(rom);
+  if (data.reason || !Number.isInteger(slot) || slot < 0 || slot >= 5) return null;
+  const index = data.d.count - 7 + slot, address = flashAddress(rom, data.d, index);
+  if (!address) return null;
+  const current = nativeGhost(rom.subarray(address, address + RECORD), true);
+  if (!appearance) return { address, ...current };
+  const ghost = nativeGhost(appearance);
+  if (!ghost) throw new Error('Invalid Appearance');
+  const record = new Uint8Array(RECORD).fill(255);
+  record.set(ghost.bytes.subarray(0, ghost.length));
+  return { address, record };
+}
+
 function previousSlot(bits, slot, count) {
   for (let step = 1; step < count; step++) {
     const candidate = (slot + count - step) % count;
@@ -265,6 +281,9 @@ function apply(rom, change) {
   if (data.reason) throw new Error(data.reason);
   const { d, neon, store, names, banks } = data;
   const fields = names.map((_, id) => fieldView(rom, data, id));
+  if (!Number.isInteger(change.field) || !Number.isInteger(change.slot) ||
+      (change.type === 'move' && (!Number.isInteger(change.toField) || !Number.isInteger(change.toSlot))))
+    throw new Error('This resident slot is unavailable.');
   const from = fields[change.field], source = from?.slots[change.slot];
   if (!source || !from.available || !source.address) throw new Error('This resident slot is unavailable.');
   const { type } = change;
@@ -325,7 +344,7 @@ function apply(rom, change) {
   return { rom: out, ranges };
 }
 
-const api = { inspect, apply, build, preview, catalog };
+const api = { inspect, apply, build, preview, catalog, memorial };
 if (typeof module !== 'undefined') module.exports = api;
 else root.ParamixResidents = api;
 })(typeof window !== 'undefined' ? window : globalThis);

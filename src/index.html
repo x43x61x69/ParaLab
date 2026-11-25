@@ -275,6 +275,7 @@ __STUDIO_LAYOUT__
   <nav class="destinations" aria-label="Main navigation">
     <button id="btnWorkspace" aria-current="page">Workspace</button>
     <button id="btnDevice" data-t="device"></button>
+    <button id="btnSaveEditor" data-t="Save Editor">Save Editor</button>
     <button id="btnLabCodes" data-t="Lab & Shop Codes">Lab &amp; Shop Codes</button>
     <button id="btnHelp">Guide</button>
   </nav>
@@ -329,6 +330,16 @@ __STUDIO_LAYOUT__
       <button type="submit" class="btn" value="cancel" id="deviceDialogCancel">Cancel</button>
       <button type="submit" class="btn" value="alternate" id="deviceDialogAlternate" hidden></button>
       <button type="submit" class="btn primary" value="accept" id="deviceDialogAccept"></button>
+    </div>
+  </form>
+</dialog>
+<dialog class="lab-dialog save-editor-preview-dialog" id="editSavePreviewDialog" aria-labelledby="editSavePreviewDialogTitle" aria-describedby="editSavePreviewDialogMessage">
+  <form method="dialog">
+    <h2 id="editSavePreviewDialogTitle" data-t="Load a matching ROM?">Load a matching ROM?</h2>
+    <p id="editSavePreviewDialogMessage" data-t="Load a matching ROM to show previews. You can edit using text now.">Load a matching ROM to show previews. You can edit using text now.</p>
+    <div class="device-dialog-actions">
+      <button type="submit" class="btn" data-t="Continue in Text Mode" autofocus>Continue in Text Mode</button>
+      <button type="button" class="btn primary" id="editSavePreviewDialogOpen" data-t="Load Matching ROM…">Load Matching ROM…</button>
     </div>
   </form>
 </dialog>
@@ -524,6 +535,63 @@ __ANALYTICS_CARD__
     </section>
     <p id="codeEmpty" role="status" data-t="No matching codes." hidden>No matching codes.</p>
   </section>
+  <section class="save-editor" id="saveEditor" aria-labelledby="saveEditorTitle" hidden>
+    <h1 id="saveEditorTitle" data-t="Save Editor">Save Editor</h1>
+    <div class="save-editor-layout">
+      <section class="save-editor-sources" aria-labelledby="editSaveSourcesLabel">
+        <h2 id="editSaveSourcesLabel" data-t="Save Source">Save Source</h2>
+        <div class="save-editor-source" data-kind="file">
+          <button class="btn primary" type="button" id="editSaveOpen" data-t="Open Save File…">Open Save File…</button>
+          <input type="file" id="editSaveFile" accept=".tamasave,.tamastate,.mylabsave,.sav" hidden>
+          <p class="hint">.tamasave · .tamastate · .mylabsave · .sav</p>
+        </div>
+        <div class="save-editor-source" data-kind="rom">
+          <button class="btn" type="button" id="editSaveRom" data-t="Edit ROM Save">Edit ROM Save</button>
+          <button type="button" class="text-action" id="editSaveOpenRom" data-t="open" hidden>Open ROM</button>
+        </div>
+        <div class="save-editor-source" data-kind="device">
+          <button class="btn" type="button" id="editSaveDevice" data-t="Read Device Save">Read Device Save</button>
+          <a class="text-action" id="editSaveConnect" href="#connectionTitle" data-view-link="uart" data-t="Connect Device">Connect Device</a>
+        </div>
+        <div class="save-editor-context" id="editSaveSlots" hidden>
+          <label for="editSaveSlot" data-t="saveSlotL">Slot</label>
+          <select id="editSaveSlot"></select>
+        </div>
+        <div class="tools" id="editSaveDeviceControls" hidden>
+          <button type="button" class="btn small" id="editSaveStop" data-t="Cancel">Cancel</button>
+        </div>
+        <button type="button" class="btn small" id="editSaveRestart" data-t="Restart Device" hidden>Restart Device</button>
+        <p id="editSaveStatus" role="status" class="hint"></p>
+      </section>
+      <section id="editSaveDocument" aria-labelledby="editSaveSource" hidden>
+        <div class="save-editor-meta">
+          <div class="save-editor-title-row">
+            <h2 id="editSaveSource" tabindex="-1"><span id="editSaveSourceName"></span><span id="editSaveSourceEdition"></span><span id="editSaveSourceSlot"></span></h2>
+            <div class="save-editor-title-actions">
+              <p id="editSaveUnsaved" data-t="Unsaved Changes" hidden>Unsaved Changes</p>
+              <button type="button" class="btn small" id="editSaveLoadPreview" data-t="Load Matching ROM…">Load Matching ROM…</button>
+            </div>
+          </div>
+          <div class="save-editor-context" id="editSaveEditionRow" hidden>
+            <label for="editSaveEdition" data-t="Edition">Edition</label>
+            <select id="editSaveEdition" class="model-select"></select>
+          </div>
+          <div class="save-editor-preview-notice" id="editSavePreviewNotice">
+            <p id="editSavePreviewHint" class="hint" data-t="Load a matching ROM to show previews. You can edit using text now.">Load a matching ROM to show previews. You can edit using text now.</p>
+          </div>
+        </div>
+        <form id="editSaveForm"><div id="editSaveFields" class="save-editor-fields"></div></form>
+        <div class="save-editor-actions">
+          <div class="save-editor-save-actions">
+            <button type="button" class="btn" id="editSaveDownload" data-t="Download Edited Save">Download Edited Save</button>
+            <button type="button" class="btn primary" id="editSaveApply" data-t="Apply to Workspace">Apply to Workspace</button>
+            <button type="button" class="btn primary" id="editSaveWrite" data-t="Review and Write…">Review and Write…</button>
+          </div>
+          <button type="button" class="btn small" id="editSaveOriginal" data-t="Download Original Save">Download Original Save</button>
+        </div>
+      </section>
+    </div>
+  </section>
   <section class="plan device" id="device" hidden>
     <div class="device-heading">
       <h1>Device Console</h1>
@@ -664,6 +732,7 @@ __ANALYTICS_CARD__
           </section>
           <section id="uartSaveTools" role="tabpanel" aria-labelledby="deviceSaveTools" hidden>
             <div class="tools">
+              <button type="button" class="btn small" id="editSaveDeviceLink" data-t="Save Editor">Save Editor</button>
               <button class="btn small" id="btnSaveRead" data-t="devSaveRead" disabled></button>
               <button class="btn small" id="btnSaveWrite" data-t="devSaveWrite" disabled></button>
               <span class="hint" id="devSaveHint" data-t="deviceSaveFormats"></span>
@@ -1179,7 +1248,8 @@ __ANALYTICS_CARD__
       <p id="myLabSaveInfo"></p>
       <section class="rom-save-card"><h3 class="section-title">Active Save</h3>
       <div class="tools">
-        <button class="btn small" id="myLabSaveExport" type="button" data-t="myLabSaveExport"></button>
+        <button type="button" class="btn small" id="editSaveLabLink" data-t="Save Editor">Save Editor</button>
+          <button class="btn small" id="myLabSaveExport" type="button" data-t="myLabSaveExport"></button>
         <button class="btn small" id="myLabSaveReplace" type="button" data-t="myLabSaveReplace"></button>
         <input id="myLabSaveFile" type="file" accept=".tamastate,.mylabsave,.sav" hidden>
         <button class="btn small" id="myLabSaveDelete" type="button" data-t="paraClear"></button>
@@ -1472,6 +1542,7 @@ __ANALYTICS_CARD__
     </div>
     <div class="pane" id="pane-save" hidden>
       <section class="rom-save-card"><h3 class="section-title">Active Save</h3>
+      <button type="button" class="btn small" id="editSaveWorkspaceLink" data-t="Save Editor">Save Editor</button>
       <div class="tools" id="paraSlotRow" hidden>
         <label class="lbl" for="paraSlot" data-t="saveSlotL"></label>
         <select id="paraSlot"></select>

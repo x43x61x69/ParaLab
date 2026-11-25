@@ -506,7 +506,7 @@
   }
   const GHOST_POSES = [20, 24];
   const alignWord = (n) => (n + 3) & ~3;
-  function collectRomVisitors(ctx, core) {
+  function collectRomVisitors(ctx, core, { nativeAnimationFallback = false } = {}) {
     if (!ctx?.files?.[0]) return [];
     const pack = ctx.files[0], poses = core.paraLayers(pack), text = core.textTablesOf(ctx.rom);
     if (!poses || !text) return [];
@@ -528,22 +528,26 @@
       const frames = groups.get(body?.img);
       if (frames && body.sub < frames.length && !frames[body.sub]) frames[body.sub] = frame;
     }
-    if (ctx.editionId !== 8) {
-      // Transplanted figures can share individual sprites with other species.
-      // Read their own animation rather than assuming six consecutive sprites.
+    const complete = visitors.filter(visitor => visitor.frames.every(frames => frames.every(Boolean)));
+    if (nativeAnimationFallback || ctx.editionId !== 8) {
+      // Expanded ROMs can reuse sprites or reorder groups. The native animation
+      // identifies each layer even when a contiguous sprite group is unavailable.
+      const resolved = new Set(complete.map(visitor => visitor.character.id));
       for (const character of core.charTable(pack)) {
-        if (character.id >= 9000 || character.field < 7 || character.field > 9 ||
-            character.stage < 3 || character.stage > 5) continue;
+        const { id, stage, field } = character;
+        if (nativeAnimationFallback ? id < 1001 || id > 4999 || stage < 2 || stage > 5 || resolved.has(id) :
+          id >= 9000 || field < 7 || field > 9 || stage < 3 || stage > 5) continue;
         const frames = GHOST_POSES.map((count, zoom) =>
           Array.from({ length: count }, (_, i) => poses.frameAt(54 * character.animation + (zoom ? 30 : 1) + i)));
         if (!frames.every(group => group.every(Boolean))) continue;
         const sprites = frames.flatMap(group => [0, 1, 15].map(type =>
           group[0].find(layer => layer.type === type)?.img));
         if (!sprites.every(sprite => ctx.entries[sprite])) continue;
-        visitors.push({ character, sprites, frames, names: namesFor(character), pack, entries: ctx.entries });
+        complete.push({ character, sprites, frames, names: namesFor(character), pack, entries: ctx.entries });
+        resolved.add(id);
       }
     }
-    return visitors.filter((visitor) => visitor.frames.every((frames) => frames.every(Boolean)));
+    return complete;
   }
 
   function ghostName(out, offset, text) {

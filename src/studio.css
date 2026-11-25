@@ -722,3 +722,126 @@ body:has(main[data-view="codes"]) .interface-language { margin-inline-start:auto
 .demo-toggle[aria-pressed="true"] .demo-play,
 .demo-toggle[aria-pressed="false"] .demo-stop { display:none; }
 #guide-demos { scroll-margin-top:5rem; }
+
+.save-editor {
+  max-width:80rem;
+  margin:0 auto;
+  padding:clamp(24px,4vw,54px) clamp(14px,4vw,48px) clamp(40px,6vw,80px);
+}
+.save-editor h1 { margin:0 0 clamp(16px,2.5vw,28px); font-size:clamp(1.8rem,4vw,2.65rem); line-height:1.15; letter-spacing:-.055em; }
+.save-editor-layout { display:grid; gap:clamp(16px,2.2vw,28px); align-items:start; }
+.save-editor-layout:has(#editSaveDocument:not([hidden])) { grid-template-columns:minmax(14rem,17rem) minmax(0,1fr); }
+.save-editor-sources,#editSaveDocument {
+  min-width:0; background:var(--panel); border:1px solid var(--line); border-radius:16px;
+  box-shadow:0 4px 14px #18263308;
+}
+.save-editor-sources { padding:clamp(14px,2vw,22px); }
+.save-editor-sources h2 { margin:0 0 14px; font-size:1rem; }
+.save-editor-layout:not(:has(#editSaveDocument:not([hidden]))) .save-editor-sources {
+  display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px;
+}
+.save-editor-layout:not(:has(#editSaveDocument:not([hidden]))) .save-editor-sources > :not(.save-editor-source) { grid-column:1/-1; }
+.save-editor-layout:not(:has(#editSaveDocument:not([hidden]))) .save-editor-sources h2 { margin:0; }
+.save-editor-source {
+  display:flex; flex-direction:column; align-items:flex-start; gap:6px;
+  padding:10px; border:1px solid transparent; border-radius:10px; background:var(--check-a);
+}
+.save-editor-layout:has(#editSaveDocument:not([hidden])) .save-editor-source + .save-editor-source { margin-top:8px; }
+.save-editor[data-source="file"] [data-kind="file"],
+.save-editor[data-source="rom"] [data-kind="rom"],
+.save-editor[data-source="device"] [data-kind="device"] { background:var(--check-b); border-color:var(--grass); }
+.save-editor .btn { max-width:100%; white-space:normal; overflow-wrap:anywhere; }
+.save-editor-source .btn { width:100%; text-align:start; min-height:42px; }
+.save-editor-source .text-action { margin:3px 2px; font-size:.85rem; }
+.save-editor-source .hint,.save-editor-preview-notice .hint { margin:0; line-height:1.55; overflow-wrap:anywhere; }
+.save-editor-source .hint { padding-inline:2px; font-size:.76rem; }
+#editSaveStatus:empty { margin:0; display:none; }
+#editSaveStatus:not(:empty) { padding:10px; margin:12px 0 0; background:var(--check-a); border-radius:8px; overflow-wrap:anywhere; }
+#editSaveRestart,#editSaveDeviceControls { margin-block-start:10px; }
+.save-editor-context:not([hidden]) { display:grid; gap:5px; margin-top:12px; min-width:0; }
+.save-editor-context label { font-size:.8rem; font-weight:650; color:var(--soft); }
+.save-editor-context select { min-width:0; max-width:100%; min-height:38px; }
+.save-editor-meta { padding:clamp(14px,2.2vw,24px); border-bottom:1px solid var(--line); }
+.save-editor-title-row { display:flex; flex-wrap:wrap; gap:8px 12px; align-items:center; }
+.save-editor-title-row h2 { flex:1 1 16rem; min-width:0; margin:0; font-size:clamp(1rem,2vw,1.25rem); line-height:1.45; overflow-wrap:anywhere; }
+.save-editor-title-actions { display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:8px; margin-inline-start:auto; }
+.save-editor-title-actions .btn { min-height:40px; }
+.save-editor-preview-dialog { padding:clamp(18px,4vw,28px); }
+.save-editor-preview-dialog h2 { font-size:1.25rem; margin:0 0 .65rem; }
+.save-editor-preview-dialog p { margin:0; line-height:1.55; }
+#editSaveUnsaved { margin:0; padding:3px 8px; color:var(--warn); background:#fff3d8; border-radius:6px; font-size:.76rem; font-weight:650; }
+.save-editor-preview-notice:not([hidden]) {
+  display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px; margin-top:14px;
+  padding:10px 12px; border-radius:8px; background:var(--check-a);
+}
+.save-editor-preview-notice p { flex:1 1 18rem; }
+.save-editor-fields { display:grid; gap:10px; padding:clamp(14px,2.2vw,24px); }
+.save-editor-data { display:grid; gap:10px; min-width:0; }
+.save-editor-data h3 { margin:0 0 2px; font-size:1rem; }
+.save-editor-data + .save-editor-data { margin-top:10px; padding-top:18px; border-top:1px solid var(--line); }
+.save-editor-data-extensions h3 { color:var(--sky); }
+.save-editor-fields:empty { padding:0; }
+.save-editor-section { min-width:0; border:1px solid var(--line); border-radius:10px; background:var(--panel); }
+.save-editor-section > summary {
+  cursor:pointer; font-weight:700; padding:12px 14px; line-height:1.45; overflow-wrap:anywhere;
+  border-radius:9px;
+}
+.save-editor-section > summary::marker { color:var(--sky); }
+.save-editor-section > summary:hover,.save-editor-section[open] > summary { background:var(--check-a); }
+.save-editor-section[open] > summary { border-radius:9px 9px 0 0; }
+.save-editor-section > .save-editor-controls { border-top:1px solid var(--line); padding:12px 14px; }
+.save-editor-controls { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,12rem),1fr)); align-items:end; gap:12px; }
+.save-editor-controls > label,.save-editor-inline-actions > label { display:grid; align-content:end; min-width:0; gap:5px; overflow-wrap:break-word; }
+:is(.save-editor-controls,.save-editor-inline-actions) > label > span { font-size:.84rem; line-height:1.4; }
+.save-editor-controls > label.check { display:flex; align-items:center; align-self:stretch; min-height:40px; margin:0; background:var(--check-a); padding:7px 9px; border-radius:6px; }
+.save-editor-controls > label.check input { flex:none; }
+.save-editor-controls :is(select,input:not([type="checkbox"])) { min-width:0; width:100%; min-height:40px; }
+.save-editor-controls .btn { min-height:40px; }
+.save-editor-group {
+  min-width:0; margin:0; padding:10px 12px 12px; border:1px solid var(--line); border-radius:8px;
+}
+.save-editor-group > legend { padding-inline:5px; color:var(--soft); font-size:.85rem; font-weight:650; }
+.save-editor-inline-actions { display:flex; align-items:end; flex-wrap:wrap; gap:8px; min-width:0; }
+.save-editor-inline-actions > label { flex:1 1 12rem; max-width:22rem; }
+.save-editor-inline-actions > .btn { flex:0 0 auto; }
+.save-editor-group > .save-editor-inline-actions:empty { display:none; }
+.save-editor-controls > .save-editor-inline-actions:empty { display:none; }
+.save-editor-record-heading { min-height:44px; }
+.save-editor-record-title {
+  display:inline-flex; align-items:center; gap:8px; vertical-align:middle;
+  margin-inline-start:10px; color:var(--soft); font-size:.85rem; font-weight:550; max-width:100%;
+}
+.save-editor-record-title canvas,.save-editor-item-preview canvas {
+  image-rendering:pixelated; max-width:100%; max-height:46px; object-fit:contain;
+}
+.save-editor-item-preview:not([hidden]) { display:grid; place-items:center; min-height:42px; }
+.save-editor-controls [aria-invalid="true"] { border-color:var(--warn); outline:1px solid var(--warn); }
+.save-editor-wide { grid-column:1/-1; }
+.save-editor-records { max-height:min(24rem,65vh); overflow:auto; padding:2px; }
+.save-editor-preview { display:flex; align-items:center; gap:10px; overflow-wrap:anywhere; }
+.save-editor-preview canvas { image-rendering:pixelated; max-width:100%; object-fit:contain; }
+.save-editor-actions,.save-editor-save-actions { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+.save-editor-actions {
+  position:sticky; bottom:0; z-index:2; justify-content:space-between;
+  background:var(--panel); border-top:1px solid var(--line); border-radius:0 0 15px 15px;
+  padding:12px clamp(14px,2.2vw,24px); box-shadow:0 -4px 12px #18263308;
+}
+.save-editor-actions .btn { min-height:40px; }
+.save-editor :is(button,a,select,input,summary):focus-visible { outline:2px solid var(--sky); outline-offset:2px; }
+@media (max-width:760px) {
+  .save-editor-layout:has(#editSaveDocument:not([hidden])),
+  .save-editor-layout:not(:has(#editSaveDocument:not([hidden]))) .save-editor-sources { grid-template-columns:minmax(0,1fr); }
+  .save-editor-actions { position:static; box-shadow:none; }
+}
+@media (max-width:440px) {
+  .save-editor-inline-actions > label { flex-basis:100%; max-width:none; }
+  .save-editor-actions,.save-editor-save-actions { display:grid; grid-template-columns:minmax(0,1fr); }
+}
+.save-editor-controls > label.save-editor-book-entry { min-height:48px; }
+.save-editor-book-portrait:not([hidden]),.save-editor-choice-portrait:not([hidden]) {
+  flex:0 0 32px; width:32px; height:32px; display:grid; place-items:center;
+}
+.save-editor-choice-portrait { align-self:center; }
+.save-editor-book-portrait canvas,.save-editor-choice-portrait canvas {
+  max-width:100%; max-height:100%; object-fit:contain; image-rendering:pixelated;
+}

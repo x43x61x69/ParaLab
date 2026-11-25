@@ -33,6 +33,7 @@ const F_KEEP_AWAKE = 0x8000;
 const F_RING = 0x80, F_NO_SHORTCUT = 0x2000; // persisted opt-out; the A+C menu remains enabled
 const F_BOOK6 = 256; // native Tama File has the three additional regions
 const F_BOOK_SKY = 0x10000; // Jade Forest's separate Sky Tama File
+const F_NEON_TRAVEL = 0x20000;
 const F_APPS = 512;  // ordinary launcher menu without legacy Paradise save tools
 const F_NEON_TAMA = 0x800;
 const F_NEON_EDIT = 1024;
@@ -90,6 +91,40 @@ const AWAKE_PROFILES = {
 function linkedBranch(from, to) {
   const [lo, hi] = bw(from, to);
   return (lo | ((hi | 0x4000) << 16)) >>> 0;
+}
+
+const NEON_TRAVEL_SITE = 0x29CD0, NEON_TRAVEL_HELPER = 0xF80;
+function neonTravelPatch(rom, stub, restore = false) {
+  const site = NEON_TRAVEL_SITE, at = stub + NEON_TRAVEL_HELPER;
+  const stageCheck = 0xBFC82803; // cmp r0, #3; it gt
+  const branch = linkedBranch(xip(site), xip(at));
+  const optionAddress = 0x18000290 + 0xFC4;
+  const magic = 0x3156544E; // NTV1
+  if (u32(rom, site - 4) !== 0x0082F3C0 || u32(rom, site + 6) !== 0x1068F643 ||
+      u32(rom, site) !== (restore ? branch : stageCheck) ||
+      u16(rom, site + 4) !== (restore ? 0xBF00 : 0x2201)) return false;
+  if (restore) {
+    if (u32(rom, at + 0x14) !== optionAddress || u32(rom, at + 0x18) !== magic) return false;
+  } else {
+    const labels = 'PLANET TRAVEL ON\0PLANET TRAVEL OFF\0';
+    if (!isFF(rom, at, 0x1C + labels.length)) return false;
+    // r0 is the growth stage, r2 starts at zero. Replay the original
+    // comparison for other stages and for saves without the opt-in marker.
+    const code = [
+      0x2803, 0xDD06, // cmp r0, #3; ble done
+      0x2805, 0xDC03, // cmp r0, #5; bgt locked
+      0x4802, 0x7800, // ldr r0, optionAddress; ldrb r0, [r0]
+      0x28B6, 0xD000, // cmp r0, #0xb6; beq done
+      0x2201, 0x4770, // locked: movs r2, #1; done: bx lr
+    ];
+    code.forEach((word, i) => w16(rom, at + 2 * i, word));
+    w32(rom, at + 0x14, optionAddress);
+    w32(rom, at + 0x18, magic);
+    for (let i = 0; i < labels.length; i++) rom[at + 0x1C + i] = labels.charCodeAt(i);
+  }
+  w32(rom, site, restore ? stageCheck : branch);
+  w16(rom, site + 4, restore ? 0x2201 : 0xBF00);
+  return true;
 }
 function keepAwakePatch(rom, stub, profile, restore = false, probe = false) {
   const at = stub + AWAKE_HOOK, entry = AWAKE_PROFILES[profile];
@@ -716,6 +751,15 @@ function slotPages(s, resolveClock = true) {
   if (pos !== s.bytes) throw new Error('stored save damaged');
   return pages;
 }
+function slotExportPages(pages, head) {
+  const result = new Map(pages);
+  if (u32(head, SLOT_TIME_OFF) !== SLOT_TIME_MAGIC) return result;
+  for (const address of [0xEFE000, 0xEFF000]) {
+    const data = pages.get(address);
+    if (data && !data.every(byte => byte === 255)) result.set(address, slotClock(Uint8Array.from(data), head));
+  }
+  return result;
+}
 /** A save (Map address -> 4 KB, only pages from..to that are not empty) packed like the menu does, for slotPlace. */
 function slotBuild(pages, i, from, to, sourceHead, extra = []) {
   const head = new Uint8Array(0x1000).fill(0xFF), parts = []; let np = 0, bytes = 0, sum = 0;
@@ -1036,6 +1080,36 @@ function characters(d) {
   const P = profileOf(d, e.profile);
   return charCatalog(d, P).map((c) => ({ id: c.id, stage: c.sum & 255, field: (c.sum >> 8) - 1, name: c.name }));
 }
+function saveEditorRoster(rom, editionId, menu, names, assets = rom) {
+  const id = editionId, neon = id === 8, six = id >= 5 && id <= 7;
+  const sky = !!(menu?.flags & F_BOOK_SKY);
+  const book6 = !!(menu?.flags & F_BOOK6);
+  const version = book6 ? u32(rom, menu.stubOff + 0x304) : 0;
+  const imported = version === 3 ? 6 : version >= 4 ? 3 : 0;
+  const groups = assets && !neon ? characters(assets) : [];
+  const fields = neon ? 3 : imported ? imported + 3 : sky ? book6 ? 7 : 4 : book6 ? names.length : 3;
+  const results = [];
+  for (let field = 0; field < fields; field++) {
+    const extraSky = sky && field === (book6 ? 6 : 3);
+    const extraNeon = imported && field >= imported && field < imported + 3;
+    const max = neon ? field === 0 ? 22 : 21 : extraNeon ? field === imported + 1 ? 38 : 24 : 22;
+    const group = groups.filter(entry => entry.stage >= 3 && entry.field === (extraSky ? 3 : extraNeon ? 6 + field - imported : field));
+    const neonPointer = neon && assets ? u32(assets, 0xB0A28 + 8 * field) - 0x10000000 + XIP_DEC : 0;
+    const nativeNeon = neonPointer > 0 && neonPointer + 2 * max <= assets.length && u32(assets, 0xB0A2C + 8 * field) === max;
+    if (!neon && assets && group.length !== max) continue;
+    if (id <= 3 && !assets) continue;
+    const from = neon ? 0x94 + 4 * field : extraSky ? 0xF80 : extraNeon ? 0xF98 + 8 * (field - imported) :
+      id <= 3 ? 0x88 : field < 3 ? (six ? 0x94 : 0x88) + 4 * field : 0xF80 + 4 * (field - 3);
+    const title = extraSky ? 'Sky' : extraNeon ? NEON_FIELD_NAMES[field - imported] : names[field];
+    for (let index = 0; index < max; index++) {
+      const character = group[index]?.id ?? (nativeNeon ? u16(assets, neonPointer + index * 2) : null);
+      const bit = from * 8 + (id <= 3 ? character % 1000 : index);
+      results.push({ bit, viewed: bit + 8 * (extraNeon ? 24 : !neon && field >= 3 ? 12 : 16),
+        id: character, index, field, title, extension: !neon && field >= 3 });
+    }
+  }
+  return results;
+}
 /*
  * Catalog: 8 byte header, 28 bytes per entry, then "PEXT" and 12 bytes per entry:
  * flash address of the picture entry, its length, byte sum, first word. The menu
@@ -1132,6 +1206,8 @@ function feldStrip(rom, emb, E) {
   appearanceRebuild(out, false);
   careStrip(out, f.stubOff);
   if (f.flags & F_KEEP_AWAKE) keepAwakePatch(out, f.stubOff, edition(out)?.profile.name, true);
+  if ((f.flags & F_NEON_TRAVEL) && !neonTravelPatch(out, f.stubOff, true))
+    throw new Error('Neon Planets travel hook does not match this ROM');
   const tab = E.sceneTable(out);
   launchRestore(out, f.stubOff);   // start device: scene handlers back, trampolines gone (before the menu area is erased)
   const prev = f.stubOff === STUB_OFF ? E.installedOrigs(out, tab) : [0, 1, 2, 3].map((k) => u32(out, f.stubOff + 0x94 + 4 * k));
@@ -1478,6 +1554,10 @@ function feldApply(rom, opts, saved, emb, E, placeCatalogAfterAssets = false) {
     w32(out, prog + ci + 36, u32(out, prog + ci + 36) | F_KEEP_AWAKE);
     w32(out, prog + ci + 492, P.tama);
   }
+  if (neonEdit && !launch && !opts.clean && neonTravelPatch(out, stubOff)) {
+    w32(out, prog + ci + 36, u32(out, prog + ci + 36) | F_NEON_TRAVEL);
+    w32(out, prog + ci + 492, P.tama);
+  }
   const fontTag = findWord(f, 0x46584D50); // PMXF + ONT1/ONT2/ONT3
   const fontVersion = fontTag < 0 ? 0 : u32(f, fontTag + 4);
   if (fontVersion === 0x31544E4F || fontVersion === 0x32544E4F || fontVersion === 0x33544E4F) {
@@ -1602,7 +1682,7 @@ function embedded() {
 }
 
 function emuType(rom) { const m = u32(rom, APP_OFF + 0x140); return m === 0x37584D50 ? 't7' : m === 0x38584D50 ? 't18' : m === 0x31584D50 ? 'v1' : m === PMXC && appKind(rom) === 2 ? 'tama' : ''; }
-root.ParamixFeld = { F_KEEP_AWAKE, keepAwakeSupport, poolCount, slotRanges, sixPoolTail, F_RING, F_RESIDENT_BANKS, F_NO_SHORTCUT, F_APPS, F_NEON_EDIT, F_NEON_TAMA, F_NEON_SAVES, CARE_AUTOPILOT_PATCH, CARE_FUEL_PATCH, careOptions, careSupport, neonSlotRange, neonActive, neonSwitchPending, neonAppearance, neonBagLayout, languagePatchPages, F_GPLAY, GPLAY, CLEAN_ROM, F_CLEAN, CLOCK_SEC, cleanReserved, cleanInfo, cleanBase, cleanApply, isClean, saveSlots, fieldOfSettings, lzPack, lzUnpack, slotPages, slotBuild, poolUsed, slotParse, FIELD_TEXT, characters, F_TAMA, F_SAVES, F_LAUNCH, isLaunch, launchRestore, emuType, familyOf, isSix, slotAddr, slotReadAsync, slotPlace, poolAddr, textTabelle, zeichenkette, edition, feldId, canFields, fieldNames, fieldNow, feldFind, feldSlots, feldStrip, feldApply, feldApps, appKind, itemCatalog, embedded, NAMES, F_FIELDS, F_BAG };
+root.ParamixFeld = { F_KEEP_AWAKE, F_NEON_TRAVEL, keepAwakeSupport, poolCount, slotRanges, sixPoolTail, F_RING, F_RESIDENT_BANKS, F_NO_SHORTCUT, F_APPS, F_NEON_EDIT, F_NEON_TAMA, F_NEON_SAVES, CARE_AUTOPILOT_PATCH, CARE_FUEL_PATCH, careOptions, careSupport, neonSlotRange, neonActive, neonSwitchPending, neonAppearance, neonBagLayout, languagePatchPages, F_GPLAY, GPLAY, CLEAN_ROM, F_CLEAN, CLOCK_SEC, cleanReserved, cleanInfo, cleanBase, cleanApply, isClean, saveSlots, fieldOfSettings, lzPack, lzUnpack, slotPages, slotExportPages, slotBuild, poolUsed, slotParse, FIELD_TEXT, characters, saveEditorRoster, F_TAMA, F_SAVES, F_LAUNCH, isLaunch, launchRestore, emuType, familyOf, isSix, slotAddr, slotReadAsync, slotPlace, poolAddr, textTabelle, zeichenkette, edition, feldId, canFields, fieldNames, fieldNow, feldFind, feldSlots, feldStrip, feldApply, feldApps, appKind, itemCatalog, embedded, NAMES, F_FIELDS, F_BAG };
 if (typeof module !== 'undefined') module.exports = root.ParamixFeld;
 root.ParamixFeld.menuPayload = menuPayload;
 root.ParamixFeld.menuVersion = menuVersion;
