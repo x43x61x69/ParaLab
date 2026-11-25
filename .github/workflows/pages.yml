@@ -18,10 +18,10 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
-          node-version: '22'
+          node-version: '24'
       - name: Check embedded menu versions
         run: node test/menu_version_test.js
       - name: Compare Paradise codes with Tamagotchi Wiki
@@ -29,7 +29,7 @@ jobs:
         run: python3 tools/check_wiki_codes.py --warn-unavailable
       - name: Build the site
         run: node build.js --web _site/index.html
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: _site
 
@@ -46,4 +46,4 @@ jobs:
     steps:
       - name: Publish to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
