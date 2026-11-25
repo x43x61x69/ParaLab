@@ -30,7 +30,9 @@
 /* Header offsets live here so the Studio can install the branches. */
 _start:
   .ascii "BK06"
-#if BOOK_PLATFORM
+#if BOOK_PLATFORM == 2
+  .word 5
+#elif BOOK_PLATFORM
   .word 4
 #else
   .word 3
@@ -44,6 +46,9 @@ _start:
 #if BOOK_PLATFORM
   .word nativeRosters - _start
 #endif
+#if BOOK_PLATFORM == 2
+  .word skyRoster - _start, wrapPrevious - _start
+#endif
 
 /* Find the slot and bit for an added character. The IDs are populated from the
  * ROM's own character table in bit order, independently of the field row shown.
@@ -52,6 +57,12 @@ _start:
 extraFlag:
   adr r1, extraIds
   movs r2, #0
+#if BOOK_PLATFORM == 2
+  adr r3, fieldCount
+  ldrb r3, [r3]
+  cmp r3, #4
+  beq 9f
+#endif
 #if BOOK_PLATFORM
   mov r12, #86
 #else
@@ -69,8 +80,27 @@ extraFlag:
   adds r2, #1
   cmp r2, r12
   blo 1b
+#if BOOK_PLATFORM == 2
+9:
+  adr r1, skyRoster
+  movs r2, #0
+2:
+  ldrh r3, [r1], #2
+  cbz r3, 3f
+  cmp r0, r3
+  beq 6f
+  adds r2, #1
+  cmp r2, #22
+  blo 2b
+3:
+#endif
   movs r1, #0
   bx lr
+#if BOOK_PLATFORM == 2
+6:
+  mov r12, #0
+  b 8f
+#endif
 4:
 #if !BOOK_PLATFORM
   cmp r2, #66
@@ -206,6 +236,26 @@ wrapNext:
   movhs r0, #0
   bx lr
 
+#if BOOK_PLATFORM == 2
+wrapPrevious:
+  adr r0, fieldCount
+  ldrb r0, [r0]
+  subs r0, #1
+  strh.w r0, [sp, #0x2e]
+  bx lr
+
+/* r0 is the selected region. A Sky-only last page has one row. */
+.macro skyPage other
+  adr r3, fieldCount
+  ldrb r3, [r3]
+  cmp r3, #6
+  beq \other
+  subs r3, #1
+  cmp r0, r3
+  bne \other
+.endm
+#endif
+
 moved:
   push {r4, lr}
   callGame MOVED
@@ -244,6 +294,14 @@ refresh:
   ldr r7, =NATIVE_VIEWED
   cmp r0, #3
   blo 1f
+#if BOOK_PLATFORM == 2
+  skyPage 8f
+  movs r9, #2
+  ldr r6, =BOOK_PRIMARY
+  ldr r7, =BOOK_VIEWED
+  b 1f
+8:
+#endif
 #if !BOOK_PLATFORM
   adds r5, #6
   ldr r6, =BOOK_PRIMARY
@@ -258,6 +316,17 @@ refresh:
 1:
   movs r8, #0
 2:
+#if BOOK_PLATFORM == 2
+  cmp r9, #2
+  bne 8f
+  adr r0, emptyCaption
+  cmp r8, #0
+  bne 7f
+  movs r0, #65
+  callGame GAME_TEXT
+  b 7f
+8:
+#endif
   ldrh r0, [r5], #2
   callGame GAME_TEXT
   cmp r9, #0
@@ -270,6 +339,19 @@ refresh:
   ldr r1, [r1, #0x128]
   str r0, [r1]
 #if BOOK_PLATFORM
+#if BOOK_PLATFORM == 2
+  cmp r9, #2
+  bne 8f
+  movs r0, #0
+  cmp r8, #0
+  bne 6f
+  ldr r0, [r6]
+  ldr r1, [r7]
+  bics r0, r1
+  lsls r0, #10
+  b 6f
+8:
+#endif
   cmp r9, #0
   bne 9f
   mov r0, r8
@@ -311,7 +393,14 @@ refresh:
   ldr r0, [r4, #FIELD]
   adr r1, fieldCount
   ldrb r1, [r1]
+#if BOOK_PLATFORM == 2
+  subs r1, #1
+  cmp r1, #5
+  it eq
+  moveq r1, #3
+#else
   subs r1, #3
+#endif
   cmp r0, r1
   ite lo
   movlo r6, #1                    /* down before the final bank, up there */
@@ -368,6 +457,13 @@ detailTitle:
   callGame GAME_TEXT
   b 2f
 1:
+#if BOOK_PLATFORM == 2
+  mov r0, r2
+  skyPage 8f
+  adr r0, extraInitials + 8
+  b 2f
+8:
+#endif
 #if BOOK_PLATFORM
   subs r2, #3
   adr r0, neonInitials
@@ -417,6 +513,15 @@ fitNeonCaption:
 listExtra:
   loadScene r1
   ldr r2, [r1, #FIELD]
+#if BOOK_PLATFORM == 2
+  mov r0, r2
+  skyPage 8f
+  push {r4-r8, lr}
+  adr r5, skyRoster
+  movs r6, #22
+  b 9f
+8:
+#endif
 #if BOOK_PLATFORM
   subs r2, #3
 #else
@@ -441,6 +546,7 @@ listExtra:
   adr r5, extraIds + 132
 #endif
   add.w r5, r5, r3, lsl #1
+9:
   add.w r4, r1, #0x54
   movs r7, #0
 2:
@@ -489,7 +595,7 @@ detailSprites:
   .hword 569, 570, 571
   .endr
 #elif BOOK_PLATFORM == 2
-  .rept 2
+  .rept 3
   .hword 140, 179, 141, 180, 143, 182
   .endr
 #else
@@ -503,6 +609,10 @@ neonInitials: .hword 320,0, 331,0, 337,0  /* C N T */
 #if BOOK_PLATFORM
 extraIds: .space 2 * (24 + 38 + 24)
 nativeRosters: .space 2 * 3 * 22
+#if BOOK_PLATFORM == 2
+skyRoster: .space 2 * 22
+emptyCaption: .hword 0
+#endif
 #else
 extraIds: .space 2 * (3 * 22 + 24 + 38 + 24)
 #endif

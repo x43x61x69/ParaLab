@@ -10,19 +10,28 @@
 
 static int progress_neon_book(void){ return (g_cfg.flags&F_NEON_EDIT)!=0; }
 
+static int progress_sky(u32 field){
+#ifndef FELD_CLEAN
+  u32 flags=g_cfg.flags;
+  return (flags&F_BOOK_SKY) && field==((flags&F_BOOK6)?6u:3u);
+#else
+  return 0;
+#endif
+}
+
 static u32 progress_neon_start(void){
 #ifndef FELD_CLEAN
   if(g_cfg.flags&F_BOOK6){
     u32 version=rd32(g_cfg.stub_off+0x304u);
     if(version==3u) return 6u;
-    if(version==4u) return 3u;
+    if(version>=4u) return 3u;
   }
 #endif
   return 0;
 }
 static int progress_imported(u32 field){
   u32 start=progress_neon_start();
-  return start && field>=start;
+  return start && field>=start && field<start+3u;
 }
 static u32 progress_count(u32 field){
   if(progress_neon_book()) return field==0u?22u:21u;
@@ -31,7 +40,8 @@ static u32 progress_count(u32 field){
 }
 static const char *progress_field_name(u32 field){
   u32 start=progress_neon_start();
-  if(start && field>=start){
+  if(progress_sky(field)) return fname(3u);
+  if(start && field>=start && field<start+3u){
     static const char *const names[]={"COSMIC","NEW TAMA","TAMA PLANET"};
     return names[field-start];
   }
@@ -47,6 +57,9 @@ static u16 progress_field_color(u32 field){
 
 static u32 progress_fields(void){
   if(progress_neon_book()) return 3u;
+#ifndef FELD_CLEAN
+  if(g_cfg.flags&F_BOOK_SKY) return (g_cfg.flags&F_BOOK6)?7u:4u;
+#endif
   u32 start=progress_neon_start();
   if(start) return start+3u;
   u32 n=nfields();
@@ -65,7 +78,7 @@ static void progress_chars(u32 field){
     }
     return;
   }
-  u32 tag=progress_imported(field)?7u+field-progress_neon_start():field+1u;
+  u32 tag=progress_sky(field)?4u:progress_imported(field)?7u+field-progress_neon_start():field+1u;
   for(u32 i=0;i<g_cfg.cat_n && g_chrn<256u;i++){
     u32 a=g_cfg.cat_off+8u+28u*i;
     if(fl(a+2u)[0]==2u && fl(a+6u)[0]>=3u && fl(a+7u)[0]==tag)
@@ -74,6 +87,7 @@ static void progress_chars(u32 field){
 }
 static u32 progress_flag(u32 field,u32 index,u32 id){
   if(progress_neon_book()) return (NEON_BOOK_UNLOCKED+4u*field)*8u+index;
+  if(progress_sky(field)) return BOOK_EXTRA_OFF*8u+index;
   if(progress_imported(field)) return (BOOK_NEON_OFF+8u*(field-progress_neon_start()))*8u+index;
   u32 bit=id%1000u, off=0x88u;
   if(g_cfg.tama_off!=0x104u){

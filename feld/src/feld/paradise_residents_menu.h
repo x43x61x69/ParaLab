@@ -6,6 +6,8 @@
 #define RES_SIX_MARK 0xF0Fu
 #define RES_SIX_ROSTER 0xF64u
 #define RES_SIX_LIMIT 0xF70u
+#define RES_JADE_READY 0xF1Cu
+#define RES_JADE_STASH 0xF14u
 #define RES_BANK_MAGIC 0x31425352u
 #define RES_BANK_MARKS 0xFB7000u
 
@@ -44,18 +46,23 @@ static struct ResidentField resident_field(u32 field){
   u32 physical=bank && !gen3?1u:field%3u;
   int switches=six && (gen3 || physical==1u);
   int active=!switches || bank==current;
-  int separate=six && gen3 && g_set[RES_SIX_MARK]==0x5Au;
+  int private=(g_cfg.flags&F_RESIDENT_BANKS)!=0;
+  if(private && !gen3 && g_set[RES_JADE_READY]!=0x5Au){
+    __builtin_memset(g_set+RES_JADE_STASH,0,8);
+    g_set[RES_JADE_READY]=0x5A;
+  }
+  int separate=switches && (gen3?g_set[RES_SIX_MARK]==0x5Au:private);
+  u32 inactive=gen3?RES_SIX_ROSTER:RES_JADE_STASH-8u;
   u32 stride=resident_packed(d)?8u:4u;
-  f.roster=(active?d->roster:RES_SIX_ROSTER)+physical*stride;
+  f.roster=(active?d->roster:inactive)+physical*stride;
   f.start=d->index+physical*d->per_field;
   f.available=active || separate;
-  int private=gen3 && (g_cfg.flags&F_RESIDENT_BANKS) && rd32(0x109000u)==RES_BANK_MAGIC;
   f.secondary=private && bank;
   f.flags=f.available?resident_flag(f.roster,d):0;
   f.slots=4u;
   if(!resident_packed(d) && ((g_set[active?0x89u:RES_SIX_LIMIT]&(1u<<physical)) || (f.flags&0xF0u))) f.slots=8u;
   if(separate)
-    f.alias=resident_flag((active?RES_SIX_ROSTER:d->roster)+physical*stride,d);
+    f.alias=resident_flag((active?inactive:d->roster)+physical*stride,d);
   return f;
 }
 static u32 resident_private(u32 rel){ return rel<14u?0xFB8000u+rel*RES_RECORD:0xD01000u+(rel-14u)*RES_RECORD; }

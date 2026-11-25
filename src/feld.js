@@ -20,6 +20,8 @@
 const XIP_DEC = 0x11000;
 const xip = (off) => 0x10000000 + off - XIP_DEC;
 const APP_OFF = 0xA0000, STUB_OFF = 0xB0000, FELD_OFF = 0xB1000, FELD_END = 0xC0000;
+const MENU_FONT_B64 = '__FELD_FONT_B64__';
+const MENU_TITLE_B64 = '__FELD_TITLE_B64__';
 const DOOM_CODE = 0xB1000, DOOM_SAVE = 0x10E000;
 const SLOT_BASE = 0x830000, SLOT_SIZE = 0x58000, GUEST_OFF = 0x940000;
 const FELD_MAGIC = 0x444C4546, SLOT_MAGIC = 0x544C5346, CAT_MAGIC = 0x54414350, PMXC = 0x43584D50, PDMC = 0x434D4450;
@@ -30,6 +32,7 @@ const F_RESIDENT_BANKS = 0x4000;
 const F_KEEP_AWAKE = 0x8000;
 const F_RING = 0x80, F_NO_SHORTCUT = 0x2000; // persisted opt-out; the A+C menu remains enabled
 const F_BOOK6 = 256; // native Tama File has the three additional regions
+const F_BOOK_SKY = 0x10000; // Jade Forest's separate Sky Tama File
 const F_APPS = 512;  // ordinary launcher menu without legacy Paradise save tools
 const F_NEON_TAMA = 0x800;
 const F_NEON_EDIT = 1024;
@@ -369,6 +372,14 @@ function feldId(rom) { const e = edition(rom); return e ? e.id : 0; }
 function canFields(rom) { const e = edition(rom); return !!(e && e.profile.ids.length); }
 /** The fields of this ROM (names). */
 function fieldNames(rom) { const e = edition(rom); return e?.id === 8 ? NEON_FIELD_NAMES.slice() : e ? profileOf(rom, e.profile).names.map(cap) : []; }
+/** Text rows for Paradise fields, ordered by the Menu field profiles. */
+function fieldNameRows(rom, includeExtra = isSix(rom)) {
+  const e = edition(rom);
+  if (!e || e.profile.ring) return [];
+  if (includeExtra && e.profile.name === 'jade') return [14, 15, 16, 66];
+  if (includeExtra && e.profile.name === 'gen3') return FIELD_TEXT.slice();
+  return FIELD_TEXT.slice(0, e.profile.ids.length);
+}
 /** Active field (name), read from the save. */
 function fieldNow(rom) {
   const e = edition(rom); if (!e) return '';
@@ -1360,8 +1371,8 @@ function feldApply(rom, opts, saved, emb, E, placeCatalogAfterAssets = false) {
   w32(f, ci + 40, P.c); w16(f, ci + 44, P.h[0]); w16(f, ci + 46, P.h[1]);
   // 1.6.8: a field renamed in the Studio (text table) shows its new name in the menu too
   const shownName = (i) => {
-    if (appsOnly) return NEON_MENU_NAMES[i] || '';
     const x = (opts.fieldNames || [])[i];
+    if (appsOnly) return (x && x.toUpperCase() !== NEON_FIELD_NAMES[i]?.toUpperCase() ? x.slice(0, 11) : NEON_MENU_NAMES[i]) || '';
     return (x && !FIELD_DEFAULT.has(x) ? x.slice(0, 11) : P.names[i]) || '';
   };
   w32(f, ci + 48, P.ids.length);
@@ -1452,13 +1463,42 @@ function feldApply(rom, opts, saved, emb, E, placeCatalogAfterAssets = false) {
   if (neonSaves) neonGuard(out, stubOff, true);
   HOOK_OFF.forEach((h, k) => w32(out, tab.PSID_HOME + 12 + 4 * k, (xip(stubOff) + h) | 1));
   if (launch) launchRedirect(out, tab, stubOff, tOff);
-  else if (Six && Six.sixBookApply(out, stubOff)) w32(out, prog + ci + 36, u32(out, prog + ci + 36) | F_BOOK6);
+  else {
+    const regions = Six?.sixBookApply(out, stubOff);
+    if (regions) {
+      const bookFlags = (regions === 4 ? 0 : F_BOOK6) |
+        (P.name === 'jade' && regions !== 6 ? F_BOOK_SKY : 0);
+      w32(out, prog + ci + 36, u32(out, prog + ci + 36) | bookFlags);
+    }
+  }
   if (tama || neonTama) appearanceRebuild(out, true);
   if (care) careInstall(out, stubOff, P.name, care);
   if (keepAwake) {
     if (!keepAwakePatch(out, stubOff, P.name)) throw new Error('Keep awake hook does not match this ROM');
     w32(out, prog + ci + 36, u32(out, prog + ci + 36) | F_KEEP_AWAKE);
     w32(out, prog + ci + 492, P.tama);
+  }
+  const fontTag = findWord(f, 0x46584D50); // PMXF + ONT1/ONT2/ONT3
+  const fontVersion = fontTag < 0 ? 0 : u32(f, fontTag + 4);
+  if (fontVersion === 0x31544E4F || fontVersion === 0x32544E4F || fontVersion === 0x33544E4F) {
+    const font = MENU_FONT_B64.startsWith('__') && typeof require !== 'undefined'
+      ? Uint8Array.from(require('node:fs').readFileSync(__dirname + '/../feld/src/feld/font.h', 'utf8').match(/0x[0-9a-f]{2}/gi), hex => Number(hex))
+      : b64(MENU_FONT_B64);
+    const at = stubOff + (fontVersion === 0x33544E4F ? 0x9C8 : fontVersion === 0x32544E4F ? 0x9D0 : 0x900);
+    if (font.length !== 386 || !isFF(out, at, font.length))
+      throw new Error('the Menu font does not fit the launcher');
+    out.set(font, at);
+    if (fontVersion !== 0x31544E4F) {
+      const title = MENU_TITLE_B64.startsWith('__') && typeof require !== 'undefined'
+        ? Uint8Array.from(require('node:fs').readFileSync(__dirname + '/../feld/src/feld/title_rows.h', 'utf8')
+            .match(/0x[0-9a-f]{2}/gi), Number)
+        : b64(MENU_TITLE_B64);
+      if (title.length !== 182) throw new Error('Invalid Menu title font');
+      const older = fontVersion === 0x32544E4F, dest = at + font.length;
+      if (!isFF(out, dest, older ? 156 : title.length)) throw new Error('Menu title font does not fit');
+      out.set(older ? title.subarray(0, 21) : title, dest);
+      if (older) out.set(title.subarray(47), dest + 21);
+    }
   }
   return shortcutPage === null ? out : H.apply(out, stubOff, shortcutPage);
 }
@@ -1566,5 +1606,6 @@ root.ParamixFeld = { F_KEEP_AWAKE, keepAwakeSupport, poolCount, slotRanges, sixP
 if (typeof module !== 'undefined') module.exports = root.ParamixFeld;
 root.ParamixFeld.menuPayload = menuPayload;
 root.ParamixFeld.menuVersion = menuVersion;
+root.ParamixFeld.fieldNameRows = fieldNameRows;
 root.ParamixFeld.preserveMenuVersion = preserveMenuVersion;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -1956,20 +1956,14 @@ function refreshCharacterNames() {
  * Menu tab, their names can be changed before they are built in */
 const sixActive = () => !!state.ctx && !state.launch && ((!!S6.sixInfo(state.ctx.rom) && !state.sixOff) || !!state.six || !!state.sixWant);
 function fieldTexts(rom, six) {
-  if (F.feldId(rom) === 7) return [];
-  let fn = F.fieldNames(rom).map((s) => s.toUpperCase()); const lws = ['LAND', 'WATER', 'SKY'], out = [];
-  if (six !== undefined) {
-    const id = F.feldId(rom);
-    if (!six) fn = fn.slice(0, 3);
-    else if (fn.length <= 3) fn = fn.concat(id === 4 ? ['SKY'] : id >= 5 ? lws : []);
-  }
-  fn.forEach((nm, i) => {
-    const k = lws.indexOf(nm), own = i < 3 ? 14 + i : k >= 0 ? 64 + k : -1;
-    if (own < 0) return;
-    const idx = [own]; if (i < 3 && k >= 0 && C.textGet(rom, 64 + k) === C.textGet(rom, own)) idx.push(64 + k);
-    out.push({ idx, name: C.textGet(rom, own) });
+  const id = F.feldId(rom), fields = F.fieldNames(rom);
+  const rows = id === 8 ? NT.planetTextRows(rom) : F.fieldNameRows(rom, six);
+  return rows.map((own, i) => {
+    const name = C.textGet(rom, own), idx = [own];
+    if (id >= 1 && id <= 4 && own < 17 && fields[i]?.toUpperCase() === ['LAND', 'WATER', 'SKY'][i] &&
+        C.textGet(rom, 64 + i) === name) idx.push(64 + i);
+    return { idx, name };
   });
-  return out;
 }
 function nameRow(box, label, cur, idx, max) {
   const l = document.createElement('label'), sp = document.createElement('span'), inp = document.createElement('input');
@@ -1991,6 +1985,12 @@ function renderNames() {
   fb.innerHTML = ''; cb.innerHTML = '';
   $('namesFind').placeholder = t('namesFind');
   for (const f of fieldTexts(rom, sixActive())) nameRow(fb, romDisplayName(rom, f.idx[0]) || f.name, f.name, f.idx, 11);
+  if (NT.installed(rom)) {
+    for (const row of NT.planetTextRows(rom)) {
+      const name = C.textGet(rom, row);
+      nameRow(fb, romDisplayName(rom, row) || name, name, [row], 11);
+    }
+  }
   const seen = new Set();
   try {
     for (const c of C.charTable(state.ctx.files[0]).filter((c) => c.id > 1000 && c.id < 9000)) {
@@ -4300,14 +4300,15 @@ function renderFeld() {
   $('sixRow').hidden = !sixCan || la;
   for (const [id, k] of [['sixOnTxt', jade ? 'sixOnJ' : 'sixOn'], ['sixHintTxt', jade ? 'sixHintJ' : 'sixHint']]) { $(id).dataset.t = k; $(id).textContent = t(k); }
   const sixUnavailable = !fe || !S6.embedded();
-  const sixLocked = sixUnavailable || neonBuilt;
+  const sixAddToNeon = neonBuilt && !sixIn && S6.sixCan(rom);
+  const sixLocked = sixUnavailable || (neonBuilt && !sixAddToNeon);
   const repairWalking = neonBuilt && S6.sixStale(si);
   $('sixOn').checked = (sixIn && !state.sixOff) || !!state.six || !!state.sixWant;
   $('sixOn').disabled = sixLocked;
   if (neonBuilt && state.feldInit) box.disabled = true;
   const sixPick = $('btnSix');
-  sixPick.hidden = jade || (neonBuilt && !repairWalking) || (sixIn && !sixOld && sixSame(si));
-  sixPick.disabled = $('fileSix').disabled = sixUnavailable || (neonBuilt && !repairWalking);
+  sixPick.hidden = jade || (neonBuilt && !sixAddToNeon && !repairWalking) || (sixIn && !sixOld && sixSame(si));
+  sixPick.disabled = $('fileSix').disabled = sixUnavailable || (sixLocked && !repairWalking);
   sixPick.dataset.t = repairWalking ? 'sixRepairPick' : 'sixPick';
   sixPick.textContent = t(sixPick.dataset.t);
   const sourceStatus = $('sixSourceStatus');
@@ -4743,6 +4744,7 @@ async function composeBaseRom(deferResidentBanks = false) {
   }
   let addingResidentBanks = false;
   try {
+    rom = RB.refresh(rom);
     if (deferResidentBanks) rom = RB.strip(rom);
     else if (RB?.needsInstall(rom)) {
       rom = RB.apply(rom);
@@ -8883,11 +8885,9 @@ $('btnReadLabItems').onclick = () => {
 };
 
 async function connectedResidentRanges(device) {
-  if (!RB || ![5, 6, 7].includes(device.info.edition)) return [];
+  if (!RB || ![4, 5, 6, 7].includes(device.info.edition)) return [];
   const page = await device.read(0x109000, 0x1000);
-  return rd32(page, 0) === 0x31425352 && rd32(page, 4) === 1 &&
-    rd32(page, 24) === 0x60FB7000 && rd32(page, 28) === 0x60FB8000 &&
-    rd32(page, 32) === 0x60D01000 ? RB.ranges : [];
+  return RB.manifestVersion(page) === (device.info.edition === 4 ? 2 : 1) ? RB.ranges : [];
 }
 
 /* From the device: the native save with its clock, plus any supported emulator saves on Paradise. */
@@ -8985,7 +8985,7 @@ $('fileSave').onchange = async (e) => {
     const d = dv.d;
     let img = new Uint8Array(0x1000000).fill(0xFF);
     for (const [p, data] of chk.pages) img.set(data, p);
-    if (extra.length && !chk.supplemental) img = RB.migrateSave(img);
+    if (extra.length && !chk.supplemental) img = RB.migrateSave(img, ed === 4 ? 2 : 1);
     const map = new Map();
     const include = (p) => chk.pages.has(p) || extra.some(([from, to]) => p >= from && p < to);
     for (const [a, b] of [SV.region(ed), ...extra]) {

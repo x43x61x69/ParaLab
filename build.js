@@ -159,6 +159,10 @@ let feld = fs.readFileSync(__dirname + '/src/feld.js', 'utf8');
   for (const f of ['feld.bin', 'stub_feld_tpl.bin']) if (!fs.existsSync(__dirname + '/feld/' + f)) throw new Error('feld/' + f + ' is missing');
   feld = feld.replace('__FELD_B64__', menuBinary('feld/feld.bin').toString('base64'))
     .replace('__FELD_STUB_B64__', d('stub_feld_tpl.bin'))
+    .replace('__FELD_FONT_B64__', Buffer.from(fs.readFileSync(__dirname + '/feld/src/feld/font.h', 'utf8')
+      .match(/0x[0-9a-f]{2}/gi).map(Number)).toString('base64'))
+    .replace('__FELD_TITLE_B64__', Buffer.from(fs.readFileSync(__dirname + '/feld/src/feld/title_rows.h', 'utf8')
+      .match(/0x[0-9a-f]{2}/gi).map(Number)).toString('base64'))
     .replace('__FELD_CARE_B64__', d('paradise-care.bin'));
   feld = feld.replace('__FELDC_B64__', menuBinary('feld/feldc.bin').toString('base64'));
 }
@@ -195,7 +199,8 @@ const flash = fs.readFileSync(__dirname + '/src/flash.js', 'utf8')
 }
 const saves = fs.readFileSync(__dirname + '/src/saves.js', 'utf8');
 const residentBanks = fs.readFileSync(__dirname + '/src/paradise_resident_banks.js', 'utf8')
-  .replace('__RESIDENT_BANK_HELPER__', fs.readFileSync(__dirname + '/six/resident-banks/helper.bin').toString('base64'));
+  .replace('__RESIDENT_BANK_HELPER__', fs.readFileSync(__dirname + '/six/resident-banks/helper.bin').toString('base64'))
+  .replace('__RESIDENT_BANK_JADE_HELPER__', fs.readFileSync(__dirname + '/six/resident-banks/helper-jade.bin').toString('base64'));
 new (require('vm').Script)(residentBanks, { filename: 'paradise_resident_banks.js' });
 const residents = fs.readFileSync(__dirname + '/src/paradise_residents.js', 'utf8');
 for (const [name, source] of [['paradise_resident_banks.js', residentBanks], ['paradise_residents.js', residents]]) {

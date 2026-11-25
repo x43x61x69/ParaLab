@@ -100,8 +100,14 @@ const KINDS = {
     fm: { obj: 0x180140B8, field: 0x18000BA0 + 0x1B7, level: 0x18000BA0 + 0x78, build: [0x2262C, 0x10014954],
       prev: [0x1007564C, 0x3C2E0, 0x3C5C2], cmp: [0x3C470, 0x3C53E, 0x3C5EA, 0x3C69A], set: 0x3C498, read: '90f94a00',
       imm: [[0x22634, 0x4E, 0x48], [0x3C29E, 0x4D, 0x4F], [0x3C3F8, 0x4D, 0x4F]], off: [0x4A, 0x48, 0x4F, 0x64], ent: [0, 1, 2, 0x81] },
-    // food per field without the DNA part (option bit 64): settings block, field byte, switched slots, history,
-    // first food kind per field (Land, Water, Forest, -, Sky in the Water slot, -), check and young stage branch
+    // Only Water's slot is shared with Sky. History uses slot + 3 for Sky.
+    dna: { base: 0x18000BA0, cnt: 0x125, field: 0x1B7, stash: 0xF0C, mark: 0xF0B, bits: 0, mask: 0, slots: 2,
+      regions: [], icons: [862, 863, 877, 862, 1365, 877],
+      sites: [[0x10072648, '80b590b0', 'bw', 0], [0x100726CC, '80b590b0', 'bw', 1], [0x10009604, '81b08df8', 'bw', 2],
+        [0x10036EA2, '0328', 'hex', '0628'], [0x100729CC, 'fff73cfe', 'bl', 3], [0x100729D4, '0228', 'hex', '0528'],
+        [0x100120A6, '90f8b701', 'bl', 4], [0x10066142, '90f8b701', 'bl', 4], [0x10012160, '91f8b701', 'bl', 5],
+        [0x1005ECBC, '1ef0b2fe81790ca830f81100', 'bl', 8]] },
+    // Legacy food-only helper and the same food rules for the independent history.
     food: { ram: 0x18000BA0, field: 0x1B7, slots: 2, hist: 0x132, kinds: [0, 3, 9, 0, 6, 0], sites: [[0x1000E7F6, '0cf035f9', 'bl', 10], [0x10072750, '80b590b0', 'bw', 11]] } },
 };
 /* 1.7.3 test23 SIX_HUNT: the egg hunt gives 8 entries per field (picture, item, found bit; two groups of 4, one picked at
@@ -778,14 +784,15 @@ function sixCleanUpdateNeeded(rom) {
 }
 function sixFieldsUpdateNeeded(rom) {
   const info = sixInfo(rom);
-  return info?.kind === 'gen3' && info.fieldMenu && info.version === SIX_VERSION && info.dna &&
-    (sixAdultUpdateNeeded(rom) || sixCleanUpdateNeeded(rom) || sixToyUpdateNeeded(rom));
+  return info?.fieldMenu && info.version === SIX_VERSION && info.dna &&
+    (sixAdultUpdateNeeded(rom) || (info.kind === 'gen3' && (sixCleanUpdateNeeded(rom) || sixToyUpdateNeeded(rom))));
 }
 function sixFieldsUpdate(rom, blob) {
   if (!sixFieldsUpdateNeeded(rom)) return rom;
   const adult = sixAdultUpdateNeeded(rom);
-  const clean = blob && blob.length > 0xFB0 && sixCleanUpdateNeeded(rom);
-  const toy = sixToyUpdateNeeded(rom) && sixToyHooks(blob);
+  const gen3 = sixInfo(rom).kind === 'gen3';
+  const clean = gen3 && blob && blob.length > 0xFB0 && sixCleanUpdateNeeded(rom);
+  const toy = gen3 && sixToyUpdateNeeded(rom) && sixToyHooks(blob);
   if (!adult && !clean && !toy) return rom;
   const out = new Uint8Array(rom);
   if (adult) out.set(bookBytes(ADULT_FIELDS_NEW), ADULT_FIELDS_AT);
@@ -993,20 +1000,24 @@ function sixLabGamesUpdate(rom, blob) {
 function dnaCan(rom, K) {
   const D = K && K.dna, fo = (x) => x - 0x10000000 + 0x11000;
   if (!SIX_DNA || !D) return false;
-  return dnaSites(D).every(([x, h]) => hex(rom, fo(x), h.length / 2) === h);
+  return dnaSites(K).every(([x, h]) => hex(rom, fo(x), h.length / 2) === h);
 }
 /* the firmware places of the DNA part (with the food places when on) */
-function dnaSites(D) { return SIX_FOOD && D.food ? D.sites.concat(D.food.sites) : D.sites; }
+function dnaSites(K) {
+  const food = K.dna.food || K.food;
+  return SIX_FOOD && food ? K.dna.sites.concat(food.sites) : K.dna.sites;
+}
 /* An old DNA part without the food places: put the DNA part in again (the saved values stay).
- * Jade Forest (no DNA part): the food part alone. */
+ * The legacy food-only patch is still recognized when upgrading Jade Forest. */
 function sixFood(rom, blob) {
   const info = sixInfo(rom), K = info && KINDS[info.kind], fo = (x) => x - 0x10000000 + 0x11000;
   if (!SIX_FOOD || !info || info.version < 7 || !K || !blob || blob.length <= P_DNA_FN + 4 * 11 || u32(blob, P_DNA_FN + 4 * 11) === 0) return rom;
-  const F = K.dna ? K.dna.food : K.food;
+  const F = K.dna?.food || K.food;
   if (!F || !F.sites.every(([x, h]) => hex(rom, fo(x), h.length / 2) === h)) return rom;
   const out = new Uint8Array(rom);
-  if (K.dna) { if (!info.dna) return rom; dnaStrip(out, K, info); dnaInstall(out, K, blob, info.fieldMenu); }
-  else if (!info.dna) foodInstall(out, K, blob);
+  if (info.dna) { dnaStrip(out, K, info); dnaInstall(out, K, blob, info.fieldMenu); }
+  else if (K.food) foodInstall(out, K, blob);
+  else return rom;
   return out;
 }
 /* Food part alone (Jade Forest): the code of the DNA part, only the values the food code reads. */
@@ -1041,10 +1052,11 @@ function dnaInstall(out, K, blob, fieldMenu) {
   w16(page, P_DNA + 12, D.bits); page[P_DNA + 14] = D.mask; page[P_DNA + 15] = D.slots;
   page.fill(0, P_DNA + 0x10, P_DNA + 0x28); D.regions.forEach(([o, n], i) => { w16(page, P_DNA + 0x10 + 4 * i, o); w16(page, P_DNA + 0x12 + 4 * i, n); });
   D.icons.forEach((v, i) => w16(page, P_DNA + 0x28 + 2 * i, v));
-  if (SIX_FOOD && D.food) { w16(page, P_DNA + 0x34, D.food.hist); D.food.kinds.forEach((v, i) => { page[P_DNA + 0x36 + i] = v; }); }
+  const food = D.food || K.food;
+  if (SIX_FOOD && food) { w16(page, P_DNA + 0x34, food.hist); food.kinds.forEach((v, i) => { page[P_DNA + 0x36 + i] = v; }); }
   w32(page, 32, u32(page, 32) | 8);
   const fn = (k) => u32(page, P_DNA_FN + 4 * k) & ~1;
-  sitesPut(out, dnaSites(D), fn);
+  sitesPut(out, dnaSites(K), fn);
   out.set(branch(XIP(0x11000 + K.child.at), fn(DNA_CHILD), true), 0x11000 + K.child.at);
   if (fieldMenu) out.set(branch(0x10000000 + K.fm.set, fn(DNA_FSET), true), 0x11000 + K.fm.set);
 }
@@ -1052,7 +1064,7 @@ function dnaInstall(out, K, blob, fieldMenu) {
 function dnaStrip(out, K, info) {
   const D = K.dna, fo = (x) => x - 0x10000000 + 0x11000, page = out.subarray(SIX_OFF, SIX_OFF + 0x1000);
   if (!D) return;
-  for (const [x, h] of D.food ? D.sites.concat(D.food.sites) : D.sites) for (let k = 0; k < h.length / 2; k++) out[fo(x) + k] = parseInt(h.substr(2 * k, 2), 16);
+  for (const [x, h] of dnaSites(K)) out.set(bookBytes(h), fo(x));
   const fn = (k) => u32(page, P_FN + 4 * k) & ~1;
   out.set(branch(XIP(0x11000 + K.child.at), fn(FN_CHILD), true), 0x11000 + K.child.at);
   if (info.fieldMenu) out.set(branch(0x10000000 + K.fm.set, u32(page, P_FM_FN + 8) & ~1, true), 0x11000 + K.fm.set);
@@ -1080,13 +1092,13 @@ function sixDna(rom, blob, on) {
   const K = KINDS[info.kind], out = new Uint8Array(rom);
   if (!on) {
     dnaStrip(out, K, info);
-    if (info.kind === 'gen3' && info.fieldMenu &&
-        hex(out, ADULT_FIELDS_AT, ADULT_FIELDS_NEW.length / 2) === ADULT_FIELDS_NEW) {
+    if (info.fieldMenu && hex(out, ADULT_FIELDS_AT, ADULT_FIELDS_NEW.length / 2) === ADULT_FIELDS_NEW) {
       out.set(bookBytes(ADULT_FIELDS_OLD), ADULT_FIELDS_AT);
     }
     return out;
   }
-  if (!SIX_DNA || !K.dna || !blob || u32(blob, P_DNA_FN) === 0 || !dnaCan(rom, K)) return rom;
+  if (info.food && K.food) foodStrip(out, K);
+  if (!SIX_DNA || !K.dna || !blob || u32(blob, P_DNA_FN) === 0 || !dnaCan(out, K)) return rom;
   dnaInstall(out, K, blob, info.fieldMenu);
   return sixFieldsUpdate(out, blob);
 }
@@ -1143,7 +1155,7 @@ function sixApply(rom, land, blob, opts = {}) {
     if (fieldMenu) outJ.set(bookBytes(ADULT_FIELDS_OLD), ADULT_FIELDS_AT);
     if (dnaOk) dnaInstall(outJ, KINDS.jade, blob, fieldMenu);
     else if (wantFood) return sixFood(outJ, blob);
-    return outJ;
+    return sixFieldsUpdate(outJ, blob);
   }
   if (!sixSource(land)) throw new Error('the second ROM must be a Land, Water or Sky ROM');
   const trop = rom;
@@ -1361,6 +1373,7 @@ const LEGACY_BOOKS = {
   ] },
 };
 const LEGACY_BOOK_VERSION = 4;
+const JADE_BOOK_VERSION = 5;
 function legacyBookKind(rom) {
   const id = C.editionIdOf(rom);
   if (id >= 1 && id <= 3) return 'gen1';
@@ -1373,6 +1386,11 @@ function bookSites(version) {
   if (version === 2) return BOOK_SITES;
   return BOOK_SITES.map((site) => site[0] === 0x90c72 ? [site[0], site[1], 'hex', '0820'] : site)
     .concat([[0x6feac, '20201190', 'jump', 14]]);
+}
+
+function legacyBookSites(legacy, version) {
+  return version !== JADE_BOOK_VERSION ? legacy.sites : legacy.sites.map(site =>
+    site[0] === 0x8241A ? [site[0], '0220adf82e00', 'call', 19] : site);
 }
 
 function bookReplacement(page, at, site) {
@@ -1469,14 +1487,15 @@ function neonBookCharacters(rom, chars) {
 function legacyBookCharacters(rom, profile) {
   const nt = root.ParamixNeonTransplant || (typeof require !== 'undefined'
     ? require('../six/experimental-neon/transplant.js') : null);
-  if (!nt?.installed(rom)) return null;
+  const imported = nt?.installed(rom), sky = profile === LEGACY_BOOKS.jade && sixInfo(rom)?.kind === 'jade';
+  if (!imported && !sky) return null;
   const chars = C.charTable(C.arc2Files(rom, C.ASSET_BASE)[0]);
-  const rosters = profile.fields.map(field =>
+  const rosters = profile.fields.concat(sky ? [3] : []).map(field =>
     chars.filter(c => c.field === field && c.stage >= 3 && c.stage <= 5 && c.id < 9000)
       .map(c => c.id).sort((a, b) => a - b));
   if (rosters.some(ids => ids.length !== 22 || new Set(ids).size !== 22)) return null;
-  const neon = neonBookCharacters(rom, chars);
-  return neon && { ...neon, rosters: rosters.flat() };
+  const neon = imported ? neonBookCharacters(rom, chars) : { ids: [], names: [] };
+  return neon && { ...neon, rosters: rosters.slice(0, 3).flat(), sky: sky ? rosters[3] : [] };
 }
 
 function sixBookApply(rom, stubOff) {
@@ -1484,9 +1503,9 @@ function sixBookApply(rom, stubOff) {
   let data;
   try { data = legacy ? legacyBookCharacters(rom, legacy) : bookCharacters(rom); } catch (_) { return false; }
   if (!data) return false;
-  const { ids, names, rosters, landSprites = [], neonSprites = [] } = data;
-  const version = legacy ? LEGACY_BOOK_VERSION : names.length ? BOOK_VERSION : 2;
-  const sites = legacy ? legacy.sites : bookSites(version);
+  const { ids, names, rosters, sky = [], landSprites = [], neonSprites = [] } = data;
+  const version = kind === 'jade' ? JADE_BOOK_VERSION : legacy ? LEGACY_BOOK_VERSION : names.length ? BOOK_VERSION : 2;
+  const sites = legacy ? legacyBookSites(legacy, version) : bookSites(version);
   if (sites.some(([off, orig]) => hex(rom, off, orig.length / 2) !== orig)) return false;
   const code = legacy ? legacy.code : BOOK_B64;
   const file = legacy ? 'book-' + kind : 'book';
@@ -1497,21 +1516,28 @@ function sixBookApply(rom, stubOff) {
   const idsAt = u32(page, 60), countAt = u32(page, 68), namesAt = u32(page, 72);
   const spritesAt = u32(page, 8 + 4 * 11);
   const rostersAt = legacy ? u32(page, 76) : 0;
-  if (u32(page, 0) !== BOOK_MAGIC || u32(page, 4) !== (legacy ? LEGACY_BOOK_VERSION : BOOK_VERSION) ||
+  const skyAt = version === JADE_BOOK_VERSION ? u32(page, 80) : 0;
+  if (u32(page, 0) !== BOOK_MAGIC || u32(page, 4) !== (legacy ? version : BOOK_VERSION) ||
       idsAt + 2 * ids.length > page.length || countAt >= page.length ||
       namesAt + 2 * names.length > page.length || (!legacy && spritesAt + 36 > page.length) ||
       (legacy && rostersAt + 2 * rosters.length > page.length) ||
+      (sky.length && skyAt + 2 * sky.length > page.length) ||
       at + page.length > stubOff + 0x1000 || !rom.subarray(at, at + page.length).every((b) => b === 255)) return false;
   w32(page, 4, version);
-  page[countAt] = legacy ? 6 : names.length ? 9 : 6;
+  page[countAt] = legacy ? 3 + (names.length ? 3 : 0) + (sky.length ? 1 : 0) : names.length ? 9 : 6;
   if (rosters) rosters.forEach((id, i) => w16(page, rostersAt + 2 * i, id));
+  if (sky.length) {
+    sky.forEach((id, i) => w16(page, skyAt + 2 * i, id));
+    const skySprites = spritesAt + 4 * (page[countAt] - 1);
+    w16(page, skySprites, 142); w16(page, skySprites + 2, 181);
+  }
   ids.forEach((id, i) => w16(page, idsAt + 2 * i, id));
   names.forEach((id, i) => w16(page, namesAt + 2 * i, id));
   landSprites.forEach((id, i) => w16(page, spritesAt + 12 + 2 * i, id));
   neonSprites.forEach((id, i) => w16(page, spritesAt + 24 + 2 * i, id));
   rom.set(page, at);
   sites.forEach((site) => rom.set(bookReplacement(page, at, site), site[0]));
-  return true;
+  return page[countAt];
 }
 
 function sixBookStrip(rom, stubOff) {
@@ -1519,8 +1545,10 @@ function sixBookStrip(rom, stubOff) {
   if (u32(rom, at) !== BOOK_MAGIC) return;
   const page = rom.subarray(at, stubOff + 0x1000);
   const version = u32(page, 4);
-  const legacy = version === LEGACY_BOOK_VERSION ? LEGACY_BOOKS[legacyBookKind(rom)] : null;
-  const sites = legacy ? legacy.sites : bookSites(version);
+  const legacy = version >= LEGACY_BOOK_VERSION ? LEGACY_BOOKS[legacyBookKind(rom)] : null;
+  const sites = legacy ? legacyBookSites(legacy, version) : bookSites(version);
+  if (version > JADE_BOOK_VERSION || (version === JADE_BOOK_VERSION && legacy !== LEGACY_BOOKS.jade))
+    throw new Error('unsupported native Tama File patch');
   if ((!legacy && (version < 1 || version > BOOK_VERSION)) || sites.some((site) => {
     const b = bookReplacement(page, at, site);
     return hex(rom, site[0], b.length) !== hex(b, 0, b.length);

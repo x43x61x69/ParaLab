@@ -179,8 +179,9 @@ function info(rom) {
   const six = SIX.sixInfo(rom);
   const names = F.fieldNames(rom);
   const bank = six && store.page[SIX_SET] === 1 ? 1 : 0;
-  const separate = six?.kind === 'gen3' && six.dna && six.fieldMenu && store.page[SIX_DNA_MARK] === 0x5A;
-  const banks = six?.kind === 'gen3' && six.dna && six.fieldMenu ? bankPatch(rom) : null;
+  const banks = six?.dna ? bankPatch(rom) : null;
+  if (banks && d === layouts.jade) store.page = banks.initializeJade(store.page);
+  const separate = (banks && d === layouts.jade) || six?.kind === 'gen3' && six.dna && six.fieldMenu && store.page[SIX_DNA_MARK] === 0x5A;
   return { d, neon, store, bank, separate, banks, six, names, edition: edition.id,
     physicalField: store.page[edition.profile.fieldByte] };
 }
@@ -192,13 +193,14 @@ function fieldView(rom, data, id) {
   const switches = names.length > 3 && (six?.kind === 'gen3' || physical === 1);
   const active = !switches || bank === activeBank;
   const available = active || separate;
-  const roster = (active || !separate ? d.roster : SIX_ROSTER) + physical * d.stride;
+  const inactive = d === layouts.jade ? (banks?.JADE_ROSTER ?? 0) - d.stride : SIX_ROSTER;
+  const roster = (active || !separate ? d.roster : inactive) + physical * d.stride;
   const expansion = (active ? 0x89 : SIX_EXPANSION);
   const capacity = d.packed || !((store.page[expansion] >> physical) & 1) ? 4 : 8;
   // Occupied upper slots remain visible even if the expansion flag was lost.
   const own = available ? flags(store.page, d, roster) : 0;
   const other = switches && separate
-    ? flags(store.page, d, (active ? SIX_ROSTER : d.roster) + physical * d.stride) : 0;
+    ? flags(store.page, d, (active ? inactive : d.roster) + physical * d.stride) : 0;
   const slots = Array.from({ length: own & 0xF0 ? 8 : capacity }, (_, slot) => {
     const index = d.index + physical * (d.packed ? 4 : 8) + slot;
     const primary = flashAddress(rom, d, index);

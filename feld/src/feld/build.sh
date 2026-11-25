@@ -2,6 +2,7 @@
 # Build the Paramix field switch (feld.bin, runs from PRAM 0)
 set -e
 cd "$(dirname "$0")"
+if [ "${1:-}" != "--inner" ]; then python3 gen/font.py; fi
 python3 gen_version.py
 CF="--target=thumbv7m-none-eabi -mcpu=cortex-m3 -mthumb -ffreestanding -nostdlib -ffunction-sections -fdata-sections -flto -Os -fno-common -Wall -Wno-initializer-overrides -Wno-unused-const-variable -fno-builtin-memset -DTONE_FIX -DBL_BLACK -DBL_OFFFIX -DBL_SLEEP -DFAST_LCD -DLCD_FASTCLK -DCLEAN -DPARA_BACK -DPARA_MB_KEEP -DPARA_FLASH -DPARA_FLASH_LATE -DFELD_AUTO -DFELD_BFALL -DFELD_BFALL_NOA -DCLEAN_AUTO -DBAT_SHOW -DBAG_DEL -DFELD_PW -DFELD_TAMA_ANY -DFELD_NOCLK -DFELD_BSETTLE -DFELD_SEEN $XCF"
 O=""

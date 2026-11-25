@@ -25,8 +25,16 @@
 #include "io.h"
 #include "hw.h"
 #include "flash.h"
+#if defined(HOST) || defined(FELD_CLEAN)
 #include "font.h"
+#else
+__attribute__((used,section(".pmxversion")))
+static const char menu_font_tag[]="PMXFONT3";
+#endif
+#include "title_rows.h"
+#ifdef HOST
 #include "../../../shared/title_font.h"
+#endif
 #ifdef FELD_MY_LAB_ON_PARADISE
 #include "../stub/my_lab_paradise_entry.h"
 #endif
@@ -59,6 +67,7 @@
 #define F_LAUNCH 16u                /* 1.6.8: launcher ROM: the menu is the home screen (C stays, display off when idle) */
 #define F_CLEAN  32u                /* 1.7.2: ROM without the Paradise: the menu starts by itself and keeps the clock */
 #define F_BOOK6  0x100u             /* native six-region Tama File patch installed */
+#define F_BOOK_SKY 0x10000u         /* Sky has a separate Tama File on Jade Forest */
 #define F_APPS   0x200u             /* menu without legacy settings writes (Neon Planets) */
 #define F_NEON_EDIT 0x400u           /* Neon settings ring and its own editors */
 #define F_KEEP_AWAKE 0x8000u
@@ -201,11 +210,20 @@ static int glyph(int c){ return c<32 ? 92+c : c-32; }
 static int slen(const char *s){ int n=0; while(s[n]) n++; return n; }
 static int text_w(const char *s, int sc){ int n=slen(s); return n ? n*6*sc-sc : 0; }
 static void textn(int x,int y,const char *s,int n,u16 c,int sc){
+#if !defined(HOST) && !defined(FELD_CLEAN)
+  /* The Paradise installer stores the small font in its launcher sector. */
+  const volatile u8 *font_index=fl(g_cfg.stub_off+0x9C8u);
+  const volatile u8 *columns=font_index+96u;
+#endif
   for(int i=0;i<n && s[i];i++,x+=6*sc){
     int ch=(u8)s[i]; if(ch>=0x60 && ch!='x' && ch!='v') ch-=32;
     unsigned index=glyph(ch);
-    if(index>=sizeof(font_index)) continue;
+    if(index>=96u) continue;
+#if !defined(HOST) && !defined(FELD_CLEAN)
+    const volatile u8 *g=columns+5u*font_index[index];
+#else
     const u8 *g=font_columns[font_index[index]];
+#endif
     for(int k=0;k<5;k++) for(int r=0;r<7;r++) if(g[k]&(1u<<r)) rect(x+k*sc,y+r*sc,x+k*sc+sc,y+r*sc+sc,c);
   }
 }
@@ -220,11 +238,21 @@ static int title_width(const char *s){
   return width ? width-2 : 0;
 }
 static void title_text(int x,int y,const char *s,u16 color){
+#if !defined(HOST) && !defined(FELD_CLEAN)
+  const volatile u8 *title_rows=fl(g_cfg.stub_off+0xB4Au);
+  const volatile u8 *title_offsets=title_rows+21u;
+  const volatile u8 *title_runs=title_offsets+26u;
+#endif
   for(;*s;s++,x+=10){
     if(*s==' ') continue;
-    const unsigned char *rows=title_font[((u8)*s&~0x20)-'A'];
-    for(int r=0;r<12;r++) for(int k=0;k<8;k++)
-      if(rows[r]&(128u>>k)) rect(x+k,y+r,x+k+1,y+r+1,color);
+    const volatile u8 *runs=title_runs+title_offsets[((u8)*s&~0x20)-'A'];
+    for(int r=0;r<12;){
+      u8 run=*runs++, row=title_rows[run&31u];
+      int end=r+(run>>5)+1;
+      for(int k=0;k<8;k++)
+        if(row&(128u>>k)) rect(x+k,y+r,x+k+1,y+end,color);
+      r=end;
+    }
   }
 }
 static void centered_title(int y,const char *s,u16 color){
@@ -2267,6 +2295,9 @@ static int care_row(u32 i,char *name,char *right,u16 *col){
       care_label(name,"TRAVEL FUEL"); utoa_(patches&CARE_FUEL_PATCH?CARE_FUEL_MAX:g_set[g_cfg.tama_off+0x1Bu],right);
       char *p=right; while(*p) p++; care_label(p,"/60"); return 1;
     }
+#ifndef FELD_CLEAN
+    if(i>=12u) return cell_row(i-12u,name,right,col);
+#endif
     if(i>=10u){
       care_label(name,i==10u?"CLEANLINESS":"ILLNESS");
       if(i==10u) utoa_(care_cleanliness(care_layout()),right);
@@ -2323,7 +2354,11 @@ static void care_menu(void){
   const struct CareLayout *layout=care_layout();
   u32 first=(care_patches()&CARE_AUTOPILOT_PATCH)?2u:0u;
   for(;;){
-    int row=care_choose("CARE",first+(layout?12u:8u),sel,care_row);
+    u32 rows=layout?12u:8u;
+#ifndef FELD_CLEAN
+    if(layout) rows+=CELL_FIELD+(cell_split()?nfields():3u);
+#endif
+    int row=care_choose("CARE",first+rows,sel,care_row);
     if(row<0) return;
     sel=(u32)row;
     if(sel<first){ autopilot_menu(sel==0u); continue; }
@@ -2336,6 +2371,9 @@ static void care_menu(void){
     }
     if(layout && action==9u){ care_fuel_menu(); continue; }
     if(!t_alive()){ message("NO CURRENT TAMA","HATCH AN EGG FIRST",""); continue; }
+#ifndef FELD_CLEAN
+    if(action>=12u){ cell_edit(action-12u); continue; }
+#endif
     if(action>=10u){ care_edit_condition(layout,action==11u); continue; }
     if(action==0u) care_full();
     else if(action<3u) tama_number(action);
