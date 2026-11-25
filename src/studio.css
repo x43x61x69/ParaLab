@@ -528,6 +528,9 @@ button,input,select,textarea { font-family:inherit; }
 #deviceDialog::backdrop { background:rgb(13 29 66 / .5); }
 #deviceDialog h2 { font-size:1.35rem; margin:0 0 12px; }
 #deviceDialogMessage { white-space:pre-line; overflow-wrap:anywhere; line-height:1.6; }
+.dialog-confirmations { margin:1em 0 0; min-inline-size:0; }
+.dialog-confirmations label { display:flex; gap:.65em; align-items:baseline; margin:.5em 0; cursor:pointer; }
+.dialog-confirmations input { flex:none; }
 .device-dialog-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; margin-top:20px; }
 
 .lab-items-tools { display:flex; align-items:center; flex-wrap:wrap; justify-content:space-between; gap:8px; margin:12px 0; }

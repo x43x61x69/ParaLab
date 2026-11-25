@@ -2783,6 +2783,15 @@ static void game_progress_menu(void){
 }
 
 #ifdef FELD_MY_LAB
+#if defined(LAB_FT_UPDATE) && !defined(FELD_CLEAN) && !defined(HOST)
+/* The My Lab update tool reads the device clock while exporting saves. */
+static u32 rtc_cnt(void){ return REG(0x45000304u); }
+static void civil(u32 z,u32 *y,u32 *m,u32 *d){
+  z+=719468u; u32 era=z/146097u, doe=z-era*146097u, yoe=(doe-doe/1460u+doe/36524u-doe/146096u)/365u;
+  u32 doy=doe-(365u*yoe+yoe/4u-yoe/100u), mp=(5u*doy+2u)/153u;
+  *d=doy-(153u*mp+2u)/5u+1u; *m=mp<10u?mp+3u:mp-9u; *y=yoe+era*400u+(*m<=2u);
+}
+#endif
 #include "my_lab_tools.h"
 #endif
 

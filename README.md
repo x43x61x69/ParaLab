@@ -115,10 +115,10 @@ Open **Lab Codes** in the main navigation to browse 11 Paradise characters, thei
 
 ### 1. Prepare the UART update
 
-Open a supported stock My Lab ROM and go to **Update File**. Have the matching device `.key` ready.
+Open a supported stock My Lab ROM or a compatible ParaLab menu ROM and go to **Update File**. Enter the device key as eight hexadecimal digits, load a text `.key` file, or choose **Find Key Automatically** to search the loaded ROM. Both update workflows share the key field.
 
-- **Loaded ROM** creates an update from the ROM.
-- **Existing update file** opens a stock `MLTUPD.BIN`. Choose **Choose Key and Patch Update…** to authenticate it against the loaded ROM and add the writable UART Flash Tool.
+- **Loaded ROM** creates an update from the ROM. Automatic key search runs locally in the browser.
+- **Existing update file** opens a stock `MLTUPD.BIN`. Use **Patch Update with Key** to use the key already in the field, or **Choose Key and Patch Update…** to load a key and patch in one step. ParaLab authenticates the update against the loaded ROM before adding the writable UART Flash Tool.
 
 Copy the resulting `MLTUPD.BIN` to the root of the microSD card and use the stock Settings update flow. This package installs the writable UART Flash Tool.
 
@@ -129,7 +129,7 @@ Copy the resulting `MLTUPD.BIN` to the root of the microSD card and use the stoc
 3. Open the exported image in Workspace and choose **Review and Write…** in Device Console. ParaLab verifies the image’s writable rescue region on-device before changing the main boot table. Images with the older read-only rescue are rejected.
 
 > [!WARNING]
-> The stock My Lab Settings update flow with `MLTUPD.BIN` has been verified on hardware. Emulator checks covered Recovery, UART launch, and one rescue-sector write and readback. A host-side simulation covered the rescue-first write sequence. Keep a working recovery card and a ROM backup.
+> The stock My Lab Settings update flow with `MLTUPD.BIN` and the full Menu and rescue-region install have been verified on hardware. Keep a working recovery card and a ROM backup.
 
 ### Flash a full ROM from microSD
 

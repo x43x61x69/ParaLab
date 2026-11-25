@@ -153,8 +153,24 @@ const T = {
     myLabSpriteEdits: 'Edited sprite sheets',
     myLabSpriteDirty: 'Sprite sheet changes are ready to export.',
     myLabUpdateHeading: 'Update File', myLabUpdateOpen: 'Choose Update File…',
-    myLabUartCreate: 'Choose Key and Create Update…',
+    myLabUartKeyLabel: 'Device key (hex)',
+    myLabUartKeyFormat: 'Exactly 8 hexadecimal digits. A .key file contains this text.',
+    myLabUartKeyFile: 'Load .key file…',
+    myLabUartKeyInvalid: 'Enter exactly 8 hexadecimal digits (optional 0x prefix).',
+    myLabUartCreate: 'Create Update with Key',
+    myLabUartAuto: 'Find Key Automatically',
+    myLabUartSearchStart: 'Start Search',
+    myLabUartSearchConfirm: 'Finding a key and using it to access or modify firmware may be subject to copyright and rules on technological protection measures. Owning the device does not, by itself, grant permission to access, modify, or distribute its firmware. If you cannot confirm every statement below, cancel.',
+    myLabUartConsentLegend: 'Confirm each statement before continuing',
+    myLabUartConsentSource: 'I lawfully obtained this ROM from a device I purchased.',
+    myLabUartConsentUse: 'I will use this feature only for a purpose permitted by applicable law. I have any required authorization or have confirmed that an applicable legal exception covers my intended use.',
+    myLabUartConsentResponsibility: 'I am responsible for how I use the key and any resulting files. I will keep the key private and will not upload or share the ROM or modified update files unless I am legally entitled to do so.',
+    myLabUartFinding: 'Searching ROM for device key…',
+    myLabUartSearching: 'Testing key candidates',
+    myLabUartFound: 'Key found and filled in.',
+    myLabUartSearchBad: 'Could not find the device key: {error}',
     myLabUpdatePatch: 'Choose Key and Patch Update…',
+    myLabUpdatePatchWithKey: 'Patch Update with Key',
     myLabUartReady: 'Authenticated writable UART update saved as MLTUPD.BIN.',
     myLabUartBad: 'Could not create UART update: {error}',
     myLabUpdatePatchReady: 'Patched and authenticated writable UART update saved as MLTUPD.BIN.',
@@ -564,7 +580,8 @@ function renderBusyDialog() {
   let amount = '';
   if (counted) {
     const format = new Intl.NumberFormat(locale());
-    amount = format.format(current.done / 1024) + ' / ' + format.format(current.total / 1024) + ' KiB';
+    amount = current.percentMode ? (current.done / current.total * 100).toFixed(1) + '%' :
+      format.format(current.done / 1024) + ' / ' + format.format(current.total / 1024) + ' KiB';
     bar.setAttribute('aria-valuemax', current.total);
     bar.setAttribute('aria-valuenow', current.done);
     bar.setAttribute('aria-valuetext', amount);
@@ -586,8 +603,8 @@ async function busy(title, fn, detailed = false) {
   try {
     renderBusyDialog();
     await new Promise(resolve => setTimeout(resolve, 30));
-    return detailed ? await fn((phase, done, total) => {
-      Object.assign(operation, { phase, done, total });
+    return detailed ? await fn((phase, done, total, mode) => {
+      Object.assign(operation, { phase, done, total, percentMode: mode === 'percent' });
       renderBusyDialog();
     }) : await fn();
   } finally {
@@ -1773,18 +1790,18 @@ function showMyLabRom(ctx, name) {
   $('myLabCharacterSearch').value = '';
   $('myLabCharacterZoom').value = '0';
   $('myLabArchive').value = '1';
-  const canCreateUpdate = myLabRom.menuAction === 'install';
+  const canCreateUpdate = MLM.canCreateUartUpdate(myLabRom.rom);
   $('updateRomName').textContent = name;
   $('updateRequiresStock').hidden = canCreateUpdate;
   $('updateSourceRom').checked = canCreateUpdate;
   $('updateSourcePackage').checked = !canCreateUpdate;
   showUpdateSource();
   $('updatePackageActions').hidden = true;
-  $('updatePatchStatus').textContent = $('updateRomStatus').textContent = '';
+  $('updatePatchStatus').textContent = $('updateRomStatus').textContent = $('myLabUartKeyStatus').textContent = '';
   $('myLabUpdateStatus').textContent = '';
   $('myLabUpdateExport').disabled = true;
-  $('myLabUpdatePatch').disabled = true;
-  $('myLabUartCreate').disabled = myLabRom.menuAction !== 'install';
+  $('myLabUartKeyHex').value = '';
+  renderUartKeyControls();
   $('myLabSprite').value = 0;
   showMyLabTab(myLabTabs[0]);
   renderGameLabels();
@@ -4105,10 +4122,61 @@ $('myLabExport').onclick = () => {
   if (gardenPreview) download(gardenPreview, 'my-lab-slot-' + (gardenSlot.slot + 1) + '-' + visView(gardenPreview).getUint16(0x10a, true) + '.bin');
 };
 function showUpdateSource() {
-  $('updateFromRom').hidden = !$('updateSourceRom').checked;
-  $('updateFromPackage').hidden = $('updateSourceRom').checked;
+  const fromRom = $('updateSourceRom').checked;
+  $('updateFromRom').hidden = !fromRom;
+  $('updateFromPackage').hidden = fromRom;
+  $(fromRom ? 'updateRomKeySlot' : 'updatePackageKeySlot').append($('myLabUartKeyControls'));
+}
+function isUartKey(value) { return /^(?:0x)?[0-9a-f]{8}$/i.test(value); }
+function renderUartKeyControls() {
+  const input = $('myLabUartKeyHex'), value = input.value.trim();
+  const valid = isUartKey(value);
+  const supported = !!myLabRom && MLM.canCreateUartUpdate(myLabRom.rom);
+  const blocked = !supported || myLabRom.uartKeyBusy;
+  const canPatch = !blocked && !!myLabRom?.update;
+  $('myLabUartKeyControls').hidden = !supported;
+  input.disabled = $('myLabUartKeyFileOpen').disabled = $('myLabUartAuto').disabled = !!blocked;
+  $('myLabUartCreate').disabled = blocked || !valid;
+  $('myLabUpdatePatch').disabled = !canPatch;
+  $('myLabUpdatePatchWithKey').disabled = !canPatch || !valid;
+  input.setAttribute('aria-invalid', value && !valid ? 'true' : 'false');
+  $('myLabUartKeyHint').textContent = value && !valid ? t('myLabUartKeyInvalid') : '';
+}
+async function readUartKeyFile(file) {
+  if (file.size > 128) throw new Error(t('myLabUartKeyInvalid'));
+  const value = (await file.text()).trim();
+  if (!isUartKey(value)) throw new Error(t('myLabUartKeyInvalid'));
+  return value.replace(/^0x/i, '').toUpperCase();
+}
+async function withUartKeyControls(ctx, action) {
+  if (!ctx || ctx !== myLabRom || ctx.uartKeyBusy || !MLM.canCreateUartUpdate(ctx.rom)) return;
+  ctx.uartKeyBusy = true;
+  renderUartKeyControls();
+  try { await action(); }
+  finally {
+    ctx.uartKeyBusy = false;
+    if (ctx === myLabRom) renderUartKeyControls();
+  }
 }
 $('updateSourceRom').onchange = $('updateSourcePackage').onchange = showUpdateSource;
+$('myLabUartKeyHex').oninput = () => {
+  $('myLabUartKeyStatus').textContent = '';
+  renderUartKeyControls();
+};
+$('myLabUartKeyFileOpen').onclick = () => $('myLabUartKey').click();
+$('myLabUartKey').onchange = async event => {
+  const file = event.target.files[0], ctx = myLabRom;
+  event.target.value = '';
+  if (!file) return;
+  const status = $('myLabUartKeyStatus');
+  try {
+    await withUartKeyControls(ctx, async () => {
+      status.textContent = '';
+      const key = await readUartKeyFile(file);
+      if (ctx === myLabRom) $('myLabUartKeyHex').value = key;
+    });
+  } catch (error) { if (ctx === myLabRom) status.textContent = em(error); }
+};
 $('myLabUpdateOpen').onclick = () => $('myLabUpdateFile').click();
 $('myLabUpdateFile').onchange = async (event) => {
   const file = event.target.files[0], ctx = myLabRom;
@@ -4121,7 +4189,7 @@ $('myLabUpdateFile').onchange = async (event) => {
   ctx.update = null;
   status.textContent = t("Checking {v1}…", { v1: file.name });
   button.disabled = true;
-  $('myLabUpdatePatch').disabled = true;
+  renderUartKeyControls();
   try {
     if (file.size > ML.UPDATE_MAX) throw new Error('File exceeds the My Lab update size limit');
     const bytes = new Uint8Array(await file.arrayBuffer());
@@ -4131,7 +4199,7 @@ $('myLabUpdateFile').onchange = async (event) => {
     status.textContent = t("{v1} · {v2} bytes. {v3}", { v1: file.name, v2: bytes.length.toLocaleString(locale()), v3: t('myLabUpdateReady') });
     $('updatePackageActions').hidden = false;
     button.disabled = false;
-    $('myLabUpdatePatch').disabled = ctx.menuAction !== 'install';
+    renderUartKeyControls();
   } catch (error) {
     if (ctx === myLabRom && ctx.updateFile === file) status.textContent = t('myLabUpdateBad', { error: em(error) });
   }
@@ -4140,37 +4208,42 @@ $('myLabUpdateExport').onclick = () => {
   if (myLabRom?.update) download(myLabRom.update, ML.UPDATE_NAME);
 };
 $('myLabUpdatePatch').onclick = () => {
-  if (myLabRom?.menuAction === 'install' && myLabRom.update) $('myLabUpdatePatchKey').click();
+  if (!$('myLabUpdatePatch').disabled) $('myLabUpdatePatchKey').click();
 };
-$('myLabUpdatePatchKey').onchange = async event => {
-  const file = event.target.files[0], ctx = myLabRom, source = ctx?.update;
-  event.target.value = '';
-  if (!file || !ctx || ctx.menuAction !== 'install' || !source) return;
+async function patchUpdateWithKey(ctx, file) {
+  const source = ctx?.update;
+  if (!source) return;
   const status = $('updatePatchStatus');
   try {
-    if (file.size > 128) throw new Error('Open the matching eight-digit My Lab device key');
-    const key = (await file.text()).trim();
-    const patched = await busy(t("Patching Update File"), () => MLM.patchUartUpdateFromRom(source, ctx.rom, key));
-    if (ctx !== myLabRom || ctx.update !== source) return;
-    download(patched, ML.UPDATE_NAME);
-    measure('operation', 'patch_update_file');
-    status.textContent = t('myLabUpdatePatchReady');
+    await withUartKeyControls(ctx, async () => {
+      status.textContent = '';
+      const key = file ? await readUartKeyFile(file) : $('myLabUartKeyHex').value.trim();
+      if (ctx !== myLabRom || ctx.update !== source || !isUartKey(key)) return;
+      if (file) {
+        $('myLabUartKeyHex').value = key;
+        $('myLabUartKeyStatus').textContent = '';
+      }
+      const patched = await busy(t("Patching Update File"), () => MLM.patchUartUpdateFromRom(source, ctx.rom, key));
+      if (ctx !== myLabRom || ctx.update !== source) return;
+      download(patched, ML.UPDATE_NAME);
+      measure('operation', 'patch_update_file');
+      status.textContent = t('myLabUpdatePatchReady');
+    });
   } catch (error) {
     if (ctx === myLabRom && ctx.update === source)
       status.textContent = t('myLabUpdatePatchBad', { error: em(error) });
   }
-};
-$('myLabUartCreate').onclick = () => {
-  if (myLabRom?.menuAction === 'install') $('myLabUartKey').click();
-};
-$('myLabUartKey').onchange = async event => {
-  const file = event.target.files[0], ctx = myLabRom;
+}
+$('myLabUpdatePatchWithKey').onclick = () => patchUpdateWithKey(myLabRom);
+$('myLabUpdatePatchKey').onchange = event => {
+  const file = event.target.files[0];
   event.target.value = '';
-  if (!file || !ctx || ctx.menuAction !== 'install') return;
+  if (file) return patchUpdateWithKey(myLabRom, file);
+};
+async function createUartUpdateWithKey(ctx, key) {
+  if (!ctx || ctx !== myLabRom || !MLM.canCreateUartUpdate(ctx.rom)) return;
   const status = $('updateRomStatus');
   try {
-    if (file.size > 128) throw new Error('Open the matching eight-digit My Lab device key');
-    const key = (await file.text()).trim();
     const update = await busy(t("Building Update File"), () => MLM.createUartUpdate(ctx.rom, key));
     if (ctx !== myLabRom) return;
     download(update, ML.UPDATE_NAME);
@@ -4178,6 +4251,37 @@ $('myLabUartKey').onchange = async event => {
     status.textContent = t('myLabUartReady');
   } catch (error) {
     if (ctx === myLabRom) status.textContent = t('myLabUartBad', { error: em(error) });
+  }
+}
+$('myLabUartCreate').onclick = () => {
+  const ctx = myLabRom, key = $('myLabUartKeyHex').value.trim();
+  if (isUartKey(key)) return withUartKeyControls(ctx, () => createUartUpdateWithKey(ctx, key));
+};
+$('myLabUartAuto').onclick = async () => {
+  const ctx = myLabRom, status = $('myLabUartKeyStatus');
+  if ($('myLabUartAuto').disabled) return;
+  try {
+    const accepted = await deviceDialog(t('myLabUartSearchConfirm'), t('myLabUartAuto'), t('myLabUartSearchStart'),
+      false, null, null, ['myLabUartConsentSource', 'myLabUartConsentUse', 'myLabUartConsentResponsibility'].map(key => t(key)));
+    if (!accepted) return;
+    await withUartKeyControls(ctx, async () => {
+      status.textContent = '';
+      const key = await busy(t('myLabUartFinding'), onProgress => {
+        let displayed = 0;
+        onProgress('myLabUartSearching', displayed, 100, 'percent');
+        return MLM.findUartDeviceKey(ctx.rom, progress => {
+          const percent = Math.floor(progress * 1000) / 10;
+          if (percent === displayed) return;
+          displayed = percent;
+          onProgress('myLabUartSearching', percent, 100, 'percent');
+        });
+      }, true);
+      if (ctx !== myLabRom) return;
+      $('myLabUartKeyHex').value = key;
+      status.textContent = t('myLabUartFound');
+    });
+  } catch (error) {
+    if (ctx === myLabRom) status.textContent = t('myLabUartSearchBad', { error: em(error) });
   }
 };
 $('fileRom').onchange = (e) => { const f = e.target.files[0]; e.target.value = ''; if (f) loadRom(f); };
@@ -5059,7 +5163,7 @@ function renderWriteReview(plan) {
   $('writeSaves').textContent = plan.saves;
 }
 
-function deviceDialog(message, title = t("Confirm Device Operation"), action = t("Continue"), notice = false, writeMode = null, alternate = null) {
+function deviceDialog(message, title = t("Confirm Device Operation"), action = t("Continue"), notice = false, writeMode = null, alternate = null, confirmations = []) {
   const dialog = $('deviceDialog');
   if (dialog.open) return Promise.resolve(false);
   const review = writeMode === 'review';
@@ -5072,13 +5176,35 @@ function deviceDialog(message, title = t("Confirm Device Operation"), action = t
   $('deviceDialogCancel').hidden = notice;
   $('deviceDialogAlternate').hidden = !alternate;
   $('deviceDialogAlternate').textContent = alternate || '';
-  $('deviceDialogAccept').textContent = action;
+  const accept = $('deviceDialogAccept');
+  accept.textContent = action;
+  const checks = [];
+  if (confirmations.length) {
+    const fieldset = document.createElement('fieldset');
+    fieldset.className = 'dialog-confirmations';
+    const legend = document.createElement('legend');
+    legend.textContent = t('myLabUartConsentLegend');
+    fieldset.append(legend);
+    for (const statement of confirmations) {
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      const label = document.createElement('label');
+      label.append(checkbox, document.createTextNode(statement));
+      fieldset.append(label);
+      checks.push(checkbox);
+    }
+    fieldset.onchange = () => { accept.disabled = !checks.every(check => check.checked); };
+    $('deviceDialogMessage').append(fieldset);
+  }
+  accept.disabled = checks.length > 0;
   const targetDevice = dv.d;
   dialog.returnValue = '';
   return new Promise(resolve => {
     dialog.addEventListener('close', () => {
       const choice = dialog.returnValue;
-      resolve(dv.d === targetDevice && (choice === 'accept' || (alternate && choice === 'alternate'))
+      const confirmed = checks.every(check => check.checked);
+      accept.disabled = false;
+      resolve(confirmed && dv.d === targetDevice && (choice === 'accept' || (alternate && choice === 'alternate'))
         ? (alternate ? choice : true) : false);
     }, { once: true });
     dialog.showModal();

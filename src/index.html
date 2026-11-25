@@ -1204,9 +1204,21 @@ __ANALYTICS_CARD__
       <section id="updateFromRom" class="update-path">
         <h3>Create a UART Update</h3>
         <p>Build a microSD update that starts the writable Flash Tool on My Lab.</p>
-        <dl class="file-facts"><dt>Source ROM</dt><dd id="updateRomName"></dd><dt>Required file</dt><dd>Matching device key (.key)</dd></dl>
-        <button class="btn primary" id="myLabUartCreate" type="button" data-t="myLabUartCreate"></button>
-        <input id="myLabUartKey" type="file" accept=".key" hidden>
+        <dl class="file-facts"><dt>Source ROM</dt><dd id="updateRomName"></dd></dl>
+        <div id="updateRomKeySlot">
+          <div id="myLabUartKeyControls">
+            <p class="hint" data-t="myLabUartKeyFormat"></p>
+            <div class="tools uart-key-controls">
+              <label><span data-t="myLabUartKeyLabel">Device key</span> <input id="myLabUartKeyHex" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" minlength="8" maxlength="10" pattern="(?:0x)?[0-9A-Fa-f]{8}" placeholder="A1B2C3D4" aria-describedby="myLabUartKeyHint"></label>
+              <button class="btn" id="myLabUartKeyFileOpen" type="button" data-t="myLabUartKeyFile">Load .key file…</button>
+              <input id="myLabUartKey" type="file" accept=".key,.txt" hidden>
+              <button class="btn" id="myLabUartAuto" type="button" data-t="myLabUartAuto" disabled></button>
+            </div>
+            <p class="hint" id="myLabUartKeyHint" aria-live="polite"></p>
+            <p id="myLabUartKeyStatus" role="status"></p>
+          </div>
+        </div>
+        <button class="btn primary" id="myLabUartCreate" type="button" data-t="myLabUartCreate" disabled></button>
         <p id="updateRomStatus" role="status"></p>
       </section>
       <section id="updateFromPackage" class="update-path" hidden>
@@ -1215,17 +1227,19 @@ __ANALYTICS_CARD__
         <button class="btn" id="myLabUpdateOpen" type="button" data-t="myLabUpdateOpen"></button>
         <input id="myLabUpdateFile" type="file" accept=".bin" hidden>
         <p id="myLabUpdateStatus" role="status"></p>
+        <div id="updatePackageKeySlot"></div>
         <div id="updatePackageActions" hidden>
-          <p>Download a copy of the inspected file. For a supported stock ROM, you can also add the writable UART Flash Tool with its matching device key.</p>
+          <p>Download a copy of the inspected file. With a supported loaded ROM, you can also add the writable UART Flash Tool with its matching device key.</p>
           <div class="tools">
-            <button class="btn primary" id="myLabUpdatePatch" type="button" data-t="myLabUpdatePatch" disabled></button>
-            <input id="myLabUpdatePatchKey" type="file" accept=".key" hidden>
+            <button class="btn primary" id="myLabUpdatePatchWithKey" type="button" data-t="myLabUpdatePatchWithKey" disabled></button>
+            <button class="btn" id="myLabUpdatePatch" type="button" data-t="myLabUpdatePatch" disabled></button>
+            <input id="myLabUpdatePatchKey" type="file" accept=".key,.txt" hidden>
             <button class="btn" id="myLabUpdateExport" type="button" disabled>Download Original File</button>
           </div>
           <p id="updatePatchStatus" role="status"></p>
         </div>
       </section>
-      <p id="updateRequiresStock" class="hint" hidden>Creating or patching a UART update requires a supported stock My Lab ROM. You can still inspect and download an existing update file.</p>
+      <p id="updateRequiresStock" class="hint" hidden>Creating or patching a UART update requires a supported My Lab ROM. You can still inspect and download an existing update file.</p>
       <details class="update-install">
         <summary>Using the Download on My Lab</summary>
         <p data-sentence="sentenceMyLabUpdate">Copy <code data-sentence-part="file">MLTUPD.BIN</code> to the root of the microSD card. After installing the UART update, open <a data-sentence-part="read" href="#romTransfer" data-view-link="uart">Device → Read ROM</a> to back up the device. A failed write may require Recovery.</p>

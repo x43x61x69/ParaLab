@@ -358,7 +358,12 @@ async function decryptBoot(rom, key, subtle = root.crypto?.subtle) {
     // Add a CBC block that decrypts to a full padding block for Web Crypto.
     const padding = input.slice(0xff0, 0x1000).map(byte => byte ^ 16);
     input.set(await encryptBlock(bootKey, padding), 0x1000);
-    const plain = new Uint8Array(await subtle.decrypt({ name: 'AES-CBC', iv }, bootKey, input));
+    let plain;
+    try { plain = new Uint8Array(await subtle.decrypt({ name: 'AES-CBC', iv }, bootKey, input)); }
+    catch (error) {
+      if (error?.name === 'OperationError') throw new Error('My Lab device key does not match this ROM');
+      throw error;
+    }
     code.set(reverseBlocks(plain), page);
   }
   return code;
@@ -372,13 +377,21 @@ function status(rom) {
       rom.subarray(NATIVE_HOOK, NATIVE_HOOK + 0x1000).every(byte => byte === 0xFF)) return 'install';
   return null;
 }
+function canCreateUartUpdate(rom) {
+  const mode = status(rom);
+  if (mode === 'install') return true;
+  return mode === 'update' && !M.hasParadisePortMarker(rom) && M.isMyLab(rom) &&
+    u32(rom, 8) === 0x13 && u32(rom, 0x24) === BOOT_CRC &&
+    tag(rom, NATIVE_HOOK + 0x100, 8) === 'PXMLAB02';
+}
 const UART_DISPATCHER = 0x1AE000, UART_ROWS = UART_DISPATCHER + 0x100;
 const UART_APP = 0x1AF000, UART_APP_CAPACITY = 0xE000;
 const UART_STOCK_ROWS = COMPUTER_ROWS, UART_ROW_BYTES = 32;
 const UPDATE_FIRST = 0x100000, UPDATE_LAST = 0xE00000, UPDATE_HEADER = 0x100;
 
 function uartProbeRom(stock, entry, app, updatePayloadOnly = false, pram = null) {
-  if (!updatePayloadOnly && status(stock) !== 'install') throw new Error('Open a stock My Lab v1.0.00 ROM');
+  const installedMenu = status(stock) === 'update' && canCreateUartUpdate(stock);
+  if (!updatePayloadOnly && status(stock) !== 'install' && !installedMenu) throw new Error('Open a supported stock My Lab v1.0.00 ROM or its ParaLab menu build');
   if (!entry.length || entry.length > UART_ROWS - UART_DISPATCHER ||
       app.length < 16 || app.length > UART_APP_CAPACITY ||
       !['PXMLRO01', 'PXMLBS01'].includes(tag(app, 8, 8))) throw new Error('Invalid My Lab UART tool');
@@ -388,11 +401,18 @@ function uartProbeRom(stock, entry, app, updatePayloadOnly = false, pram = null)
   const label = addMyLabLabel(rom, 'UART');
   // The full ParaLab menu occupies Computer's fifth row. Put the temporary
   // UART launcher in that same slot so installing ParaLab replaces it in place.
-  patchBytes(rom, 0x147468, '48f2b471c1f2070151600421', '4df20011c1f2090151600521');
-  patchBytes(rom, 0x14749A, '0328', '0428');
-  patchBytes(rom, 0x1474A6, '48f2b471c1f20701', '4df20011c1f20901');
-  patchBytes(rom, 0x14753A, '48f2b470c1f20700', '4df20010c1f20900');
-  patchBytes(rom, 0x147548, 'ccf7eefa', '66f05afd'); // BL to UART_DISPATCHER.
+  if (installedMenu) {
+    patchBytes(rom, 0x147468, '4cf28011c1f2080151600521', '4df20011c1f2090151600521');
+    patchBytes(rom, 0x1474A6, '4cf28011c1f20801', '4df20011c1f20901');
+    patchBytes(rom, 0x14753A, '4cf28010c1f20800', '4df20010c1f20900');
+    patchBytes(rom, 0x147548, '55f08afd', '66f05afd');
+  } else {
+    patchBytes(rom, 0x147468, '48f2b471c1f2070151600421', '4df20011c1f2090151600521');
+    patchBytes(rom, 0x14749A, '0328', '0428');
+    patchBytes(rom, 0x1474A6, '48f2b471c1f20701', '4df20011c1f20901');
+    patchBytes(rom, 0x14753A, '48f2b470c1f20700', '4df20010c1f20900');
+    patchBytes(rom, 0x147548, 'ccf7eefa', '66f05afd'); // BL to UART_DISPATCHER.
+  }
   rom.copyWithin(UART_ROWS, UART_STOCK_ROWS, UART_STOCK_ROWS + UART_ROW_BYTES);
   w32(rom, label, UART_ROWS + UART_ROW_BYTES);
   w32(rom, 0x7FFD, UART_ROWS + UART_ROW_BYTES + 4);
@@ -483,14 +503,53 @@ async function patchUartUpdate(packageBytes, pram, entry, app, subtle = root.cry
 }
 
 async function createUartUpdate(rom, deviceKey, subtle = root.crypto?.subtle) {
-  if (!/^(?:0x)?[0-9a-f]{8}$/i.test(deviceKey)) {
-    throw new Error('Open the matching eight-digit My Lab device key');
-  }
+  if (!/^(?:0x)?[0-9a-f]{8}$/i.test(deviceKey)) throw new Error('Enter exactly eight hexadecimal digits for the My Lab device key');
   const pram = await decryptBoot(rom, parseInt(deviceKey, 16), subtle);
   if (C.crc32(pram) !== BOOT_CRC) throw new Error('My Lab device key does not match this ROM');
+  if (!canCreateUartUpdate(rom)) throw new Error('Open a supported stock My Lab ROM or its ParaLab menu build');
   const target = uartProbeRom(rom, bundled('__MYLAB_UART_ENTRY_B64__'),
     bundled('__MYLAB_UART_WRITE_APP_B64__'), false, pram);
   return packUartUpdate(target, pram, subtle);
+}
+async function findUartDeviceKey(rom, onProgress = () => {}, subtle = root.crypto?.subtle) {
+  if (!subtle || !canCreateUartUpdate(rom)) throw new Error('Open a supported stock My Lab ROM or its ParaLab menu build first');
+  const aes = Uint8Array.from(rom.subarray(0x28, 0x48)).reverse();
+  const cipherBlock = Uint8Array.from(rom.subarray(BOOT, BOOT + 16)); cipherBlock.reverse();
+  const bootKey = await subtle.importKey('raw', aes, 'AES-CBC', false, ['encrypt', 'decrypt']);
+  const pad = cipherBlock.map(byte => byte ^ 16);
+  const encryptedTail = new Uint8Array(await subtle.encrypt({ name: 'AES-CBC', iv: new Uint8Array(16) }, bootKey, pad));
+  const pair = new Uint8Array(32); pair.set(cipherBlock); pair.set(encryptedTail.subarray(0, 16), 16);
+  const baseBlock = new Uint8Array(await subtle.decrypt({ name: 'AES-CBC', iv: new Uint8Array(16) }, bootKey, pair));
+  const params = new Uint8Array(48);
+  params.set(aes.subarray(16, 32), 0); params.set(aes.subarray(0, 16), 16); params.set(baseBlock.subarray(0, 16), 32);
+  // Use every logical core and hand out contiguous chunks on demand, so slower (efficiency) cores
+  // cannot hold up the whole search the way a fixed 1/N split did. Sequential chunks also let the
+  // WASM search reuse most of the first AES round across each 256-key block.
+  const workers = Math.max(1, Math.min(32, navigator.hardwareConcurrency || 4));
+  const CHUNK = 1 << 22, CHUNKS = 0x100000000 / CHUNK;
+  const module = await WebAssembly.compile(Uint8Array.from(atob('__MYLAB_KEY_SEARCH_WASM_B64__'), ch => ch.charCodeAt(0)));
+  const source = `let x;onmessage=async e=>{try{const d=e.data;if(d.module){x=(await WebAssembly.instantiate(d.module)).exports;const ptr=x.params_ptr();new Uint8Array(x.memory.buffer).set(d.params,ptr);x.initialize(ptr);postMessage({progress:0});return}const r=Number(x.search(d.start,1,d.count));postMessage(r>=0?{found:r>>>0}:{progress:d.count})}catch(e){postMessage({error:String(e)})}}`;
+  const workerUrl = URL.createObjectURL(new Blob([source], { type: 'text/javascript' }));
+  return new Promise((resolve, reject) => {
+    let next = 0, busy = 0, tried = 0, settled = false; const pool = [];
+    const finish = (error, key) => { if (settled) return; settled = true; pool.forEach(w => w.terminate()); URL.revokeObjectURL(workerUrl); error ? reject(error) : resolve(key); };
+    const dispatch = worker => {
+      if (next < CHUNKS) { busy++; worker.postMessage({ start: (next++ * CHUNK) >>> 0, count: CHUNK }); }
+      else if (!busy) finish(new Error('No matching My Lab device key was found in the full 32-bit search space'));
+    };
+    for (let i = 0; i < workers; i++) {
+      const worker = new Worker(workerUrl); pool.push(worker);
+      worker.onmessage = event => {
+        const d = event.data;
+        if (d.error) return finish(new Error(d.error));
+        if (d.found !== undefined) return finish(null, d.found.toString(16).padStart(8, '0').toUpperCase());
+        if (d.progress) { busy--; tried += d.progress; onProgress(tried / 0x100000000); }
+        if (!settled) dispatch(worker);
+      };
+      worker.onerror = error => finish(new Error(error.message || 'Device-key search worker failed'));
+      worker.postMessage({ module, params });
+    }
+  });
 }
 async function patchUartUpdateFromRom(packageBytes, rom, deviceKey, subtle = root.crypto?.subtle) {
   if (!/^(?:0x)?[0-9a-f]{8}$/i.test(deviceKey))
@@ -1265,6 +1324,6 @@ async function createParadiseImage(rom, backup, key) {
   return forParadise(rom, paradiseBins(), backup);
 }
 
-root.ParamixMyLabMenu = { screenFitSupport, screenFitState, screenFitChanged, withScreenFit, hasMenuBars, withMenuBars, hasCornerLayout, withCornerLayout, hasLegacySettingsLayout, hasSettingsLayout, withSettingsLayout, forParadise, createParadiseImage, validateParadiseBackup, build, updateMenu, updateParadiseImage, installGarden, removeColdRescue, tableSum, patchBytes, addMyLabLabel, menuTemplate, decryptBoot, status, apply, uartProbeRom, packUartUpdate, patchUartUpdate, patchUartUpdateFromRom, createUartUpdate, flashToolBinary };
+root.ParamixMyLabMenu = { screenFitSupport, screenFitState, screenFitChanged, withScreenFit, hasMenuBars, withMenuBars, hasCornerLayout, withCornerLayout, hasLegacySettingsLayout, hasSettingsLayout, withSettingsLayout, forParadise, createParadiseImage, validateParadiseBackup, build, updateMenu, updateParadiseImage, installGarden, removeColdRescue, tableSum, patchBytes, addMyLabLabel, menuTemplate, decryptBoot, status, canCreateUartUpdate, apply, uartProbeRom, packUartUpdate, patchUartUpdate, patchUartUpdateFromRom, createUartUpdate, findUartDeviceKey, flashToolBinary };
 if (typeof module !== 'undefined') module.exports = root.ParamixMyLabMenu;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -56,6 +56,7 @@ const myLabScreenScripts = ['mylab_grid_fit.js', 'mylab_item_fit.js', 'mylab_gam
   'mylab_tutorial_fit.js', 'mylab_screen_support.js'];
 let myLabMenu = [...myLabScreenScripts, 'mylab_menu.js']
   .map(name => fs.readFileSync(path.join(__dirname, 'src', name), 'utf8')).join('\n');
+myLabMenu = myLabMenu.replace('__MYLAB_KEY_SEARCH_WASM_B64__', fs.readFileSync(path.join(__dirname, 'src/key_search.wasm')).toString('base64'));
 for (const [name, file] of Object.entries({
   MENU: 'feld/feld-mylab.bin', HOOK: 'feld/feld-mylab-hook.bin',
   STUB: 'feld/stub_feld_tpl.bin', FLASH: 'flash/flashapp-mylab.bin',
