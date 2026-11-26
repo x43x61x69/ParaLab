@@ -1168,10 +1168,27 @@ class Paradise {
         if (!await opts.confirmParadiseBackupReplacement())
           return { written: 0, kept: 0, notes, image, rescue: false, cancelled: true };
       }
-      if (installBridge && target && !paradiseBridge) {
-        if (await this.crc(0, SECTOR) !== target.bootCrc ||
-            await this.crc(editionPage, SECTOR) !== target.editionCrc)
+      if (installBridge && !paradiseBridge) {
+        if (opts.chooseParadiseBackup) {
+          const choice = await opts.chooseParadiseBackup();
+          if (!choice || cancel?.())
+            return { written: 0, kept: 0, notes, image, rescue: false, cancelled: true };
+          image = Uint8Array.from(img);
+          if (choice === 'backup') {
+            const backup = await this.dump(progress, cancel);
+            const menu = root.ParamixMyLabMenu || (typeof require !== 'undefined' ? require('./mylab_menu.js') : null);
+            await menu.pairParadiseBackup(image, backup);
+            if (cancel?.() || !await opts.saveParadiseBackup(backup) || cancel?.())
+              return { written: 0, kept: 0, notes, image, rescue: false, cancelled: true };
+          } else if (choice === 'skip') {
+            image.fill(0xFF, recordOffset, recordOffset + recordLength);
+          } else {
+            throw new Error('Invalid Paradise backup choice');
+          }
+        } else if (target && (await this.crc(0, SECTOR) !== target.bootCrc ||
+            await this.crc(editionPage, SECTOR) !== target.editionCrc)) {
           throw new Error('The connected Paradise does not match the boot and edition records in the selected backup');
+        }
       }
       if (restoreParadise) {
         const F = root.ParamixFeld || (typeof require !== 'undefined' ? require('./feld.js') : null);

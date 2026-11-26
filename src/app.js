@@ -109,8 +109,14 @@ const T = {
     myLabExperimental: 'Experimental', myLabPortTab: 'Porting',
     myLabPortTitle: 'Port {editionMyLab} to {editionParadise}',
     myLabPortDevice: '{editionMyLab} on {editionParadise}',
-    myLabPortHelp: 'Use the loaded {editionMyLab} ROM and a full ROM backup from the target {editionParadise}. Keep that backup for UART restoration.',
-    myLabPortBackup: 'Target {editionParadise} ROM backup', myLabPortKey: 'Matching {editionMyLab} .key',
+    myLabPortHelp: 'Build the port from the loaded {editionMyLab} ROM. ParaLab offers to back up the connected {editionParadise} before the first write. Select an existing backup to pair it with an exported port.',
+    myLabPortBackup: 'Existing {editionParadise} ROM backup (optional)',
+    myLabPortFirstBackupTitle: 'Back Up Paradise Before Installing?',
+    myLabPortFirstBackupHelp: 'Back up the full ROM from this device so you can restore its Paradise firmware and saves. If you skip, the installation will overwrite the current firmware and saves without making a backup.',
+    myLabPortFirstBackupRead: 'Back Up ROM',
+    myLabPortFirstBackupSkip: 'Skip Backup',
+    myLabPortFirstBackupDownloadHelp: 'Download {name} and keep it for restoring this device. Confirm that the file has finished downloading before you approve the write.',
+    myLabPortFirstBackupDownload: 'Download Backup',
     myLabScreenFit: 'Screen correction',
     myLabScreenFitHint: 'Adjusts the layout of some game screens so less content is cut off on {editionParadise}.',
     myLabScreenFitUnsupported: 'Screen correction requires a supported My Lab firmware build and compatible screen resources.',
@@ -3964,7 +3970,7 @@ function myLabPortNeedsKey(ctx) {
 function myLabPortInputs(ctx) {
   const backup = $('myLabPortBackup').files[0];
   const key = myLabPortNeedsKey(ctx) ? $('myLabPortKey').files[0] : null;
-  if (ctx.menuAction && ctx.screenFitSupport.portSupported && ctx.menu.mode !== 'paradise' && backup && key !== undefined) return { backup, key };
+  if (ctx.menuAction && ctx.screenFitSupport.portSupported && ctx.menu.mode !== 'paradise' && key !== undefined) return { backup, key };
 }
 function renderMyLabPort() {
   const action = myLabRom.menu.mode !== 'paradise' && myLabRom.menuAction && myLabRom.screenFitSupport.portSupported;
@@ -3983,6 +3989,8 @@ function renderMyLabPort() {
     myLabRom.portDraft ? t('myLabPortDone') : '';
   $('myLabPortSwitch').checked = !!myLabRom.portDraft;
   $('myLabPortBackup').disabled = $('myLabPortKey').disabled = !!myLabRom.portBusy;
+  $('myLabPortBackupClear').hidden = !$('myLabPortBackup').files.length;
+  $('myLabPortBackupClear').disabled = !!myLabRom.portBusy;
   $('myLabPortSwitch').disabled = !!myLabRom.portBusy || (!myLabRom.portDraft && !myLabPortInputs(myLabRom));
 }
 function renderMyLabPortPlan() {
@@ -4005,11 +4013,11 @@ async function setMyLabPort(enabled) {
   ctx.portBusy = true;
   renderMyLabPortPlan();
   try {
-    if (backup.size !== FL.FLASH_SIZE) throw new Error('Choose an original Paradise ROM backup from this device');
+    if (backup && backup.size !== FL.FLASH_SIZE) throw new Error('Choose an original Paradise ROM backup from this device');
     if (key && key.size > 128) throw new Error('Open the matching eight-digit My Lab device key');
     const source = myLabFlashImage() || ctx.rom;
     const image = await busy(t('myLabPortPreparing'), async () => MLM.createParadiseImage(source,
-      new Uint8Array(await backup.arrayBuffer()), key && (await key.text()).trim()));
+      backup ? new Uint8Array(await backup.arrayBuffer()) : undefined, key && (await key.text()).trim()));
     if (ctx !== myLabRom) return;
     ctx.portDraft = { flashImage: image, usedFlash: myLabUsedFlash(image), screenFitSupport: MLM.screenFitSupport(image) };
     measure('edit', 'my_lab_port', 'my-lab-on-paradise');
@@ -4021,6 +4029,10 @@ async function setMyLabPort(enabled) {
   }
 }
 $('myLabPortBackup').onchange = $('myLabPortKey').onchange = () => setMyLabPort(true);
+$('myLabPortBackupClear').onclick = () => {
+  $('myLabPortBackup').value = '';
+  void setMyLabPort(!!myLabRom?.portDraft);
+};
 $('myLabScreenFit').onchange = event => {
   if (!myLabRom) return;
   if (currentScreenFitSupport(myLabRom).supported) myLabRom.screenFit = event.target.checked;
@@ -5185,7 +5197,7 @@ function renderWriteReview(plan) {
   $('writeSaves').textContent = plan.saves;
 }
 
-function deviceDialog(message, title = t("Confirm Device Operation"), action = t("Continue"), hideCancel = false, writeMode = null, alternate = null, confirmations = []) {
+function deviceDialog(message, title = t("Confirm Device Operation"), action = t("Continue"), hideCancel = false, writeMode = null, alternate = null, confirmations = [], focusAccept = hideCancel) {
   const dialog = $('deviceDialog');
   if (dialog.open) return Promise.resolve(false);
   const review = writeMode === 'review';
@@ -5230,7 +5242,7 @@ function deviceDialog(message, title = t("Confirm Device Operation"), action = t
         ? (alternate ? choice : true) : false);
     }, { once: true });
     dialog.showModal();
-    $(hideCancel ? 'deviceDialogAccept' : 'deviceDialogCancel').focus();
+    $(focusAccept ? 'deviceDialogAccept' : 'deviceDialogCancel').focus();
   });
 }
 
@@ -7867,14 +7879,29 @@ $('btnWrite').onclick = async () => {
       return;
     }
     if (!samePlan()) return;
+    const firstPortInstall = plan.paradiseImage && !plan.portUpdate;
     if (!await confirmDeviceWrite(plan, image) ||
-        (!keepMyLabSaves && !await deviceDialog(t(plan.myLab || plan.portUpdate ? 'devMyLabReplace' : 'devSureFull')))) return;
+        (!firstPortInstall && !keepMyLabSaves && !await deviceDialog(t(plan.myLab || plan.portUpdate ? 'devMyLabReplace' : 'devSureFull')))) return;
     if (!samePlan()) return;
     await devWriteTask(async () => {
       const confirmParadiseBackupReplacement = () => confirmFlashOperation(t('myLabPortReplacePairingHelp'),
         t('myLabPortReplacePairingTitle'), t('myLabPortReplacePairingWrite'));
+      const chooseParadiseBackup = async () => {
+        const choice = await deviceDialog(t('myLabPortFirstBackupHelp'), t('myLabPortFirstBackupTitle'),
+          t('myLabPortFirstBackupRead'), false, null, t('myLabPortFirstBackupSkip'), [], true);
+        return choice === 'accept' ? 'backup' : choice === 'alternate' ? 'skip' : null;
+      };
+      const saveParadiseBackup = async backup => {
+        const edition = F.edition(backup);
+        const name = romExportName(romEditionKey(edition.id), ['pre-port-backup']);
+        if (!await deviceDialog(t('myLabPortFirstBackupDownloadHelp', { name }),
+          t('myLabPortFirstBackupDownload'), t('myLabPortFirstBackupDownload')) || dv.cancel) return false;
+        download(backup, name);
+        return true;
+      };
       const result = await device.write(image, {
-        onlyChanged, fastWrite, keepMyLabSaves, confirmParadiseBackupReplacement, confirmWrite: confirmFlashWriteCount,
+        onlyChanged, fastWrite, keepMyLabSaves, confirmParadiseBackupReplacement,
+        chooseParadiseBackup, saveParadiseBackup, confirmWrite: confirmFlashWriteCount,
         stockMyLabRescueApp: plan.stockMyLabWrite ? MLM.flashToolBinary(false) : null,
       }, devProg, () => dv.cancel);
       if (result.cancelled) { devRender(t('devCancelled')); return; }

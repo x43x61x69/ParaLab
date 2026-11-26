@@ -1286,7 +1286,6 @@ function updateParadiseImage(rom, { feld, gamePort, stub, flashApp }) {
 
 async function forParadise(rom, { feld, flashApp, hook, gamePort, stub }, backup, subtle = root.crypto?.subtle) {
   if (!subtle) throw new Error('Web Crypto is unavailable');
-  const backupEdition = backup && validateParadiseBackup(backup);
   if (!screenFitSupport(rom, null, true).portSupported ||
       !M.isFlashImage(rom, C) || tag(rom, NATIVE_HOOK + 0x100, 8) !== 'PXMLAB02' ||
       C.crc32(rom.subarray(STOCK_BOOT, STOCK_BOOT + BOOT_SIZE)) !== BOOT_CRC) {
@@ -1322,16 +1321,20 @@ async function forParadise(rom, { feld, flashApp, hook, gamePort, stub }, backup
   if (!rescue) throw new Error('Invalid Paradise Flash Tool');
   image.set(rescue, FL.RESCUE_OFF);
   tableSum(image, 0xFFE000);
-  if (backup) {
-    const offset = M.PARADISE_BACKUP_OFFSET;
-    image.set(encoder.encode('PXMLPB01'), offset);
-    w32(image, C.crc32(backup.subarray(0, 0x1000)), offset + 8);
-    image.set(new Uint8Array(await subtle.digest('SHA-256', backup)), offset + 12);
-    w32(image, backupEdition.at, offset + 44);
-    w32(image, C.crc32(backup.subarray(backupEdition.at, backupEdition.at + 0x1000)), offset + 48);
-  }
+  if (backup) await pairParadiseBackup(image, backup, subtle);
   if (!M.isParadiseFlashImage(image, C)) throw new Error('Invalid Paradise boot or rescue layout');
   return image;
+}
+
+async function pairParadiseBackup(image, backup, subtle = root.crypto?.subtle) {
+  const edition = validateParadiseBackup(backup);
+  const digest = new Uint8Array(await subtle.digest('SHA-256', backup));
+  const offset = M.PARADISE_BACKUP_OFFSET;
+  image.set(encoder.encode('PXMLPB01'), offset);
+  w32(image, C.crc32(backup.subarray(0, 0x1000)), offset + 8);
+  image.set(digest, offset + 12);
+  w32(image, edition.at, offset + 44);
+  w32(image, C.crc32(backup.subarray(edition.at, edition.at + 0x1000)), offset + 48);
 }
 
 function validateParadiseBackup(backup) {
@@ -1361,6 +1364,6 @@ async function createParadiseImage(rom, backup, key) {
   return forParadise(rom, paradiseBins(), backup);
 }
 
-root.ParamixMyLabMenu = { screenFitSupport, screenFitState, screenFitChanged, withScreenFit, hasMenuBars, withMenuBars, hasCornerLayout, withCornerLayout, hasLegacySettingsLayout, hasSettingsLayout, withSettingsLayout, forParadise, createParadiseImage, validateParadiseBackup, build, updateMenu, updateParadiseImage, installGarden, removeColdRescue, tableSum, patchBytes, addMyLabLabel, menuTemplate, decryptBoot, status, canCreateUartUpdate, apply, uartProbeRom, packUartUpdate, patchUartUpdate, patchUartUpdateFromRom, createUartUpdate, findUartDeviceKey, flashToolBinary };
+root.ParamixMyLabMenu = { screenFitSupport, screenFitState, screenFitChanged, withScreenFit, hasMenuBars, withMenuBars, hasCornerLayout, withCornerLayout, hasLegacySettingsLayout, hasSettingsLayout, withSettingsLayout, forParadise, createParadiseImage, validateParadiseBackup, pairParadiseBackup, build, updateMenu, updateParadiseImage, installGarden, removeColdRescue, tableSum, patchBytes, addMyLabLabel, menuTemplate, decryptBoot, status, canCreateUartUpdate, apply, uartProbeRom, packUartUpdate, patchUartUpdate, patchUartUpdateFromRom, createUartUpdate, findUartDeviceKey, flashToolBinary };
 if (typeof module !== 'undefined') module.exports = root.ParamixMyLabMenu;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -65,9 +65,9 @@ On Paradise, open **ParaLab → Tama → Stars (Past Tamas)**. Select an empty s
 
 The experimental port adapts My Lab firmware to Tamagotchi Paradise hardware. It displays the center 128 × 128 pixels of the My Lab game screen and maps the Paradise wheel to supported My Lab menus.
 
-1. Back up the full ROM and saves from your target Paradise. In **Workspace**, open a supported My Lab v1.0.00 ROM.
-2. Open **Experimental → Porting** and select the target Paradise ROM backup. If the My Lab ROM has not been prepared, select its matching `.key` as well.
-3. Once preparation succeeds, ParaLab selects **Include Port in Write and Export**. Use **Save ROM** to export the port, or open **Device Console → UART → ROM Transfer → Review and Write…** to install it.
+1. In **Workspace**, open a supported My Lab v1.0.00 ROM and go to **Experimental → Porting**. If the My Lab ROM has not been prepared, select its matching `.key`.
+2. Enable **Include Port in Write and Export**. Use **Save ROM** to export the port. You can optionally select an existing Paradise ROM backup to pair it with the export.
+3. To install, open **Device Console → UART → ROM Transfer → Review and Write…**. On the first installation, the default **Back Up ROM** option reads the connected Paradise and pairs the download with the installation. Download and keep the backup before approving the write. **Skip Backup** installs the port and overwrites the current Paradise firmware and saves without creating a backup.
 
 To update an existing v0.1.89 port, open its exported ROM in ParaLab v0.2.1 or later. Workspace recognizes **My Lab on Paradise**, reuses the Paradise backup pairing stored in the ROM, and prepares the update for writing over UART. When updating an installed port, **Keep saves** and **Only write changes** are enabled by default. **Keep saves** preserves the live game, Garden, and save slots.
 
