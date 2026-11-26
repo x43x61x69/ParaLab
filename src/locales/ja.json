@@ -77,6 +77,8 @@
   "infiniteFuelPatchHelp": "旅行後も燃料を60に保ちます。",
   "keepAwakePatch": "たまごっちを起きたままにする",
   "keepAwakePatchHelp": "本体のTamaメニューに AWAKE スイッチを追加します。新しいセーブではオフです。オンにすると育成に影響します。",
+  "singleSlotToysPatch": "外遊びのおもちゃを1枠にする",
+  "singleSlotToysPatchHelp": "本体の TAMA メニューに、初期状態ではオフの「1-SLOT TOYS」を追加します。有効にすると、たまごっちのおもちゃでの遊び方が変わることがあります。例えば、1枠に置いた観覧車に乗れるたまごっちは1匹だけです。置き直すと新しい設定が適用されます。",
   "myLabMenuTitle": "メニュー",
   "myLabStock": "{editionMyLab}の標準メニュー",
   "myLabComputer": "パソコン → ParaLab",

@@ -77,6 +77,8 @@
   "infiniteFuelPatchHelp": "旅行燃料始终保持在 60，旅行结束后也会补满。",
   "keepAwakePatch": "让 Tama 保持清醒",
   "keepAwakePatchHelp": "在设备的 Tama 菜单中加入 AWAKE 开关。新存档默认关闭。开启后会影响养成。",
+  "singleSlotToysPatch": "户外玩具只占一格",
+  "singleSlotToysPatchHelp": "在设备的 TAMA 菜单中加入 1-SLOT TOYS 开关，默认关闭。启用后可能影响拓麻歌子与玩具的互动，例如只占一格的摩天轮只能让一只拓麻歌子乘坐。重新摆放已有玩具即可应用新设置。",
   "myLabMenuTitle": "菜单",
   "myLabStock": "原版{editionMyLab}菜单",
   "myLabComputer": "电脑 → ParaLab",

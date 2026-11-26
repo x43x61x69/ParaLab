@@ -33,7 +33,7 @@ const F_KEEP_AWAKE = 0x8000;
 const F_RING = 0x80, F_NO_SHORTCUT = 0x2000; // persisted opt-out; the A+C menu remains enabled
 const F_BOOK6 = 256; // native Tama File has the three additional regions
 const F_BOOK_SKY = 0x10000; // Jade Forest's separate Sky Tama File
-const F_NEON_TRAVEL = 0x20000;
+const F_NEON_TRAVEL = 0x20000, F_SINGLE_SLOT_TOYS = 0x40000;
 const F_APPS = 512;  // ordinary launcher menu without legacy Paradise save tools
 const F_NEON_TAMA = 0x800;
 const F_NEON_EDIT = 1024;
@@ -184,6 +184,50 @@ const CARE_PROFILES = {
   neon: { layout: 3, settings: 0x18000290, fuelOffset: 0x12F,
     tick: [0x2533C, 0xB0CEB580, 0x914C904D, 0xF96AF07F], fuel: [0x72284, 0xF8ADB083, 0xF240000A, 0xF6C12094] },
 };
+const TOY_MODE_HELPER = 0xE60, TOY_MODE_SAVE = 0xFCC, TOY_MODE_MAGIC = 0x31594F54;
+const TOY_MODE_PROFILES = {
+  gen1: [0x4D85C, 0x0540F8D0, 0x00C0F244],
+  jade: [0x4F804, 0x0540F8D0, 0x00C0F244],
+  gen3: [0x54FCC, 0x0544F8D0, 0x1084F244],
+  neon: [0x55692, 0x0544F8D0, 0x009CF643],
+};
+const TOY_MODE_ORIGINAL = 0x28038AC0;
+const TOY_MODE_LABELS = '1-SLOT TOYS ON\0' + '1-SLOT TOYS OFF\0' + 'AFFECTS PLAY\0';
+const TOY_MODE_SIZE = 0x20 + TOY_MODE_LABELS.length;
+function singleSlotToysPatch(rom, stub, profile, restore = false, probe = false) {
+  const entry = TOY_MODE_PROFILES[profile];
+  if (!entry) return false;
+  const [site, before, after] = entry, at = stub + TOY_MODE_HELPER;
+  const branch = linkedBranch(xip(site), xip(at));
+  const settings = CARE_PROFILES[profile].settings + TOY_MODE_SAVE;
+  const matches = u32(rom, site - 4) === before && u32(rom, site + 4) === 0xE7FFD110 &&
+    u32(rom, site + 8) === after && u32(rom, site) === (restore ? branch : TOY_MODE_ORIGINAL);
+  if (!matches || (restore && (u32(rom, at + 0x18) !== settings || u32(rom, at + 0x1C) !== TOY_MODE_MAGIC))) return false;
+  if (probe) return true;
+  if (restore) {
+    w32(rom, site, TOY_MODE_ORIGINAL);
+    return true;
+  }
+  if (!isFF(rom, at, TOY_MODE_SIZE)) return false;
+  // Normal placement consumes the original comparison flags. Only the
+  // placement scene reads the override; rendering and scripts use the item as-is.
+  const code = [
+    0x8AC0, 0x2804, 0xD104, // ldrh r0,[r0,#22]; cmp r0,#4; bne original comparison
+    0x4904, 0x7809, 0x29D3, // ldr r1,settings; ldrb r1,[r1]; cmp r1,#0xd3
+    0xBF08, 0x2003,         // it eq; moveq r0,#3
+    0x2803, 0x4770,         // cmp r0,#3; bx lr
+  ];
+  code.forEach((word, i) => w16(rom, at + 2 * i, word));
+  w32(rom, at + 0x18, settings);
+  w32(rom, at + 0x1C, TOY_MODE_MAGIC);
+  for (let i = 0; i < TOY_MODE_LABELS.length; i++) rom[at + 0x20 + i] = TOY_MODE_LABELS.charCodeAt(i);
+  w32(rom, site, branch);
+  return true;
+}
+function singleSlotToysSupport(rom, menu) {
+  return singleSlotToysPatch(rom, menu?.stubOff ?? 0, edition(rom)?.profile.name,
+    !!(menu?.flags & F_SINGLE_SLOT_TOYS), true);
+}
 const CARE_B64 = '__FELD_CARE_B64__';
 function careOptions(rom, menu) {
   if (!menu) return 0;
@@ -1224,6 +1268,8 @@ function feldStrip(rom, emb, E) {
   appearanceRebuild(out, false);
   careStrip(out, f.stubOff);
   if (f.flags & F_KEEP_AWAKE) keepAwakePatch(out, f.stubOff, edition(out)?.profile.name, true);
+  if ((f.flags & F_SINGLE_SLOT_TOYS) && !singleSlotToysPatch(out, f.stubOff, edition(out)?.profile.name, true))
+    throw new Error('Single-slot outdoor toys patch does not match this ROM');
   if ((f.flags & F_NEON_TRAVEL) && !neonTravelPatch(out, f.stubOff, true))
     throw new Error('Neon Planets travel hook does not match this ROM');
   const tab = E.sceneTable(out);
@@ -1342,16 +1388,17 @@ function feldApply(rom, opts, saved, emb, E, placeCatalogAfterAssets = false) {
   const P = profileOf(out, ed.profile);
   const launch = !!opts.launch;
   const keepAwake = !launch && !opts.clean && !!opts.keepAwake;
+  const singleSlotToys = !launch && !opts.clean && !!opts.singleSlotToys;
   const care = launch || opts.clean ? 0 :
     (opts.autopilot ? CARE_AUTOPILOT_PATCH : 0) | (opts.infiniteFuel ? CARE_FUEL_PATCH : 0);
   const neonLaunch = P.ring && launch;
   const neonSaves = P.ring && !!opts.fields && !launch;
   const neonBag = P.ring && !!opts.bag && !launch;
-  const appsOnly = P.ring && !launch && (!!opts.appsOnly || neonSaves || neonBag || !!opts.neonTama || !!care || keepAwake);
+  const appsOnly = P.ring && !launch && (!!opts.appsOnly || neonSaves || neonBag || !!opts.neonTama || !!care || keepAwake || singleSlotToys);
   const save = (appsOnly || neonLaunch) && (root.ParamixSaves || (typeof require !== 'undefined' ? require('./saves.js') : null));
   const neonEdit = save && save.neonSaveLayout(out);
   const neonTama = appsOnly && !!opts.neonTama;
-  if (keepAwake && P.ring && !neonEdit) throw new Error('Neon Planets save layout does not match this firmware');
+  if ((keepAwake || singleSlotToys) && P.ring && !neonEdit) throw new Error('Neon Planets save layout does not match this firmware');
   if (neonTama && (!neonEdit || !neonAppearance(out))) throw new Error('Neon Planets appearance routine does not match this firmware');
   if (neonSaves && !neonEdit) throw new Error('Neon Planets save layout does not match this firmware');
   if (neonBag && (!neonEdit || !neonBagLayout(out))) throw new Error('Neon Planets item save layout does not match this firmware');
@@ -1362,7 +1409,7 @@ function feldApply(rom, opts, saved, emb, E, placeCatalogAfterAssets = false) {
   if (book9) neonGrowth.fixLayerIndices(out);
   const gplay = GPLAY && !!opts.gplay && !launch && !opts.clean; const fields = !!opts.fields && !launch, bag = !!opts.bag && !launch, tama = !!opts.tama && v6 && !launch, saves = fields && v6 && opts.saves !== false;
   if (care & CARE_AUTOPILOT_PATCH && !(tama || neonTama)) throw new Error('Autopilot requires the Tama Editor');
-  if (!fields && !bag && !tama && !gplay && !launch && !appsOnly && !book9 && !care && !keepAwake) throw new Error('nothing chosen');
+  if (!fields && !bag && !tama && !gplay && !launch && !appsOnly && !book9 && !care && !keepAwake && !singleSlotToys) throw new Error('nothing chosen');
   if (launch && (u32(emb.stub, LAUNCH_ENTRY) !== 0x4C01B672 || (u32(emb.stub, LCHECK_ENTRY) & 0xF800) !== 0xF000)) throw new Error('launcher template does not fit');   // cpsid i; ldr r4, feld_src / b.w lcheck
   const tab = E.sceneTable(out);
   if (!tab.PSID_HOME) throw new Error('home screen not found');
@@ -1572,27 +1619,32 @@ function feldApply(rom, opts, saved, emb, E, placeCatalogAfterAssets = false) {
     w32(out, prog + ci + 36, u32(out, prog + ci + 36) | F_KEEP_AWAKE);
     w32(out, prog + ci + 492, P.tama);
   }
+  if (singleSlotToys) {
+    if (!singleSlotToysPatch(out, stubOff, P.name)) throw new Error('Single-slot outdoor toys patch does not match this ROM');
+    w32(out, prog + ci + 36, u32(out, prog + ci + 36) | F_SINGLE_SLOT_TOYS);
+    w32(out, prog + ci + 492, P.tama);
+  }
   if (neonEdit && !launch && !opts.clean && neonTravelPatch(out, stubOff)) {
     w32(out, prog + ci + 36, u32(out, prog + ci + 36) | F_NEON_TRAVEL);
     w32(out, prog + ci + 492, P.tama);
   }
-  const fontTag = findWord(f, 0x46584D50); // PMXF + ONT1/ONT2/ONT3
-  const fontVersion = fontTag < 0 ? 0 : u32(f, fontTag + 4);
-  if (fontVersion === 0x31544E4F || fontVersion === 0x32544E4F || fontVersion === 0x33544E4F) {
+  // The compiler can place this string at any byte offset after the version tag.
+  const fontVersion = new TextDecoder().decode(f).match(/PMXFONT([123])\x00/)?.[1];
+  if (fontVersion) {
     const font = MENU_FONT_B64.startsWith('__') && typeof require !== 'undefined'
       ? Uint8Array.from(require('node:fs').readFileSync(__dirname + '/../feld/src/feld/font.h', 'utf8').match(/0x[0-9a-f]{2}/gi), hex => Number(hex))
       : b64(MENU_FONT_B64);
-    const at = stubOff + (fontVersion === 0x33544E4F ? 0x9C8 : fontVersion === 0x32544E4F ? 0x9D0 : 0x900);
+    const at = stubOff + (fontVersion === '3' ? 0x9C8 : fontVersion === '2' ? 0x9D0 : 0x900);
     if (font.length !== 386 || !isFF(out, at, font.length))
       throw new Error('the Menu font does not fit the launcher');
     out.set(font, at);
-    if (fontVersion !== 0x31544E4F) {
+    if (fontVersion !== '1') {
       const title = MENU_TITLE_B64.startsWith('__') && typeof require !== 'undefined'
         ? Uint8Array.from(require('node:fs').readFileSync(__dirname + '/../feld/src/feld/title_rows.h', 'utf8')
             .match(/0x[0-9a-f]{2}/gi), Number)
         : b64(MENU_TITLE_B64);
       if (title.length !== 182) throw new Error('Invalid Menu title font');
-      const older = fontVersion === 0x32544E4F, dest = at + font.length;
+      const older = fontVersion === '2', dest = at + font.length;
       if (!isFF(out, dest, older ? 156 : title.length)) throw new Error('Menu title font does not fit');
       out.set(older ? title.subarray(0, 21) : title, dest);
       if (older) out.set(title.subarray(47), dest + 21);
@@ -1700,7 +1752,7 @@ function embedded() {
 }
 
 function emuType(rom) { const m = u32(rom, APP_OFF + 0x140); return m === 0x37584D50 ? 't7' : m === 0x38584D50 ? 't18' : m === 0x31584D50 ? 'v1' : m === PMXC && appKind(rom) === 2 ? 'tama' : ''; }
-root.ParamixFeld = { F_KEEP_AWAKE, F_NEON_TRAVEL, keepAwakeSupport, poolCount, slotRanges, sixPoolTail, F_RING, F_RESIDENT_BANKS, F_NO_SHORTCUT, F_APPS, F_NEON_EDIT, F_NEON_TAMA, F_NEON_SAVES, CARE_AUTOPILOT_PATCH, CARE_FUEL_PATCH, careOptions, careSupport, neonSlotRange, neonActive, neonSwitchPending, neonAppearance, neonBagLayout, languagePatchPages, F_GPLAY, GPLAY, CLEAN_ROM, F_CLEAN, CLOCK_SEC, cleanReserved, cleanInfo, cleanBase, cleanApply, isClean, saveSlots, fieldOfSettings, lzPack, lzUnpack, slotPages, slotExportPages, slotBuild, poolUsed, slotParse, FIELD_TEXT, characters, saveEditorRoster, F_TAMA, F_SAVES, F_LAUNCH, isLaunch, launchRestore, emuType, familyOf, isSix, slotAddr, slotReadAsync, slotPlace, poolAddr, textTabelle, zeichenkette, edition, feldId, canFields, fieldNames, fieldNow, feldFind, feldSlots, feldStrip, feldApply, feldApps, appKind, itemCatalog, embedded, NAMES, F_FIELDS, F_BAG };
+root.ParamixFeld = { F_KEEP_AWAKE, F_NEON_TRAVEL, F_SINGLE_SLOT_TOYS, keepAwakeSupport, singleSlotToysSupport, poolCount, slotRanges, sixPoolTail, F_RING, F_RESIDENT_BANKS, F_NO_SHORTCUT, F_APPS, F_NEON_EDIT, F_NEON_TAMA, F_NEON_SAVES, CARE_AUTOPILOT_PATCH, CARE_FUEL_PATCH, careOptions, careSupport, neonSlotRange, neonActive, neonSwitchPending, neonAppearance, neonBagLayout, languagePatchPages, F_GPLAY, GPLAY, CLEAN_ROM, F_CLEAN, CLOCK_SEC, cleanReserved, cleanInfo, cleanBase, cleanApply, isClean, saveSlots, fieldOfSettings, lzPack, lzUnpack, slotPages, slotExportPages, slotBuild, poolUsed, slotParse, FIELD_TEXT, characters, saveEditorRoster, F_TAMA, F_SAVES, F_LAUNCH, isLaunch, launchRestore, emuType, familyOf, isSix, slotAddr, slotReadAsync, slotPlace, poolAddr, textTabelle, zeichenkette, edition, feldId, canFields, fieldNames, fieldNow, feldFind, feldSlots, feldStrip, feldApply, feldApps, appKind, itemCatalog, embedded, NAMES, F_FIELDS, F_BAG };
 if (typeof module !== 'undefined') module.exports = root.ParamixFeld;
 root.ParamixFeld.menuPayload = menuPayload;
 root.ParamixFeld.menuVersion = menuVersion;

@@ -77,6 +77,8 @@
   "infiniteFuelPatchHelp": "Maintient le carburant de voyage à 60, même après un trajet.",
   "keepAwakePatch": "Garder Tama éveillé",
   "keepAwakePatchHelp": "Ajoute le réglage AWAKE au menu Tama de l’appareil. Il est désactivé dans les nouvelles sauvegardes. L’activer affecte la croissance.",
+  "singleSlotToysPatch": "Jouets d’extérieur sur une case",
+  "singleSlotToysPatchHelp": "Ajoute au menu TAMA de l’appareil l’option 1-SLOT TOYS, désactivée par défaut. L’activer peut modifier la façon dont les Tamagotchis jouent avec les jouets. Par exemple, un seul Tamagotchi peut monter dans une grande roue placée sur une case. Replacez les jouets existants pour appliquer ce réglage.",
   "myLabMenuTitle": "Menu",
   "myLabStock": "{editionMyLab} sans menu ParaLab",
   "myLabComputer": "Ordinateur → ParaLab",

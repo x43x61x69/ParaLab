@@ -78,6 +78,8 @@
   "infiniteFuelPatchHelp": "旅行燃料始終維持在 60，完成旅行後也會補滿。",
   "keepAwakePatch": "讓 Tama 保持清醒",
   "keepAwakePatchHelp": "在裝置的 Tama 選單加入 AWAKE 開關。新存檔預設關閉。開啟後會影響養成。",
+  "singleSlotToysPatch": "戶外玩具只佔一格",
+  "singleSlotToysPatchHelp": "在裝置的 TAMA 選單加入 1-SLOT TOYS 開關，預設關閉。啟用後可能影響塔麻歌子與玩具的互動，例如只佔一格的摩天輪只能讓一隻塔麻歌子搭乘。重新擺放既有玩具即可套用新設定。",
   "Field Residents": "原野居民",
   "Open Save Backup": "開啟存檔備份",
   "Return to ROM Save": "回到 ROM 存檔",

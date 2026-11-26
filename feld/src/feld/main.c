@@ -74,6 +74,9 @@ static const char menu_font_tag[]="PMXFONT3";
 #define AWAKE_ON 0xA7u
 #define AWAKE_SAVE 0xFC0u
 #define F_NEON_TRAVEL 0x20000u
+#define F_SINGLE_SLOT_TOYS 0x40000u
+#define TOY_MODE_SAVE 0xFCCu
+#define TOY_MODE_ON 0xD3u
 #define NEON_TRAVEL_SAVE 0xFC4u
 #define NEON_TRAVEL_ON 0xB6u
 #define F_NEON_TAMA 0x800u           /* verified Neon appearance rebuild support */
@@ -2352,7 +2355,8 @@ static void autopilot_menu(int master){
     }
   }
 }
-static void care_menu(void){
+/* Keep the nested Care and Tama menus separate to fit the PRAM budget. */
+static __attribute__((noinline)) void care_menu(void){
   u32 sel=0; g_care_mask=0;
   const struct CareLayout *layout=care_layout();
   u32 first=(care_patches()&CARE_AUTOPILOT_PATCH)?2u:0u;
@@ -2392,46 +2396,58 @@ static void care_menu(void){
 }
 static void big_entry(int y, int sel, const char *name, const char *st, u16 c, u16 stc);
 static const char *const tama_rows[]={"CARE","APPEARANCE","AGE (DAYS)","PREVIEW","STARS","FIELD RESIDENTS"};
-static void tama_value(u32 i,char *out){
-  const char *s=""; out[0]=0;
+static const char *tama_value(u32 i,char *out){
   if(i==0){
-    char *p=out; s="FOOD "; while(*s) *p++=*s++; utoa_(g_set[g_cfg.tama_off+0x1Cu],p); while(*p) p++;
+    char *p=out; const char *s="FOOD "; while(*s) *p++=*s++; utoa_(g_set[g_cfg.tama_off+0x1Cu],p); while(*p) p++;
     s=" JOY "; while(*s) *p++=*s++; utoa_(g_set[g_cfg.tama_off+0x1Du],p); while(*p) p++;
-    if(g_set[g_cfg.tama_off+0x10u]){ s=" SICK"; while(*s) *p++=*s++; } *p=0; return;
+    if(g_set[g_cfg.tama_off+0x10u]){ s=" SICK"; while(*s) *p++=*s++; } *p=0; return out;
   }
-  if(i==1){ int k=cat_find(t_id()); if(k>=0){ chr_name((u32)k,out); return; } s="UNKNOWN"; }
-  if(i==2){ utoa_(t_word(0xCu),out); return; }
-  if(i==3) s="VIEW CURRENT TAMA";
-  if(i==4) s="PAST TAMAS";
-  if(i==5) s="RELEASED TAMAS";
-  while(*s) *out++=*s++; *out=0;
+  if(i==1){ int k=cat_find(t_id()); if(k<0) return "UNKNOWN"; chr_name((u32)k,out); return out; }
+  if(i==2){ utoa_(t_word(0xCu),out); return out; }
+  if(i==3) return "VIEW CURRENT TAMA";
+  if(i==4) return "PAST TAMAS";
+  return "RELEASED TAMAS";
 }
-static void tama_menu(void){
+struct tama_switch {
+  u16 labels, save;
+  u8 marker, off, hint;
+};
+static const struct tama_switch tama_switches[]={
+  {0xF40u,AWAKE_SAVE,AWAKE_ON,10,20},
+  {0xF9Cu,NEON_TRAVEL_SAVE,NEON_TRAVEL_ON,17,0},
+  {0xE80u,TOY_MODE_SAVE,TOY_MODE_ON,15,31},
+};
+static __attribute__((noinline)) void tama_menu(void){
   if(set_check_msg()) return;
   if(!t_layout()){ message("TAMA SAVE FORMAT","NOT SUPPORTED",""); return; }
   u32 edit_rows=tama_ok()?(care_layout()?5u:4u):0u;
 #ifndef FELD_CLEAN
   if(edit_rows && nfields() && resident_layout()) edit_rows=6u;
 #endif
-  u32 travel_row=edit_rows+!!(g_cfg.flags & F_KEEP_AWAKE);
-  u32 n=travel_row+!!(g_cfg.flags & F_NEON_TRAVEL);
+  const struct tama_switch *switches[3];
+  u32 count=0;
+  if(g_cfg.flags & F_KEEP_AWAKE) switches[count++]=tama_switches;
+  if(g_cfg.flags & F_NEON_TRAVEL) switches[count++]=tama_switches+1;
+  if(g_cfg.flags & F_SINGLE_SLOT_TOYS) switches[count++]=tama_switches+2;
+  u32 n=edit_rows+count;
   u32 sel=0;
-  int height=n>=7u?13:17;
+  int height=n>=7u?14:17;
   for(;;){
     rect(0,0,FELD_SCREEN_W,FELD_SCREEN_H,BG); menu_title(1,"TAMA");
-    for(u32 i=0;i<n;i++){
-      int y=13+(int)i*height;
+    /* Leave two full seven-pixel lines per row, even with all switches installed. */
+    u32 first=sel>=7u?sel-6u:0u;
+    u32 end=n<7u?n:7u+first;
+    for(u32 i=first;i<end;i++){
+      int y=13+(int)(i-first)*height;
       if(i==sel) rect(0,y,128,y+height,RGB(60,60,110));
       if(i>=edit_rows){
-        int travel=i==travel_row;
-        const char *labels=(const char*)fl(g_cfg.stub_off+(travel?0xF9Cu:0xF40u));
-        if(!travel) text(9,y+7,labels+20,GREY,1);
-        if(travel ? g_set[NEON_TRAVEL_SAVE]!=NEON_TRAVEL_ON : g_set[AWAKE_SAVE]!=AWAKE_ON)
-          labels+=travel?17:10;
-        text(3,y,labels,WHITE,1);
+        const struct tama_switch *sw=switches[i-edit_rows];
+        const char *labels=(const char*)fl(g_cfg.stub_off+sw->labels);
+        if(sw->hint) text(9,y+7,labels+sw->hint,GREY,1);
+        text(3,y,labels+(g_set[sw->save]==sw->marker?0:sw->off),WHITE,1);
         continue;
       }
-      char value[24]; tama_value(i,value);
+      char buf[24]; const char *value=tama_value(i,buf);
       text(3,y,i==5u && (g_cfg.flags & F_NEON_EDIT)?"PLANET RESIDENTS":tama_rows[i],WHITE,1);
       if(i==0){
         int x=9; const char *s=value; u16 digits=RGB(120,240,140);
@@ -2450,10 +2466,9 @@ static void tama_menu(void){
     if(k==K_BACK) return;
     if(k!=K_OK) continue;
     if(sel>=edit_rows){
-      int travel=sel==travel_row;
-      u32 off=travel?NEON_TRAVEL_SAVE:AWAKE_SAVE, marker=travel?NEON_TRAVEL_ON:AWAKE_ON;
-      g_set[off]=g_set[off]==marker?0u:marker;
-      if(!travel) g_set[g_cfg.tama_off-2u]&=(u8)~4u; /* End a baby nap already in progress. */
+      const struct tama_switch *sw=switches[sel-edit_rows];
+      g_set[sw->save]=g_set[sw->save]==sw->marker?0u:sw->marker;
+      if(sw->save==AWAKE_SAVE) g_set[g_cfg.tama_off-2u]&=(u8)~4u; /* End a baby nap already in progress. */
       set_commit();
       continue;
     }
@@ -2813,7 +2828,7 @@ static void main_menu(void){
   if(fields || (g_cfg.flags & F_NEON_SAVES)) kinds[n++]=0;
   if(g_cfg.flags & F_BAG) kinds[n++]=1;
   if(g_cfg.flags & (F_BAG|F_NEON_EDIT)) kinds[n++]=2;
-  if(tama_ok() || (g_cfg.flags & (F_KEEP_AWAKE|F_NEON_TRAVEL))) kinds[n++]=4;
+  if(tama_ok() || (g_cfg.flags & (F_KEEP_AWAKE|F_NEON_TRAVEL|F_SINGLE_SLOT_TOYS))) kinds[n++]=4;
   if(tama_ok() || progress_neon_start() || (g_cfg.flags & F_NEON_EDIT)) kinds[n++]=7;
   if(g_napp) kinds[n++]=3;
   u32 sel = g_napp ? n-1u : 0u;       /* keep the installed program selected */
@@ -2970,7 +2985,7 @@ static void run(void){
     while(!g_napp) message("NO PROGRAMS","IN THIS ROM","");
     apps_menu(1);
   }
-  if((g_cfg.flags & (F_BAG|F_TAMA|F_KEEP_AWAKE)) || progress_neon_start()) main_menu();
+  if((g_cfg.flags & (F_BAG|F_TAMA|F_KEEP_AWAKE|F_SINGLE_SLOT_TOYS)) || progress_neon_start()) main_menu();
   if(fields){ if(saves_mode()) saves_menu(1,1); else field_menu(1,1); }
   if(g_napp>1u) apps_menu(1);
   if(g_napp) start_app_i(0);

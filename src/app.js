@@ -88,6 +88,8 @@ const T = {
     infiniteFuelPatchHelp: 'Keeps travel fuel at 60, including after a trip.',
     keepAwakePatch: 'Keep Tama awake',
     keepAwakePatchHelp: 'Adds an AWAKE switch to the on-device Tama menu. It starts off for new saves. Turning it on affects growth.',
+    singleSlotToysPatch: 'Single-slot outdoor toys',
+    singleSlotToysPatchHelp: 'Adds a 1-SLOT TOYS switch to the TAMA menu on the device, off by default. Enabling it can change how Tamagotchi characters use toys. For example, a Ferris Wheel placed in one slot can seat only one Tamagotchi. Reposition existing toys to apply the new setting.',
     fl_slotMigration: 'Keep Saves could not verify the contents of slot {f}. Nothing was written.',
     mmHint2: 'Wait for the connection to finish.',
     fl_slotLayout: 'Keep Saves cannot map slot {f} to a unique slot in the new ROM. Nothing was written.',
@@ -534,9 +536,9 @@ const entry = (i) => state.changed.get(i) || (state.launch && state.launchMap &&
  * itself, and almost the whole flash is for programs */
 const CLEAN_ROM = false;
 const neonRom = () => state.ctx && state.ctx.editionId === 8 && !state.ctx.clean;
-const menuWanted = () => !!(state.appsOnly || state.feld || state.bag || state.tama || state.autopilot || state.infiniteFuel || state.keepAwake || state.gplay || state.launch ||
+const menuWanted = () => !!(state.appsOnly || state.feld || state.bag || state.tama || state.autopilot || state.infiniteFuel || state.keepAwake || state.singleSlotToys || state.gplay || state.launch ||
   (!state.clean && state.ctx && (state.neonDonor || NT?.installed(state.ctx.rom))));
-const optionalPatchesUnchanged = () => state.autopilot === state.autopilotInit && state.infiniteFuel === state.infiniteFuelInit && state.keepAwake === state.keepAwakeInit;
+const optionalPatchesUnchanged = () => state.autopilot === state.autopilotInit && state.infiniteFuel === state.infiniteFuelInit && state.keepAwake === state.keepAwakeInit && state.singleSlotToys === state.singleSlotToysInit;
 /* launcher ROM (1.6.8): the small images, computed once per ROM */
 function launchMapGet() { if (!state.launchMap) state.launchMap = C.launcherChanges(state.ctx); return state.launchMap; }
 function clearDecodedSprites() {
@@ -1944,6 +1946,7 @@ async function openRomWorkspace(buf, filename, stayOnDevice) {
     state.autopilotInit = state.autopilot = !!(care & F.CARE_AUTOPILOT_PATCH);
     state.infiniteFuelInit = state.infiniteFuel = !!(care & F.CARE_FUEL_PATCH);
     state.keepAwakeInit = state.keepAwake = !!(f && (f.flags & F.F_KEEP_AWAKE));
+    state.singleSlotToysInit = state.singleSlotToys = !!(f && (f.flags & F.F_SINGLE_SLOT_TOYS));
     state.appsOnly = !!(f && (f.flags & F.F_APPS)); state.appsOnlyInit = state.appsOnly;
     state.feldInit = state.feld; state.bagInit = state.bag; state.tamaInit = state.tama; state.paramixShortcutInit = state.paramixShortcut; state.gplayInit = state.gplay; state.savesInit = true;
     state.launch = !!(f && f.version >= 2 && (f.flags & F.F_LAUNCH)); state.launchInit = state.launch; state.launchMap = null;
@@ -1978,7 +1981,7 @@ async function openRomWorkspace(buf, filename, stayOnDevice) {
         const embOld = { stub: fe.stub, oldStub: E.embedded() && E.embedded().stub };
         const fa = F.feldApps(buf, fe.stub), low = fa.apps.length ? Math.min(...fa.apps.map((a) => a.src - 0x10000000 + 0x11000)) : 0;
         const dl = f.version >= 7 ? (buf[f.off + 0x334] | buf[f.off + 0x335] << 8 | buf[f.off + 0x336] << 16 | buf[f.off + 0x337] << 24) >>> 0 : 0, dlo = dl ? dl - 0x10000000 + 0x11000 : 0;
-        const re = F.feldApply(F.feldStrip(buf, embOld, E), { fields: state.feld, bag: state.bag, tama: !neonRom() && state.tama, neonTama: neonRom() && state.tama, autopilot: state.autopilot, infiniteFuel: state.infiniteFuel, keepAwake: state.keepAwake, appsOnly: state.appsOnly, paramixShortcut: state.paramixShortcut, gplay: state.gplay, saves: state.saves, launch: state.launch, apps: fa.apps, name0: fa.name0, appsLow: low, dl, mainSrc: fa.mainSrc, auto: fa.auto, fieldNames: fieldTexts(buf).map((x) => x.name) }, F.feldSlots(buf, fe.stub), { feld: fe.feld, stub: fe.stub }, E);
+        const re = F.feldApply(F.feldStrip(buf, embOld, E), { fields: state.feld, bag: state.bag, tama: !neonRom() && state.tama, neonTama: neonRom() && state.tama, autopilot: state.autopilot, infiniteFuel: state.infiniteFuel, keepAwake: state.keepAwake, singleSlotToys: state.singleSlotToys, appsOnly: state.appsOnly, paramixShortcut: state.paramixShortcut, gplay: state.gplay, saves: state.saves, launch: state.launch, apps: fa.apps, name0: fa.name0, appsLow: low, dl, mainSrc: fa.mainSrc, auto: fa.auto, fieldNames: fieldTexts(buf).map((x) => x.name) }, F.feldSlots(buf, fe.stub), { feld: fe.feld, stub: fe.stub }, E);
         if (dlo) re.set(buf.subarray(dlo, dlo + 0x10000), dlo);   // the flash app stays where it is
         F.preserveMenuVersion(buf, re, f.off);
         state.feldStale = re.length !== buf.length || re.some((v, i) => v !== buf[i]);
@@ -2854,7 +2857,7 @@ function renderPlan() {
     planWolf(),
     [t('planDoom'), st(doomOn, !!state.doom, kind === 1, state.doom ? (DOOM_EPS && doomFree() && state.doom.sel ? doomChip(state.doom) : 'E' + $('doomEp').value) + ($('doomMusic').checked ? ' + ' + t('doomMusic') : '') : ''), state.doom ? 'new' : doomOn ? 'keep' : kind === 1 ? 'del' : 'off'],
   ];
-  const menuOn = menuWanted(), parts = [state.appsOnly ? t('appsOnlyOn') : '', state.launch ? t('planLaunch') : '', state.feld ? t(neonRom() ? 'neonSaves' : 'feldOn') : '', state.bag ? t('bagOn') : '', state.tama ? t('tamaOn') : '', state.autopilot ? t('autopilotPatch') : '', state.infiniteFuel ? t('infiniteFuelPatch') : '', state.keepAwake ? t('keepAwakePatch') : '', menuOn && state.paramixShortcut !== false && !state.launch && !state.clean && !state.ctx.clean ? t('paramixShortcut') : '', state.gplay ? t('gplayOn') : ''].filter(Boolean).join(', ');
+  const menuOn = menuWanted(), parts = [state.appsOnly ? t('appsOnlyOn') : '', state.launch ? t('planLaunch') : '', state.feld ? t(neonRom() ? 'neonSaves' : 'feldOn') : '', state.bag ? t('bagOn') : '', state.tama ? t('tamaOn') : '', state.autopilot ? t('autopilotPatch') : '', state.infiniteFuel ? t('infiniteFuelPatch') : '', state.keepAwake ? t('keepAwakePatch') : '', state.singleSlotToys ? t('singleSlotToysPatch') : '', menuOn && state.paramixShortcut !== false && !state.launch && !state.clean && !state.ctx.clean ? t('paramixShortcut') : '', state.gplay ? t('gplayOn') : ''].filter(Boolean).join(', ');
   const menuSame = state.appsOnly === state.appsOnlyInit && state.feld === state.feldInit && state.bag === state.bagInit && state.tama === state.tamaInit && optionalPatchesUnchanged() && state.paramixShortcut === state.paramixShortcutInit && !!state.gplay === !!state.gplayInit && state.saves === state.savesInit && state.launch === state.launchInit;
   if (state.clean) chips[0] = [t('planFig'), t('cleanOn'), state.cleanInit ? 'keep' : 'new'];
   chips.push([t('planMenu'), menuOn ? parts + (state.feldStale && menuSame ? ' (' + t('stUpd') + ')' : '') : (menuOld ? t('stDel') : t('stNone')), menuOn ? ((menuSame && !state.feldStale) ? 'keep' : 'new') : menuOld ? 'del' : 'off']);
@@ -4436,6 +4439,10 @@ function renderFeld() {
   awake.checked = !!state.keepAwake && !la;
   awake.disabled = !fe || la || !!state.clean || !!state.ctx.clean ||
     (neon && !SV.neonSaveLayout(rom)) || !F.keepAwakeSupport(rom, installedMenu);
+  const toys = $('singleSlotToysOn');
+  toys.checked = !!state.singleSlotToys && !la;
+  toys.disabled = !fe || la || !!state.clean || !!state.ctx.clean ||
+    (neon && !SV.neonSaveLayout(rom)) || !F.singleSlotToysSupport(rom, installedMenu);
   { const g = $('gplayOn'), off = la || !!state.clean || !!state.ctx.clean; $('gplayRow').hidden = !F.GPLAY; g.checked = !!state.gplay && !off; g.disabled = !fe || !ed || neon || off; }
   let s;
   // six fields (Tropical/Glacier): row visible there only
@@ -4540,7 +4547,7 @@ $('exitKey').onchange = (e) => { state.exitKey = +e.target.value; renderPlan(); 
 $('launchOn').onchange = (e) => busy(t("Updating Startup Settings"), async () => {
   state.launch = e.target.checked;
   if (!state.launch) { state.clean = false; await paraMainSync(); doomFreeSync(); cleanTabs(); }
-  if (state.launch) { launchMapGet(); state.appsOnly = false; state.feld = state.bag = state.tama = state.gplay = false; state.autopilot = state.infiniteFuel = state.keepAwake = false; state.sixWant = false; state.six = null; state.neonDonor = null; }
+  if (state.launch) { launchMapGet(); state.appsOnly = false; state.feld = state.bag = state.tama = state.gplay = false; state.autopilot = state.infiniteFuel = state.keepAwake = state.singleSlotToys = false; state.sixWant = false; state.six = null; state.neonDonor = null; }
   renderInfo(); renderFeld(); renderEmu(); renderNames();
 });
 /* CLEAN_ROM: the feld build of this Studio knows the clock sector (menu version 10) */
@@ -4622,6 +4629,7 @@ $('infiniteFuelOn').onchange = (e) => {
   renderFeld();
 };
 $('keepAwakeOn').onchange = (e) => { state.keepAwake = e.target.checked; renderFeld(); };
+$('singleSlotToysOn').onchange = (e) => { state.singleSlotToys = e.target.checked; renderFeld(); };
 $('paramixShortcut').onchange = (e) => { state.paramixShortcut = e.target.checked; renderFeld(); };
 $('gplayOn').onchange = (e) => { state.gplay = e.target.checked; renderFeld(); };
 
@@ -4957,7 +4965,7 @@ async function composeBaseRom(deferResidentBanks = false) {
   const mainSrcOf = () => { if (!state.launch || !state.mainPick || (a0Free() && !doomL)) return 0; const k = state.mainPick === 'emu' ? (mainX ? 0 : -1) : extrasL.indexOf(state.mainPick); return k >= 0 && apps[k] ? apps[k].src : 0; };
   const name0 = F.appKind(rom) === 1 ? 'DOOM' : state.emu && state.emu.guest ? E.tamaName(state.emu.guest, state.emu.dev) : (!state.emu && !state.emuRemove && fe && F.appKind(state.ctx.rom) === F.appKind(rom) && F.feldApps(state.ctx.rom, fe.stub).name0) || mainName(rom);
   if (fe && menuWanted()) {
-    try { rom = F.feldApply(rom, { fields: state.feld, bag: state.bag, tama: !neonRom() && state.tama, neonTama: neonRom() && state.tama, autopilot: state.autopilot, infiniteFuel: state.infiniteFuel, keepAwake: state.keepAwake, appsOnly: state.appsOnly, paramixShortcut: state.paramixShortcut, gplay: state.gplay && !state.clean, saves: state.saves, launch: !!state.launch, apps, name0, appsLow, dl, mainSrc: mainSrcOf(), auto: !!state.emuAuto, fieldNames: fieldTexts(rom).map((x) => x.name) }, feldSaved, { feld: fe.feld, stub: fe.stub }, E); }
+    try { rom = F.feldApply(rom, { fields: state.feld, bag: state.bag, tama: !neonRom() && state.tama, neonTama: neonRom() && state.tama, autopilot: state.autopilot, infiniteFuel: state.infiniteFuel, keepAwake: state.keepAwake, singleSlotToys: state.singleSlotToys, appsOnly: state.appsOnly, paramixShortcut: state.paramixShortcut, gplay: state.gplay && !state.clean, saves: state.saves, launch: !!state.launch, apps, name0, appsLow, dl, mainSrc: mainSrcOf(), auto: !!state.emuAuto, fieldNames: fieldTexts(rom).map((x) => x.name) }, feldSaved, { feld: fe.feld, stub: fe.stub }, E); }
     catch (e) {
       if (addingResidentBanks && e.code === 'slotPoolFull') {
         e.code = 'slotResidentBankSpace';
@@ -5020,6 +5028,7 @@ function paradiseExportFeatures() {
   if (state.autopilot !== state.autopilotInit) features.push('autopilot');
   if (state.infiniteFuel !== state.infiniteFuelInit) features.push('travel-fuel');
   if (state.keepAwake !== state.keepAwakeInit) features.push('keep-awake');
+  if (state.singleSlotToys !== state.singleSlotToysInit) features.push('single-slot-toys');
   if (state.gplay !== state.gplayInit) features.push('games');
   if (state.appsOnly !== state.appsOnlyInit || state.launch !== state.launchInit ||
       state.paramixShortcut !== state.paramixShortcutInit || state.exitKey !== state.exitKeyInit || state.feldStale)
@@ -5166,6 +5175,17 @@ bindDeviceTabs(uartToolTabs, tab => {
   else clockDevice = null;
 });
 let deviceOnlyChanged = $('devOnly').checked, deviceKeepSaves = $('devKeep').checked;
+const FAST_UART_PREFERENCE_KEY = 'paralab.fastUartTransfer';
+let deviceFastPreferred = null;
+try {
+  const saved = localStorage.getItem(FAST_UART_PREFERENCE_KEY);
+  if (saved === '1' || saved === '0') deviceFastPreferred = saved === '1';
+} catch (_) { /* Keep the choice for this session if storage is unavailable. */ }
+function rememberFastUart(enabled) {
+  deviceFastPreferred = enabled;
+  try { localStorage.setItem(FAST_UART_PREFERENCE_KEY, enabled ? '1' : '0'); } catch (_) {}
+}
+const deviceCanFastWrite = device => !!device?.info.fastWrite && !device.info.readOnly;
 function deviceWritePlan() {
   const device = dv.d;
   const myLab = device?.info.edition === 0xFE;
@@ -5180,7 +5200,7 @@ function deviceWritePlan() {
   const fixedOptions = !myLab && (bridge || paradiseImage) && !portUpdate;
   const keep = !fixedOptions && deviceKeepSaves;
   const onlyChanged = fixedOptions || deviceOnlyChanged;
-  const fastWrite = !!device?.info.fastWrite && $('devFast').checked;
+  const fastWrite = deviceCanFastWrite(device) && deviceFastPreferred === true;
   const source = myLabRom || state.ctx;
   const showMyLabFlashAccess = !!myLabRom && (myLab || paradiseImage || !device);
   const hasMyLabFlashAccess = !!(stagedPort || myLabRom?.menuDraft || myLabRom?.menu?.valid);
@@ -5435,8 +5455,9 @@ function devRender(msg) {
   $('devOnly').disabled = $('devKeep').disabled = dv.run || plan.fixedOptions;
   $('devOnly').checked = plan.onlyChanged;
   $('devKeep').checked = plan.keep;
-  $('devFastOption').hidden = !dv.d?.info.fastWrite || readOnly;
+  $('devFastOption').hidden = !deviceCanFastWrite(dv.d);
   $('devFast').disabled = $('devFastOption').hidden || dv.run;
+  $('devFast').checked = plan.fastWrite;
   const upgrade = $('devFlashUpgrade');
   upgrade.hidden = !dv.d || !dv.io || !!dv.rescue || !!dv.stash || (currentFlashTool(dv.d.info) && !readOnly);
   upgrade.disabled = dv.run || dv.opening;
@@ -7864,9 +7885,10 @@ async function upgradeFlashTool(device) {
   }
   if (dv.d !== device || dv.run || dv.opening || port !== selectedDevicePort) return false;
   if (update && !update.jobs.length && currentFlashTool(device.info)) {
-    $('devFast').checked = !!device.info.fastWrite;
+    const supported = deviceCanFastWrite(device);
+    if (supported && deviceFastPreferred === null) rememberFastUart(true);
     devRender(() => t('flashUpgradeDone'));
-    return device.info.fastWrite;
+    return supported;
   }
   let written = false;
   if (update?.jobs.length) {
@@ -7917,12 +7939,12 @@ async function upgradeFlashTool(device) {
     devRender(() => t('flashUpgradeStillOld'));
     return false;
   }
-  if (!dv.d.info.fastWrite || dv.d.info.readOnly) {
+  if (!deviceCanFastWrite(dv.d)) {
     devRender(() => t('flashUpgradeUnavailable'));
     return false;
   }
-  $('devFast').checked = true;
-  if (update) devRender(() => t('flashUpgradeDone'));
+  if (deviceFastPreferred === null) rememberFastUart(true);
+  devRender(update ? () => t('flashUpgradeDone') : undefined);
   return true;
 }
 $('devFlashUpgrade').onclick = () => upgradeFlashTool(dv.d);
@@ -8021,6 +8043,10 @@ $('devOnly').onchange = () => {
 $('devKeep').onchange = () => {
   deviceKeepSaves = $('devKeep').checked;
   renderWriteReview(deviceWritePlan());
+};
+$('devFast').onchange = () => {
+  if (deviceCanFastWrite(dv.d) && !dv.run) rememberFastUart($('devFast').checked);
+  devRender();
 };
 $('btnWrite').onclick = async () => {
   let plan = deviceWritePlan();

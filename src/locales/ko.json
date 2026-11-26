@@ -77,6 +77,8 @@
   "infiniteFuelPatchHelp": "여행을 마친 뒤에도 여행 연료를 60으로 유지합니다.",
   "keepAwakePatch": "다마고치 깨어 있게 하기",
   "keepAwakePatchHelp": "기기의 Tama 메뉴에 AWAKE 스위치를 추가합니다. 새 저장에서는 기본적으로 꺼져 있습니다. 켜면 육성에 영향을 줍니다.",
+  "singleSlotToysPatch": "야외 장난감을 한 칸에 배치",
+  "singleSlotToysPatchHelp": "기기의 TAMA 메뉴에 기본값이 꺼짐인 1-SLOT TOYS 스위치를 추가합니다. 켜면 다마고치가 장난감과 상호작용하는 방식이 달라질 수 있습니다. 예를 들어 한 칸에 놓인 관람차에는 다마고치 한 마리만 탈 수 있습니다. 기존 장난감은 다시 배치하면 새 설정이 적용됩니다.",
   "myLabMenuTitle": "메뉴",
   "myLabStock": "순정 {editionMyLab} 메뉴",
   "myLabComputer": "컴퓨터 → ParaLab",

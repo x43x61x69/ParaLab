@@ -77,6 +77,8 @@
   "infiniteFuelPatchHelp": "Hält den Reisetreibstoff auch nach einer Reise bei 60.",
   "keepAwakePatch": "Tama wach halten",
   "keepAwakePatchHelp": "Fügt dem Tama-Menü auf dem Gerät einen AWAKE-Schalter hinzu. Bei neuen Spielständen ist er aus. Das Einschalten beeinflusst die Entwicklung.",
+  "singleSlotToysPatch": "Spielzeug im Freien belegt ein Feld",
+  "singleSlotToysPatchHelp": "Fügt dem Gerätemenü TAMA den Schalter 1-SLOT TOYS hinzu. Er ist standardmäßig ausgeschaltet. Das Einschalten kann ändern, wie Tamagotchis mit Spielzeug spielen. In einem Riesenrad, das auf einem Feld steht, kann zum Beispiel nur ein Tamagotchi mitfahren. Platziere vorhandenes Spielzeug neu, um die Einstellung anzuwenden.",
   "myLabMenuTitle": "Menü",
   "myLabStock": "{editionMyLab} ohne ParaLab-Menü",
   "myLabComputer": "Computer → ParaLab",

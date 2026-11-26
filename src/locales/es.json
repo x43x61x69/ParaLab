@@ -77,6 +77,8 @@
   "infiniteFuelPatchHelp": "Mantiene el combustible de viaje en 60, incluso después de un viaje.",
   "keepAwakePatch": "Mantener a Tama despierto",
   "keepAwakePatchHelp": "Añade el interruptor AWAKE al menú Tama del dispositivo. Empieza desactivado en partidas nuevas. Activarlo afecta al crecimiento.",
+  "singleSlotToysPatch": "Juguetes de exterior de una casilla",
+  "singleSlotToysPatchHelp": "Añade al menú TAMA del dispositivo la opción 1-SLOT TOYS, desactivada de forma predeterminada. Activarla puede cambiar cómo interactúan los Tamagotchis con los juguetes. Por ejemplo, en una noria colocada en una sola casilla solo puede montar un Tamagotchi. Vuelve a colocar los juguetes existentes para aplicar el nuevo ajuste.",
   "myLabMenuTitle": "Menú",
   "myLabStock": "{editionMyLab} original",
   "myLabComputer": "Ordenador → ParaLab",
