@@ -478,10 +478,30 @@ gm_step:
   pop {r0,r2-r6,pc}
 .ltorg
 
+@ Catching Poop uses two cells: normal poop and the special pickup. The
+@ shared obstacle schedule uses fruit cells 0..2 and special pickup 3.
+.org 0xAC8
+.thumb_func
+six_poop_spawn:
+  movw r2,#0x1ae9
+  movt r2,#0x1800
+  ldrb r2,[r2]
+  b poop_cell
+
 @ Outdoor toy placement. The scene indexes six destinations using the first
 @ three native list entries twice. Native rendering and writes still get slots 0..2.
 .org 0xAD4
   .word toy_fields, toy_slot_r0, toy_slot_r1, toy_preview, toy_conflicts, toy_remove, toy_place
+
+.org 0xAF0
+poop_cell:
+  lsls r2,#24
+  bpl 1f
+  adds r1,#1
+  lsrs r1,#2
+1:ldr r2,=0x1006a9b9
+  bx r2
+.ltorg
 
 @ Clean Poop uses the same six-field unlock point as the expanded Fields menu.
 @ Keep the three physical slots in the native list, starting at the current

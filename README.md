@@ -57,7 +57,7 @@ In Neon Planets, open **ParaLab → Tama → Planet Travel** to let Young and Ad
 
 For supported Paradise ROMs, enable **Single-slot outdoor toys** under **Menu → Optional ROM Patches** before exporting. On the device, **ParaLab → Tama → 1-SLOT TOYS** starts off and saves its setting with the active game. The switch applies when you place or reposition a toy. It can change how Tamagotchi characters interact with toys. A Ferris Wheel placed in one slot seats only one Tamagotchi, and large artwork can overlap neighboring toys.
 
-On Paradise ROMs with imported Neon characters, hold **A** from just before the baby evolves until the animation begins to follow the original evolution route for its field. Without **A**, the imported Neon route is automatic. Open and save an already patched ROM to update its evolution behavior.
+On Paradise ROMs with imported Neon characters, the baby follows the original evolution route for its field by default. To choose the Neon route, hold **A** from just before the baby evolves until the animation begins. Feed a Neon Kid meals from its planet to collect food cells for its next evolution. Open and save an already patched ROM to update its evolution behavior.
 
 To update the planet artwork in Tama Files on an existing Tropical or Glacier ROM with imported Neon characters, choose the original Neon Planets ROM again in **Menu** before saving.
 

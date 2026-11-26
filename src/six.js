@@ -131,7 +131,9 @@ const COOK_SITES = { gen3: [0x30A72, 0x4B930, 0x4B9A0, 0x4BAB4, 0x4BB7A, 0x6F202
   jade: [0x2C426, 0x45B94, 0x45C04, 0x45D18, 0x45DDE, 0x635CA].map((o) => [o, 0, 0x1007EB5C, 'cook']) };
 const T_COOK = 0x740;   // 24 halfwords up to the egg hunt table
 const SHOP_MEALS = 0x400;
-const SHOP_ITEM_SIZE = 46, SHOP_FLAGS_OFF = 44, SHOP_FOR_SALE = 2;
+const SHOP_MEALS_LEVEL = 0x800;
+const SHOP_ITEM_SIZE = 46, SHOP_FLAGS_OFF = 44, SHOP_FOR_SALE = 2, SHOP_LEVEL_OFF = 32;
+const SHOP_NATIVE_MEAL_LEVEL = 6, SHOP_SIX_FIELD_MEAL_LEVEL = 3;
 /* the add-on tables of six fields: name, sites, place in the helper page, option bit, table for this ROM */
 const EXTRAS = [
   { name: 'hunt', on: () => SIX_HUNT, sites: HUNT_SITES, at: 0x770, bit: 16,
@@ -190,18 +192,24 @@ function sixShopMealFlags(rom) {
 
 function sixShopUpdateNeeded(rom) {
   const info = sixInfo(rom);
-  if (info?.kind !== 'gen3' || info.version !== SIX_VERSION || (u32(rom, SIX_OFF + 32) & SHOP_MEALS)) return false;
+  if (info?.kind !== 'gen3' || info.version !== SIX_VERSION || (u32(rom, SIX_OFF + 32) & SHOP_MEALS_LEVEL)) return false;
+  const installed = (u32(rom, SIX_OFF + 32) & SHOP_MEALS) !== 0;
   const flags = sixShopMealFlags(rom);
-  return flags.length > 0 && flags.every(at => u16(rom, at) === 0);
+  return flags.length > 0 && flags.every(at =>
+    u16(rom, at) === (installed ? SHOP_FOR_SALE : 0) &&
+    u16(rom, at - SHOP_FLAGS_OFF + SHOP_LEVEL_OFF) === SHOP_NATIVE_MEAL_LEVEL);
 }
 
 function sixShopUpdate(rom) {
   if (!sixShopUpdateNeeded(rom)) return rom;
   const out = new Uint8Array(rom);
-  // Restore the native Land/Water/Sky recipes to the shop, with their original
-  // prices and unlock levels. Ingredients keep their egg hunt availability.
-  for (const at of sixShopMealFlags(rom)) w16(out, at, SHOP_FOR_SALE);
-  w32(out, SIX_OFF + 32, u32(out, SIX_OFF + 32) | SHOP_MEALS);
+  // Sell the donor meals from the same level as the base edition's meals.
+  // Ingredients retain their original availability and all prices stay intact.
+  for (const at of sixShopMealFlags(rom)) {
+    w16(out, at, SHOP_FOR_SALE);
+    w16(out, at - SHOP_FLAGS_OFF + SHOP_LEVEL_OFF, SHOP_SIX_FIELD_MEAL_LEVEL);
+  }
+  w32(out, SIX_OFF + 32, u32(out, SIX_OFF + 32) | SHOP_MEALS | SHOP_MEALS_LEVEL);
   w32(out, C.ASSET_BASE + 4, C.arc2Checksum(out, C.ASSET_BASE, u32(out, C.ASSET_BASE + 8)));
   return out;
 }
@@ -445,6 +453,8 @@ const G_OPEN = 0x1001FEBA, G_OPEN_ORIG = '5bf02dff', G_ALL = 0x100;
 const G_NAV = [[0x1002FFE4, 1], [0x1003003A, 2]];       // ldrh.w r1,[r2,#126] -> six_cnext / six_cprev
 const G_NAV_ORIG = 'b2f87e10';
 const G_BG_SITE = 0x1008F89C;
+const G_POOP_SPAWN = 0x10051C5A, G_POOP_SPAWN_OFF = 0x62C5A, G_POOP_SPAWN_ORIG = '18f0adfe';
+const G_POOP_ENTRY = 0xAC8, G_POOP_TAIL = 0xAF0;
 // The original Land and Jade Catching Poop backgrounds already exist in the
 // Tropical/Glacier archive. Entries are ordered by the native transition code.
 const G_BG_LAND = [2126, 2127, 2128, 2129, 2130];
@@ -836,7 +846,12 @@ function sixStrip(rom) {
   if (!info) return rom;
   const out = new Uint8Array(rom), K = KINDS[info.kind], f = (o) => 0x11000 + o;
   if (info.kind === 'gen3' && info.version === SIX_VERSION && (u32(rom, SIX_OFF + 32) & SHOP_MEALS)) {
-    for (const at of sixShopMealFlags(rom)) w16(out, at, u16(out, at) & ~SHOP_FOR_SALE);
+    for (const at of sixShopMealFlags(rom)) {
+      w16(out, at, u16(out, at) & ~SHOP_FOR_SALE);
+      const level = at - SHOP_FLAGS_OFF + SHOP_LEVEL_OFF;
+      if ((u32(rom, SIX_OFF + 32) & SHOP_MEALS_LEVEL) && u16(rom, level) === SHOP_SIX_FIELD_MEAL_LEVEL)
+        w16(out, level, SHOP_NATIVE_MEAL_LEVEL);
+    }
   }
   const put = (o, h) => { for (let k = 0; k < h.length / 2; k++) out[o + k] = parseInt(h.substr(2 * k, 2), 16); };
   if (info.dna) dnaStrip(out, K, info);
@@ -851,6 +866,8 @@ function sixStrip(rom) {
     for (let k = 0; k < n && k < 4096; k++) { const o = r + 4 + 16 * k, xip = u32(out, o), len = u32(out, o + 4); out.set(out.slice(o + 8, o + 8 + len), xip - 0x10000000 + 0x11000); }
   }
   if (info.allLabGames) put(f(G_OPEN - 0x10000000), G_OPEN_ORIG);
+  if (info.allLabGames && hex(out, G_POOP_SPAWN_OFF, 4) ===
+      hex(branch(G_POOP_SPAWN, SIX_XIP + G_POOP_ENTRY, true), 0, 4)) put(G_POOP_SPAWN_OFF, G_POOP_SPAWN_ORIG);
   out.fill(0xFF, SIX_OFF, SIX_OFF + 0x1000);
   if (u32(out, B_OFF) === B_MAGIC) out.fill(0xFF, B_OFF, 0x1000000);
   if (info.kind === 'jade') return out;
@@ -972,27 +989,41 @@ function oldArcadeBackgrounds(rom, info) {
 function sixLabGamesUpdateNeeded(rom) {
   const info = sixInfo(rom);
   return !!(info?.kind === 'gen3' && info.version === SIX_VERSION && info.games &&
-    (!info.allLabGames || oldArcadeBackgrounds(rom, info).length));
+    (!info.allLabGames || oldArcadeBackgrounds(rom, info).length ||
+      hex(rom, G_POOP_SPAWN_OFF, 4) === G_POOP_SPAWN_ORIG));
 }
 function sixLabGamesUpdate(rom, blob) {
   if (!sixLabGamesUpdateNeeded(rom)) return rom;
   const info = sixInfo(rom), out = new Uint8Array(rom);
   for (const [at, ids] of oldArcadeBackgrounds(rom, info)) ids.forEach((id, i) => w16(out, at + 2 * i, id));
-  if (info.allLabGames) return out;
+  if (info.allLabGames && hex(out, G_POOP_SPAWN_OFF, 4) !== G_POOP_SPAWN_ORIG) return out;
   if (!blob || blob.length < P_GM_END || blob.length > 0x1000 || u32(blob, 0) !== SIX_MAGIC || u32(blob, 4) !== SIX_VERSION ||
       (u32(blob, P_GM_FN + 12) & ~1) < SIX_XIP + P_GM_FN || (u32(blob, P_GM_FN + 12) & ~1) >= SIX_XIP + P_GM_END)
     throw new Error('Lab game helper missing');
   const oldPage = rom.subarray(SIX_OFF, SIX_OFF + 0x1000);
   const page = new Uint8Array(oldPage);
-  page.set(blob.subarray(P_GM_FN, TOY_ENTRIES), P_GM_FN);
-  const assetHooks = [...G_SITES, ...G_TABS].map(([at]) => [Number(at), 0]);
-  for (const [xip, entry] of [...assetHooks, ...G_NAV]) {
-    const at = xip - 0x10000000 + 0x11000;
-    if (!gameHook(xip, oldPage, entry).every((byte, i) => rom[at + i] === byte))
-      throw new Error('Lab game hook changed ' + xip.toString(16));
-    out.set(gameHook(xip, page, entry), at);
+  if (!info.allLabGames) {
+    page.set(blob.subarray(P_GM_FN, G_POOP_ENTRY), P_GM_FN);
+    const assetHooks = [...G_SITES, ...G_TABS].map(([at]) => [Number(at), 0]);
+    for (const [xip, entry] of [...assetHooks, ...G_NAV]) {
+      const at = xip - 0x10000000 + 0x11000;
+      if (!gameHook(xip, oldPage, entry).every((byte, i) => rom[at + i] === byte))
+        throw new Error('Lab game hook changed ' + xip.toString(16));
+      out.set(gameHook(xip, page, entry), at);
+    }
+    gamesConfigure(out, page);
   }
-  gamesConfigure(out, page);
+  if (hex(out, G_POOP_SPAWN_OFF, 4) === G_POOP_SPAWN_ORIG) {
+    for (const [start, end] of [[G_POOP_ENTRY, TOY_ENTRIES], [G_POOP_TAIL, P_GM_END]]) {
+      const code = blob.subarray(start, end);
+      const target = page.subarray(start, end);
+      if (!target.every((byte, i) => byte === code[i]) &&
+          !target.every(byte => byte === 0 || byte === 0xFF))
+        throw new Error('Catching Poop helper area is occupied');
+      target.set(code);
+    }
+    out.set(branch(G_POOP_SPAWN, SIX_XIP + G_POOP_ENTRY, true), G_POOP_SPAWN_OFF);
+  }
   out.set(page, SIX_OFF);
   return out;
 }
@@ -1251,7 +1282,7 @@ function sixApply(rom, land, blob, opts = {}) {
   bList.forEach((x, k) => { const o = 8 + k * 260; w32(bh, o, x.id); x.rel.forEach((r, t) => w32(bh, o + 4 + 4 * t, r < 0 ? 0xFFFFFFFF : r)); });
   out.set(bh, B_OFF); out.set(concat(bData), B_OFF + bHead);
   if (games) out.set(games.bytes, gBase);
-  return sixFix(sixShopUpdate(sixFieldsUpdate(out, blob)));
+  return sixFix(sixShopUpdate(sixLabGamesUpdate(sixFieldsUpdate(out, blob), blob)));
 }
 /** Fix the walking picture indices without rebuilding the other six-field imports. */
 function sixWalkingUpdate(rom, land) {

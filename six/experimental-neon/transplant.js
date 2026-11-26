@@ -26,9 +26,12 @@ const PLANET_TEXTS = [14, 15, 16];
 const expectedFields = [24, 38, 24];
 const GROWTH_PAGE = 0x107000, GROWTH_MAGIC = 0x5747524E;
 const GROWTH_PROFILES = {
-  gen1: { code: '__NEON_GROWTH_GEN1_B64__', hook: 0x1F594, stack: 0x90, layers: [0x2FF2A, 0x2FF48] },
-  jade: { code: '__NEON_GROWTH_JADE_B64__', hook: 0x1F6C8, stack: 0xC0, layers: [0x3126E, 0x3128C] },
-  gen3: { code: '__NEON_GROWTH_B64__', hook: 0x2114E, stack: 0xC8, layers: [0x34B22, 0x34B40] },
+  gen1: { code: '__NEON_GROWTH_GEN1_B64__', hook: 0x1F594, stack: 0x90, layers: [0x2FF2A, 0x2FF48],
+    food: [0x1F694, [0x11, 0x98, 0xC0, 0x89]], eye: [0x1711A, [0x0F, 0xF0, 0x8B, 0xFE]] },
+  jade: { code: '__NEON_GROWTH_JADE_B64__', hook: 0x1F6C8, stack: 0xC0, layers: [0x3126E, 0x3128C],
+    food: [0x1F7F0, [0x0B, 0x98, 0xC0, 0x89]], eye: [0x17226, [0x0F, 0xF0, 0x85, 0xFF]] },
+  gen3: { code: '__NEON_GROWTH_B64__', hook: 0x2114E, stack: 0xC8, layers: [0x34B22, 0x34B40],
+    food: [0x21278, [0x0B, 0x98, 0xC0, 0x89]], eye: [0x18796, [0x10, 0xF0, 0x4D, 0xFF]] },
 };
 function growthKind(rom) {
   const kind = F.familyOf(C.editionIdOf(rom));
@@ -40,7 +43,8 @@ const FIELD_STATE = NAME_STATE + 16, FIELD_MAGIC = 0x31465A4E; // NZF1
 const PROFILE_STATE = ITEM_STATE - 16, PROFILE_MAGIC = 0x31505A4E; // NZP1
 // Icon and background pairs used by the original Neon Tama Files detail page.
 const PROFILE_SPRITES = [153, 191, 154, 192, 155, 193];
-const GROWTH_VERSION = 3;
+const GROWTH_VERSION = 4;
+const FOOD_ENTRY = GROWTH_PAGE + 0x40, EYE_ENTRY = GROWTH_PAGE + 0xA0, EYE_RANGE = GROWTH_PAGE + 0xE0;
 const NATIVE_TEENS = 4, NATIVE_ADULTS = 16, MAX_ADULTS = 33;
 const GROWTH_CONFIG_SIZE = (3 + 3 * NATIVE_TEENS + 3 * NATIVE_ADULTS + 3 + 3 * MAX_ADULTS) * 2;
 const LAYER_INDEX_CODE = [0x00, 0x6C, 0x07, 0x9B, 0xB3, 0xF9, 0x00, 0x30, 0xBD, 0xF9, 0x1A, 0xC0];
@@ -650,6 +654,22 @@ function growthUpdateNeeded(rom) {
   return installed(rom) && u32(rom, GROWTH_PAGE + 4) < GROWTH_VERSION;
 }
 
+function installGrowthHooks(rom, kind, records) {
+  const profile = GROWTH_PROFILES[kind];
+  for (const [[at, expected], entry] of [[profile.food, FOOD_ENTRY], [profile.eye, EYE_ENTRY]]) {
+    const hook = growthBranch(at, entry);
+    const existing = rom.subarray(at, at + 4);
+    if (!same(existing, expected) && !same(existing, hook)) throw new Error('Unexpected Neon growth hook at ' + at.toString(16));
+    rom.set(hook, at);
+  }
+  const eyes = records.filter(row => row.field >= 7 && row.field <= 9 && (row.stage === 3 || row.stage === 4))
+    .map(row => row.animation).sort((a, b) => a - b);
+  if (eyes.length !== 15 || !eyes.every((id, i) => id === eyes[0] + i))
+    throw new Error('Unexpected Neon youngster animations');
+  w16(rom, EYE_RANGE, eyes[0]);
+  w16(rom, EYE_RANGE + 2, eyes.at(-1) + 1);
+}
+
 function upgradeGrowth(rom) {
   if (!growthUpdateNeeded(rom)) return rom;
   const code = growthBinary(growthKind(rom)), fresh = growthHeader(code);
@@ -661,6 +681,7 @@ function upgradeGrowth(rom) {
   const out = new Uint8Array(rom);
   out.set(code, GROWTH_PAGE);
   out.set(config, GROWTH_PAGE + fresh.config);
+  installGrowthHooks(out, growthKind(rom), C.charTable(C.arc2Files(rom, C.ASSET_BASE)[0]));
   return out;
 }
 
@@ -722,6 +743,7 @@ function installGrowth(rom, rows, code) {
     w32(out, FIELD_STATE + 4, 0);
   }
   out.set(growthBranch(profile.hook, GROWTH_PAGE + header.entry), profile.hook);
+  installGrowthHooks(out, kind, rows);
   fixLayerIndices(out);
   return out;
 }
