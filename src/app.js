@@ -83,11 +83,11 @@ const T = {
   en: {
     optionalRomPatches: 'Optional ROM Patches',
     autopilotPatch: 'Autopilot controls',
-    autopilotPatchHelp: 'Adds optional automatic care controls to the on-device Tama Editor. The controls start off in new saves.',
+    autopilotPatchHelp: 'Adds optional automatic care controls to the on-device Tamagotchi Editor. The controls start off in new saves.',
     infiniteFuelPatch: 'Always-full travel fuel',
     infiniteFuelPatchHelp: 'Keeps travel fuel at 60, including after a trip.',
-    keepAwakePatch: 'Keep Tama awake',
-    keepAwakePatchHelp: 'Adds an AWAKE switch to the on-device Tama menu. It starts off for new saves. Turning it on affects growth.',
+    keepAwakePatch: 'Keep the Tamagotchi awake',
+    keepAwakePatchHelp: 'Adds an AWAKE switch to the on-device Tamagotchi menu. It starts off for new saves. Turning it on affects growth.',
     singleSlotToysPatch: 'Single-slot outdoor toys',
     singleSlotToysPatchHelp: 'Adds a 1-SLOT TOYS switch to the TAMA menu on the device, off by default. Enabling it can change how Tamagotchi characters use toys. For example, a Ferris Wheel placed in one slot can seat only one Tamagotchi. Reposition existing toys to apply the new setting.',
     fl_slotMigration: 'Keep Saves could not verify the contents of slot {f}. Nothing was written.',
@@ -194,8 +194,7 @@ const T = {
     paraClear: 'Clear Active ROM Save', paraClearAsk: 'Clear the active Paradise save in the loaded ROM?', paraClearDone: 'Active save cleared. Save the ROM as a new file.', paraClearPending: 'Finish recovering the saved game in the ParaLab menu first.',
     specialFoodOn: 'Special Food in game', specialFoodHint: 'Adds SPECIALFOOD and RELEASE under CONNECTION. Choose a {editionNeon} ROM.',
     labReleaseOn: 'Send to My Lab in game', labReleaseHint: 'Adds RELEASE under CONNECTION. Choose a {editionNeon} ROM for the in-game text.', labReleaseInstalled: 'RELEASE is already installed.', labReleaseUpgrade: 'RELEASE will be updated on export.', labReleaseFail: 'Could not add Lab Invite: {e}',
-    neonDonorPick: 'Choose {editionNeon} ROM', neonDonorHint: 'Add 86 Tama and 59 items from {editionNeon}.', neonDonorReady: '{editionNeon} source: {name}', neonDonorBad: 'Choose a supported {editionNeon} ROM.', neonDonorFail: 'Could not add {editionNeon} content: {e}', neonDonorOn: '{editionNeon} content', neonItemsHint: 'Add 59 items from {editionNeon}.', neonLocalizeHint: 'Update Tama Files with the original planet names in all languages.',
-    "Adjust care, appearance and age on Neon Planets.": "Adjust care, appearance and age on {editionNeon}.",
+    neonDonorPick: 'Choose {editionNeon} ROM', neonDonorHint: 'Add 86 Tamagotchi characters and 59 items from {editionNeon}.', neonDonorReady: '{editionNeon} source: {name}', neonDonorBad: 'Choose a supported {editionNeon} ROM.', neonDonorFail: 'Could not add {editionNeon} content: {e}', neonDonorOn: '{editionNeon} content', neonItemsHint: 'Add 59 items from {editionNeon}.', neonLocalizeHint: 'Update Tama Files with the original planet names in all languages.',
     'Choose a Neon Planets ROM with its native language tables': 'Choose a {editionNeon} ROM with its native language tables',
     'Choose a Neon Planets ROM for the in-game text': 'Choose a {editionNeon} ROM for the in-game text',
     'Neon Planets is missing Lab Invite text': '{editionNeon} is missing Lab Invite text',
@@ -210,8 +209,11 @@ const T = {
     'Neon Planets character preview data is missing': '{editionNeon} character preview data is missing',
     'menu program too old for Neon Planets': 'menu program too old for {editionNeon}',
     neonProfileHint: 'Update the planet artwork in Tama Files.',
+    neonFilesInstallFail: 'Could not install the original Tama Files.',
     appsOnlyOn: 'Programs menu', appsOnlyHint: 'Open ParaLab alongside the {editionNeon} game to use programs and the Flash Tool.', neonSaves: 'Three {editionNeon} save slots', neonSaveFields: 'New saves use the game’s setup. The game unlocks fields with progress.', neonSaveFull: 'Writing a {editionNeon} menu slot requires a complete .sav backup.',
-    neonTamaOn: 'Tama in Programs menu (care, appearance, age)', petPoints: 'Tamapoints', petMission: 'Mission', petMissionAction: 'Completion', petMissionComplete: 'Mark complete', petMissionReset: 'Reset completion',
+    neonTamaOn: 'Edit your Tamagotchi from the Programs menu',
+    neonTamaOnHelp: 'Adjust your Tamagotchi’s care, appearance and age in {editionNeon}.',
+    petPoints: 'Tamapoints', petMission: 'Mission', petMissionAction: 'Completion', petMissionComplete: 'Mark complete', petMissionReset: 'Reset completion',
     open: 'Open ROM', save: 'Save New ROM',
     startTitle: 'Make your ROM your own',
     startText: 'Open a {editionParadise} or {editionMyLab} ROM to inspect, customize, back up, and prepare device updates. Everything runs locally in your browser.',
@@ -331,7 +333,8 @@ const T = {
     fl_noteEdKept: 'The device is {d} and the new ROM is {r}. They use the same firmware, so the device keeps its save and its field ({d}).',
     cleanOn: 'Without the Paradise (clean ROM)', cleanClock: 'Set the clock at the start', cleanClockHint: 'When the clock is missing (new batteries), the menu asks for it when switched on. Without: set the clock in the menu under SETTINGS or in each emulator itself.', emuClockOff: 'Only with "Set the clock at the start" (tab Menu).', emuSess: 'Remember where you left off', emuSessHint: 'The next start continues right there. Without: the game starts anew and loads its own save, as the real device does.', ruleClean: 'Without the Paradise: all programs go to the menu, almost the whole flash is theirs.', cleanHint: 'No Paradise on the device any more, only the menu with your programs. Almost the whole 16 MB is free.', cleanUse: 'After switching on the menu comes up right away. On the first start you set the clock, later under SETTINGS. Leave a program as usual.', cleanWarn: 'The Paradise and its save are lost when writing. Make a backup first.', cleanNoDoom: 'DOOM does not work without the Paradise yet. Please remove DOOM.', doomOne: 'DOOM goes into the menu only once.', cleanSure: 'The device has the Paradise on it. It is deleted, with its save. Do you have a backup of the device? Go on?', cleanLoaded: 'ROM without the Paradise ({ed}) loaded: {n} programs.',
     launchOn: 'Start device for programs only', launchHint: 'The device opens its installed programs after setup.', launchUse: 'After switching on and setting the clock the menu comes up. Wheel selects, B starts. Leave a program as usual, then the menu comes up again.', launchOld: 'This ROM is a start device. Load the original ROM for a normal Paradise.', launchNeed: 'This startup mode requires an installed program.', launchSix: 'A start device does not go with six fields built in. Please load the original ROM.', planLaunch: 'Start device',
-    tabFeld: 'Menu', feldOn: 'Multiple Save Slots', bagOn: 'Items and Tamapoints', tamaOn: 'Tama Editor', paramixShortcut: 'Add PARALAB at the end of the game menu', paramixShortcutHint: 'Optional. A + C on the home screen remains available.', gplayOn: 'Play time earns Tamapoints', gplayHint: 'DOOM, Wolfenstein, Game Boy, Master System, Pokémon mini and Arduboy: 10 Tamapoints per minute of play, when going back to the Paradise.', saveSlot: 'Save {n}',
+    tamaOnHelp: 'Change your Tamagotchi’s level, adjust its care or choose a different character.',
+    tabFeld: 'Menu', feldOn: 'Multiple Save Slots', bagOn: 'Items and Tamapoints', tamaOn: 'Tamagotchi Editor', paramixShortcut: 'Add PARALAB at the end of the game menu', paramixShortcutHint: 'Optional. A + C on the home screen remains available.', gplayOn: 'Play time earns Tamapoints', gplayHint: 'DOOM, Wolfenstein, Game Boy, Master System, Pokémon mini and Arduboy: 10 Tamapoints per minute of play, when going back to the Paradise.', saveSlot: 'Save {n}',
     sixOn: 'All 6 fields', sixPick: 'Choose {editionLand}, {editionWater} or {editionSky} ROM', sixRepairPick: 'Repair walking graphics…', sixHint: 'Adds Land, Water and Sky to {editionTropics} and {editionGlacier}. The field pictures come from your own {editionLand}, {editionWater} or {editionSky} ROM. All ten Lab games are available in every field.',
     sixSourceReady: 'Source ROM selected: {name}',
     'more fields need a Tropical, Glacier or Jade Forest ROM with the original firmware': 'More fields need a {editionTropics}, {editionGlacier} or {editionJade} ROM with the original firmware',
@@ -4422,7 +4425,9 @@ function renderFeld() {
   bag.parentNode.title = neon && bag.disabled ? t('neonBagUnavailable') : '';
   tm.checked = !!state.tama && !la;
   tm.disabled = !fe || !ed || la || (neon && (!SV.neonSaveLayout(rom) || !F.neonAppearance(rom)));
-  $('tamaOnHelp').textContent = neon ? t("Adjust care, appearance and age on Neon Planets.") : t("Change your Tama’s level, care and character.");
+  const tamaHelp = $('tamaOnHelp');
+  tamaHelp.dataset.t = neon ? 'neonTamaOnHelp' : 'tamaOnHelp';
+  tamaHelp.textContent = t(tamaHelp.dataset.t);
   const tamaLabel = tm.parentNode.querySelector('[data-t]');
   tamaLabel.dataset.t = neon ? 'neonTamaOn' : 'tamaOn';
   tamaLabel.textContent = t(tamaLabel.dataset.t);
@@ -4978,7 +4983,7 @@ async function composeBaseRom(deferResidentBanks = false) {
   if (state.neonDonor && NT.installed(rom)) {
     const menu = fe && F.feldFind(rom, fe.stub);
     if (!menu || !(menu.flags & 0x100) || ![3, 4].includes(rd32(rom, menu.stubOff + 0x304))) {
-      toast(t('neonDonorFail', { e: 'native Tama Files could not be installed' }), true); return null;
+      toast(t('neonFilesInstallFail'), true); return null;
     }
   }
   // autostart of the emulator (the stubs above were written with it off), clock switch (1.5.1)
