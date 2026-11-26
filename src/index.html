@@ -278,6 +278,7 @@ __STUDIO_LAYOUT__
     <button id="btnSaveEditor" data-t="Save Editor">Save Editor</button>
     <button id="btnLabCodes" data-t="Lab & Shop Codes">Lab &amp; Shop Codes</button>
     <button id="btnHelp">Guide</button>
+    <button id="btnLink">ParaLab Link</button>
   </nav>
   <div class="interface-language">
     <span class="interface-language-icon" aria-hidden="true"></span>
@@ -308,6 +309,18 @@ __STUDIO_LAYOUT__
 <input type="file" id="fileT18Pic" hidden multiple accept=".png,.json,.zip">
 <input type="file" id="fileField" hidden accept=".zip,.ZIP">
 
+<dialog id="translationResult" aria-labelledby="translationResultTitle" aria-describedby="translationResultSummary">
+  <form method="dialog">
+    <h2 id="translationResultTitle">Translated ROM Ready</h2>
+    <p id="translationResultSummary"></p>
+    <div class="device-dialog-actions">
+      <button class="btn" value="cancel">Close</button>
+      <button class="btn" type="button" id="translationDownload">Download Translated ROM</button>
+      <button class="btn primary" value="use">Use Translated ROM</button>
+    </div>
+  </form>
+</dialog>
+
 <dialog id="deviceDialog" aria-labelledby="deviceDialogTitle" aria-describedby="deviceDialogMessage">
   <form method="dialog">
     <h2 id="deviceDialogTitle"></h2>
@@ -317,6 +330,7 @@ __STUDIO_LAYOUT__
       <dl class="write-facts">
         <dt>Write Content</dt><dd id="reviewContent"></dd>
         <dt>Device Saves</dt><dd id="reviewSaves"></dd>
+        <dt id="reviewFlashAccessLabel" hidden>Flash Tool After Restart</dt><dd id="reviewFlashAccess" hidden></dd>
         <dt>Write Mode</dt><dd id="reviewMode"></dd>
         <dt>Image Difference</dt><dd><strong id="reviewBytes"></strong><small>Compared with the source file before device-specific adjustments.</small></dd>
       </dl>
@@ -345,14 +359,127 @@ __STUDIO_LAYOUT__
 </dialog>
 __ANALYTICS_CARD__
 <main data-view="workspace">
+  <section id="linkPage" hidden aria-labelledby="linkTitle">
+    <h1 id="linkTitle">ParaLab Link</h1>
+    <p data-t="Send gifts, invite Playdate visitors and look up Lab Codes on the H717 touchscreen. Connect it to a computer to use it as a USB–UART bridge for Paradise."></p>
+    <div class="guide-grid">
+      <section class="guide-card"><h2 data-t="Materials and Wiring"></h2>
+        <ul><li>LILYGO H717 · T-Display-S3 AMOLED Touch 1.91″ · 16 MiB</li><li data-t="USB-C data cable, JST-SH 1.0 mm 4-pin cable and a Paradise contact adapter"></li></ul>
+        <p data-t="Use the socket marked UART. Power the H717 by USB and Paradise with its own batteries. Connect the signal wires after the H717 starts."></p>
+        <table><thead><tr><th>H717 UART</th><th>Tamagotchi Paradise</th></tr></thead>
+          <tbody><tr><td>TX · GPIO43</td><td>RX</td></tr><tr><td>RX · GPIO44</td><td>TX</td></tr><tr><td>GND</td><td>GND</td></tr><tr><td>3V3</td><td data-t="Leave disconnected"></td></tr></tbody></table>
+      </section>
+      <section class="guide-card"><h2 data-t="Screen Preview"></h2>
+        <div id="linkScreens">
+          <img src="__LINK_SCREEN_home__" alt="ParaLab Link · Home" width="536" height="240">
+          <img src="__LINK_SCREEN_catalog__" alt="ParaLab Link · Catalog" width="536" height="240" hidden>
+          <img src="__LINK_SCREEN_bridge__" alt="ParaLab Link · USB Bridge" width="536" height="240" hidden>
+        </div>
+        <div id="linkScreenButtons"><button type="button" class="btn small" aria-pressed="true" data-t="Home"></button>
+          <button type="button" class="btn small" aria-pressed="false" data-t="Item Catalog"></button>
+          <button type="button" class="btn small" aria-pressed="false" data-t="USB Bridge">USB Bridge</button></div>
+      </section>
+    </div>
+    <section class="guide-card link-update"><h2 id="linkUpdateTitle"><span data-t="H717 USB Firmware Update"></span> <small>v__LINK_VERSION__</small></h2>
+      <p class="hint" data-t="The browser USB updater has been verified on H717 hardware."></p>
+      <p data-t="Disconnect Paradise and close other serial connections. Connect only your H717 by USB. To enter download mode manually, hold BOOT, tap RESET, then release BOOT."></p>
+      <label><select id="linkMode" aria-labelledby="linkUpdateTitle"><option value="update" data-t="Update firmware and assets · keep settings and favorites"></option><option value="factory" data-t="First installation or recovery · erase all H717 data"></option></select></label>
+      <button id="linkConnect" class="btn primary" type="button" data-t="Connect H717 via USB"></button>
+      <div class="transfer-progress" id="linkProgress" hidden>
+        <div class="flash" id="linkMeter" role="progressbar" aria-label="H717 USB" aria-valuemin="0" aria-valuemax="100"><span class="seg emu" id="linkBar"></span></div>
+        <span id="linkPercent" aria-hidden="true"></span>
+      </div>
+      <p role="status" id="linkStatus"></p>
+      <a id="linkSource"><span data-t="Source Code">Source Code</span> · GPL-3.0</a>
+    </section>
+  </section>
   <section class="plan help" id="helpBox" hidden>
     <div class="guide-heading"><h1>Guide</h1><button class="btn" id="helpClose" type="button">Back to Workspace</button></div>
+    <template id="taskPlayerTemplate"><div class="task-player"><div class="task-screen"><img alt=""></div>
+          <div class="task-controls"><button type="button" class="btn small task-play" aria-pressed="false"><span class="demo-play"><span data-t="Play">Play</span></span><span class="demo-stop"><span data-t="Stop">Stop</span></span></button><output aria-live="off"></output></div></div></template>
+    <input class="guide-search" type="search" id="guideSearch" placeholder="Search guides" aria-label="Search guides" aria-controls="guideTasks guide-demos">
+    <p id="guideEmpty" role="status" hidden><span data-t="No matching guides">No matching guides</span></p>
+    <section id="guideTasks" class="guide-reference"><h2>Task Guides</h2>
+      <details class="task-guide" name="task-guide" data-keywords="flash firmware UART ROM 刷機 刷机 韌體 固件">
+        <summary><span data-t="Write to Device">Write to Device</span></summary>
+        <div class="task-layout"><ol>
+          <li data-frame="wiring.png"><button type="button" class="task-step"><span data-t="Wire the Adapter">Wire the Adapter</span></button><p><span data-t="Use 3.3 V UART logic. Match the adapter’s printed pin labels and leave its power pin disconnected.">Use 3.3 V UART logic. Match the adapter’s printed pin labels and leave its power pin disconnected.</span> <span data-guide-copy="[data-sentence=&quot;sentenceUartParadise&quot;]"></span> <span data-guide-copy="[data-sentence=&quot;sentenceUartMyLabPrerequisite&quot;]"></span> <span data-guide-copy="[data-sentence=&quot;sentenceUartMyLab&quot;]"></span></p></li>
+          <li data-frame="read-rom.png"><button type="button" class="task-step"><span data-t="Read from Device">Read from Device</span></button><p><span data-t="Select Connect above, then choose your USB adapter in desktop Chrome or Edge.">Select Connect above, then choose your USB adapter in desktop Chrome or Edge.</span> <span data-t="Download the connected device’s ROM as a .bin backup and open it in Workspace.">Download the connected device’s ROM as a .bin backup and open it in Workspace.</span></p></li>
+          <li data-frame="write-rom.png"><button type="button" class="task-step"><span data-t="Review and Write…">Review and Write…</span></button><p><span data-t="Open the ROM to install. Check the target and save settings, then confirm the block count. Keep the device powered until writing finishes.">Open the ROM to install. Check the target and save settings, then confirm the block count. Keep the device powered until writing finishes.</span></p></li>
+        </ol></div>
+        <a class="btn" data-view-link="uart" href="#connectionTitle"><span data-t="Device Console">Device Console</span> ↗</a>
+      </details>
+      <details class="task-guide" name="task-guide" data-keywords="add paralab menu paradise 加入選單 菜单">
+        <summary><span data-t="Paradise Menu">Paradise Menu</span></summary>
+        <div class="task-layout"><ol>
+          <li data-frame="open-rom.png"><button type="button" class="task-step"><span data-t="Open ROM">Open ROM</span></button><p><span data-t="Open your Paradise ROM and choose Menu in Workspace.">Open your Paradise ROM and choose Menu in Workspace.</span></p></li>
+          <li data-frame="menu-tools.png"><button type="button" class="task-step"><span data-t="Gameplay Tools">Gameplay Tools</span></button><p><span data-t="Select the tools to install.">Select the tools to install.</span> <span data-t="paramixShortcutHint">paramixShortcutHint</span></p></li>
+          <li data-frame="menu-shortcut.png"><button type="button" class="task-step"><span data-t="Menu Shortcut">Menu Shortcut</span></button><p><span data-t="paramixShortcut">paramixShortcut</span> <span data-t="Export the ROM and write it to the device.">Export the ROM and write it to the device.</span></p></li>
+          <li data-frame="shortcut.png" data-clip="__GUIDE_shortcut.gif__"><button type="button" class="task-step"><span data-t="Menu Shortcut">Menu Shortcut</span></button><p data-t="With the PARALAB game-menu entry enabled, press A to open the game menu. Turn the wheel to select PARALAB, then press B.">With the PARALAB game-menu entry enabled, press A to open the game menu. Turn the wheel to select PARALAB, then press B.</p></li>
+        </ol></div>
+        <a class="btn" data-view-link="menu" href="#tool-feld"><span data-t="tabFeld">tabFeld</span> ↗</a>
+      </details>
+      <details class="task-guide" name="task-guide" data-keywords="add paralab menu computer 加入選單 菜单">
+        <summary><span data-t="My Lab Menu">My Lab Menu</span></summary>
+        <div class="task-layout"><ol>
+          <li data-frame="open-rom.png"><button type="button" class="task-step"><span data-t="Open ROM">Open ROM</span></button><p><span data-t="Open your My Lab ROM and choose Menu in Workspace.">Open your My Lab ROM and choose Menu in Workspace.</span></p></li>
+          <li data-frame="my-lab-uart.png" data-clip="__GUIDE_my-lab-uart.gif__"><button type="button" class="task-step"><span data-t="myLabUpdateHeading"></span></button><p data-t="On a stock My Lab, create MLTUPD.BIN in Update File using the matching key. Copy it to the microSD root and install it from Settings. Open Computer, select UART, and press B to start Flash Tool. Use Read ROM to back up the device."></p></li>
+          <li data-frame="include-menu.png"><button type="button" class="task-step"><span data-t="Include ParaLab Menu">Include ParaLab Menu</span></button><p><span data-t="myLabInstallHint">myLabInstallHint</span></p></li>
+          <li data-frame="write-rom.png"><button type="button" class="task-step"><span data-t="Write to Device">Write to Device</span></button><p><span data-t="Export the ROM and write it to the device.">Export the ROM and write it to the device.</span> <span data-t="myLabWriteMenuHelp">myLabWriteMenuHelp</span></p></li>
+          <li data-frame="entry.png" data-clip="__GUIDE_entry.gif__"><button type="button" class="task-step"><span data-t="myLabComputer">myLabComputer</span></button></li>
+        </ol></div>
+        <a class="btn" data-view-link="menu" href="#myLabTabMenu"><span data-t="tabFeld">tabFeld</span> ↗</a>
+      </details>
+      <details class="task-guide" name="task-guide" data-keywords="edit backup restore sav 存檔 存档">
+        <summary><span data-t="Save Editor">Save Editor</span></summary>
+        <div class="task-layout"><ol>
+          <li data-frame="save-source.png"><button type="button" class="task-step"><span data-t="Save Source">Save Source</span></button><p><span data-t="Open a .sav backup, use the save in the loaded ROM, or read the connected device.">Open a .sav backup, use the save in the loaded ROM, or read the connected device.</span></p></li>
+          <li data-frame="save-edit.png"><button type="button" class="task-step"><span data-t="Jump to section">Jump to section</span></button><p><span data-t="Choose the slot when available, then open a section and change its values.">Choose the slot when available, then open a section and change its values.</span></p></li>
+          <li data-frame="save-export.png"><button type="button" class="task-step"><span data-t="Download Edited Save">Download Edited Save</span></button><p><span data-t="Download a new .sav to keep the original. To update the device, review and confirm the save write.">Download a new .sav to keep the original. To update the device, review and confirm the save write.</span></p></li>
+        </ol></div>
+        <a class="btn" data-view-link="save-editor" href="#saveEditorTitle"><span data-t="Save Editor">Save Editor</span> ↗</a>
+      </details>
+      <details class="task-guide" name="task-guide" data-keywords="playdate visit 約會 聚會 拜訪">
+        <summary><span data-t="visTitle">visTitle</span></summary>
+        <div class="task-layout"><ol>
+          <li data-frame="visitor.png"><button type="button" class="task-step"><span data-t="Choose a Character">Choose a Character</span></button><p><span data-t="Choose a visitor and its edition. Connect the USB-UART adapter with the game running.">Choose a visitor and its edition. Connect the USB-UART adapter with the game running.</span></p></li>
+          <li data-frame="visit-setup.png"><button type="button" class="task-step"><span data-t="visStart">visStart</span></button><p><span data-guide-copy="[data-sentence=&quot;sentencePlaydateStart&quot;]"></span> <span data-guide-copy="[data-sentence=&quot;sentencePlaydateDevice&quot;]"></span></p></li>
+        </ol></div>
+        <a class="btn" data-view-link="device" href="#deviceTabPlaydate"><span data-t="visTitle">visTitle</span> ↗</a>
+      </details>
+      <details class="task-guide" name="task-guide" data-keywords="lab gift gift exchange 禮物 礼物">
+        <summary><span data-t="Send Gift">Send Gift</span></summary>
+        <div class="task-layout"><ol>
+          <li data-frame="gift-choice.png"><button type="button" class="task-step"><span data-t="Gifts">Gifts</span></button><p><span data-t="Select the target edition and choose a gift from its catalog.">Select the target edition and choose a gift from its catalog.</span></p></li>
+          <li data-frame="gift-exchange.png"><button type="button" class="task-step"><span data-t="Gift Exchange">Gift Exchange</span></button><p><span data-guide-copy="#deviceGift .session-steps li:first-child"></span> <span data-guide-copy="[data-sentence=&quot;sentenceGiftDevice&quot;]"></span></p></li>
+        </ol></div>
+        <a class="btn" data-view-link="device" href="#deviceTabGift"><span data-t="Send Gift">Send Gift</span> ↗</a>
+      </details>
+      <details class="task-guide" name="task-guide" data-keywords="lab gift item download arc2 研究所物品 实验室道具">
+        <summary><span data-t="Send Lab Item">Send Lab Item</span></summary>
+        <div class="task-layout"><ol>
+          <li data-frame="item-choice.png"><button type="button" class="task-step"><span data-t="Lab Items">Lab Items</span></button><p><span data-t="Choose a Lab Item and review its preview and prices.">Choose a Lab Item and review its preview and prices.</span></p></li>
+          <li data-frame="item-send.png"><button type="button" class="task-step"><span data-t="Lab Item Transfer">Lab Item Transfer</span></button><p><span data-t="Connect the USB-UART adapter to {editionParadise}.">Connect the USB-UART adapter to {editionParadise}.</span> <span data-guide-copy="[data-sentence=&quot;sentenceItemDevice&quot;]"></span></p></li>
+        </ol></div>
+        <a class="btn" data-view-link="device" href="#deviceTabItem"><span data-t="Send Lab Item">Send Lab Item</span> ↗</a>
+      </details>
+      <details class="task-guide" name="task-guide" data-keywords="port my lab paradise 移植 刷機 刷机">
+        <summary><span data-t="myLabPortTitle">myLabPortTitle</span></summary>
+        <div class="task-layout"><ol>
+          <li data-frame="open-rom.png"><button type="button" class="task-step"><span data-t="Open ROM">Open ROM</span></button><p><span data-t="Open your My Lab ROM and choose Menu in Workspace."></span></p></li>
+          <li data-frame="port-input.png"><button type="button" class="task-step"><span data-t="myLabPortTab">myLabPortTab</span></button><p><span data-t="myLabPortHelp"></span></p></li>
+          <li data-frame="port-stage.png"><button type="button" class="task-step"><span data-t="myLabPortStage">myLabPortStage</span></button><p><span data-t="myLabPortDone">myLabPortDone</span></p></li>
+          <li data-frame="write-rom.png"><button type="button" class="task-step"><span data-t="Review and Write…">Review and Write…</span></button><p><span data-t="myLabPortFirstBackupHelp"></span></p></li>
+        </ol></div>
+        <a class="btn" data-view-link="menu" href="#myLabTabPort"><span data-t="myLabPortTab">myLabPortTab</span> ↗</a>
+      </details>
+    </section>
     <section class="guide-workflow">
       <h2>Edit a ROM</h2>
       <ol class="guide-steps">
         <li><h3>Load the Source</h3><p data-sentence="sentenceGuideSource"><button data-sentence-part="open" type="button" id="guideOpenRom" class="text-action" data-t="open">Open ROM</button> loads a <span data-sentence-part="paradise" data-edition-label="paradise">Tamagotchi Paradise</span> or <span data-sentence-part="myLab" data-edition-label="my-lab">My Lab Tamagotchi</span> ROM. To read a ROM from your device, use <a data-sentence-part="read" href="#romTransfer" data-view-link="uart">Read ROM</a> and keep the downloaded backup.</p></li>
         <li><h3>Edit and Export</h3><p data-sentence="sentenceGuideEdit">Make changes in <a data-sentence-part="workspace" href="#btnWorkspace" data-view-link="workspace">Workspace</a>. Choose Save New ROM to download the edited copy.</p></li>
-        <li><h3>Write to a Device</h3><p data-sentence="sentenceGuideWrite">For a separately exported translation, open the translated ROM first. In <a data-sentence-part="write" href="#writeReview" data-view-link="uart">Write to Device</a>, review the source file, target device and save settings before confirming.</p></li>
+        <li><h3>Write to a Device</h3><p data-sentence="sentenceGuideWrite">After translating, choose Use Translated ROM to continue in Workspace. In <a data-sentence-part="write" href="#writeReview" data-view-link="uart">Write to Device</a>, review the source file, target device and save settings before confirming.</p></li>
       </ol>
     </section>
     <section class="guide-reference guide-demos" id="guide-demos">
@@ -361,7 +488,7 @@ __ANALYTICS_CARD__
         <h3><span data-edition-label="my-lab">My Lab Tamagotchi</span></h3>
         <details name="guide-walkthrough">
           <summary id="demo-entry-title" data-t="myLabComputer">myLabComputer</summary>
-          <img class="demo-lcd" id="demo-entry" width="160" height="128" data-poster="__GUIDE_entry.png__" data-animation="__GUIDE_entry.gif__" alt="" aria-labelledby="demo-entry-title">
+          <img class="demo-lcd" id="demo-entry" width="320" height="256" data-poster="__GUIDE_entry.png__" data-animation="__GUIDE_entry.gif__" alt="" aria-labelledby="demo-entry-title">
           <button class="btn small demo-toggle" type="button" aria-controls="demo-entry" aria-pressed="false"><span class="demo-play">Play</span><span class="demo-stop">Stop</span></button>
         </details>
         <details name="guide-walkthrough">
@@ -377,7 +504,7 @@ __ANALYTICS_CARD__
         </details>
         <details name="guide-walkthrough">
           <summary id="demo-items-title" data-t="Add an Item">Add an Item</summary>
-          <img class="demo-lcd" id="demo-items" width="160" height="128" data-poster="__GUIDE_bulk.png__" data-animation="__GUIDE_items.gif__" alt="" aria-labelledby="demo-items-title">
+          <img class="demo-lcd" id="demo-items" width="160" height="128" data-poster="__GUIDE_items.png__" data-animation="__GUIDE_items.gif__" alt="" aria-labelledby="demo-items-title">
           <button class="btn small demo-toggle" type="button" aria-controls="demo-items" aria-pressed="false"><span class="demo-play">Play</span><span class="demo-stop">Stop</span></button>
         </details>
         <details name="guide-walkthrough">
@@ -387,12 +514,12 @@ __ANALYTICS_CARD__
         </details>
         <details name="guide-walkthrough">
           <summary id="demo-decor-title" data-t="Lab Decorations">Lab Decorations</summary>
-          <img class="demo-lcd" id="demo-decor" width="160" height="128" data-poster="__GUIDE_bulk.png__" data-animation="__GUIDE_decor.gif__" alt="" aria-labelledby="demo-decor-title">
+          <img class="demo-lcd" id="demo-decor" width="160" height="128" data-poster="__GUIDE_decor.png__" data-animation="__GUIDE_decor.gif__" alt="" aria-labelledby="demo-decor-title">
           <button class="btn small demo-toggle" type="button" aria-controls="demo-decor" aria-pressed="false"><span class="demo-play">Play</span><span class="demo-stop">Stop</span></button>
         </details>
         <details name="guide-walkthrough">
           <summary id="demo-treasure-title" data-t="Treasures">Treasures</summary>
-          <img class="demo-lcd" id="demo-treasure" width="160" height="128" data-poster="__GUIDE_bulk.png__" data-animation="__GUIDE_treasure.gif__" alt="" aria-labelledby="demo-treasure-title">
+          <img class="demo-lcd" id="demo-treasure" width="160" height="128" data-poster="__GUIDE_treasure.png__" data-animation="__GUIDE_treasure.gif__" alt="" aria-labelledby="demo-treasure-title">
           <button class="btn small demo-toggle" type="button" aria-controls="demo-treasure" aria-pressed="false"><span class="demo-play">Play</span><span class="demo-stop">Stop</span></button>
         </details>
         <details name="guide-walkthrough">
@@ -412,7 +539,7 @@ __ANALYTICS_CARD__
         </details>
         <details name="guide-walkthrough">
           <summary id="demo-flash-title" data-t="UART Flash Tool">UART Flash Tool</summary>
-          <img class="demo-lcd" id="demo-flash" width="160" height="128" data-poster="__GUIDE_flash.png__" data-animation="__GUIDE_flash.gif__" alt="" aria-labelledby="demo-flash-title">
+          <img class="demo-lcd" id="demo-flash" width="320" height="256" data-poster="__GUIDE_my-lab-uart.png__" data-animation="__GUIDE_my-lab-uart.gif__" alt="" aria-labelledby="demo-flash-title">
           <button class="btn small demo-toggle" type="button" aria-controls="demo-flash" aria-pressed="false"><span class="demo-play">Play</span><span class="demo-stop">Stop</span></button>
         </details>
         <details name="guide-walkthrough">
@@ -425,8 +552,9 @@ __ANALYTICS_CARD__
         <h3><span data-edition-label="paradise">Tamagotchi Paradise</span></h3>
         <details name="guide-walkthrough">
           <summary id="demo-shortcut-title" data-t="Menu Shortcut">Menu Shortcut</summary>
-          <p><kbd>A</kbd> + <kbd>C</kbd></p>
-          <img class="demo-lcd" id="demo-shortcut" width="128" height="128" data-poster="__GUIDE_shortcut.png__" alt="" aria-labelledby="demo-shortcut-title">
+          <p data-t="With the PARALAB game-menu entry enabled, press A to open the game menu. Turn the wheel to select PARALAB, then press B.">With the PARALAB game-menu entry enabled, press A to open the game menu. Turn the wheel to select PARALAB, then press B.</p>
+          <img class="demo-lcd" id="demo-shortcut" width="256" height="312" data-poster="__GUIDE_shortcut.png__" data-animation="__GUIDE_shortcut.gif__" alt="" aria-labelledby="demo-shortcut-title">
+          <button class="btn small demo-toggle" type="button" aria-controls="demo-shortcut" aria-pressed="false"><span class="demo-play">Play</span><span class="demo-stop">Stop</span></button>
         </details>
         <details name="guide-walkthrough">
           <summary id="demo-field-title" data-t="myLabField">myLabField</summary>
@@ -458,12 +586,12 @@ __ANALYTICS_CARD__
         </details>
         <details name="guide-walkthrough">
           <summary id="demo-missions-title" data-t="petMission">petMission</summary>
-          <img class="demo-lcd" id="demo-missions" width="128" height="128" data-poster="__GUIDE_galaxy.png__" data-animation="__GUIDE_missions.gif__" alt="" aria-labelledby="demo-missions-title">
+          <img class="demo-lcd" id="demo-missions" width="128" height="128" data-poster="__GUIDE_missions.png__" data-animation="__GUIDE_missions.gif__" alt="" aria-labelledby="demo-missions-title">
           <button class="btn small demo-toggle" type="button" aria-controls="demo-missions" aria-pressed="false"><span class="demo-play">Play</span><span class="demo-stop">Stop</span></button>
         </details>
         <details name="guide-walkthrough">
           <summary id="demo-planets-title" data-t="Current Planet">Current Planet</summary>
-          <img class="demo-lcd" id="demo-planets" width="128" height="128" data-poster="__GUIDE_access.png__" data-animation="__GUIDE_planets.gif__" alt="" aria-labelledby="demo-planets-title">
+          <img class="demo-lcd" id="demo-planets" width="128" height="128" data-poster="__GUIDE_planets.png__" data-animation="__GUIDE_planets.gif__" alt="" aria-labelledby="demo-planets-title">
           <button class="btn small demo-toggle" type="button" aria-controls="demo-planets" aria-pressed="false"><span class="demo-play">Play</span><span class="demo-stop">Stop</span></button>
         </details>
         <details name="guide-walkthrough">
@@ -561,7 +689,7 @@ __ANALYTICS_CARD__
             <div class="save-editor-source" data-kind="device">
               <span class="save-editor-source-icon" aria-hidden="true"><i></i></span>
               <div class="save-editor-source-content">
-                <a class="btn" id="editSaveConnect" href="#connectionTitle" data-view-link="uart" data-t="Connect Device">Connect Device</a>
+                <button class="btn" id="editSaveConnect" type="button">Connect and Read Save</button>
                 <button class="btn" type="button" id="editSaveDevice" data-t="Read Device Save" hidden>Read Device Save</button>
                 <p class="hint" id="editSaveDeviceName" hidden></p>
               </div>
@@ -620,8 +748,9 @@ __ANALYTICS_CARD__
           <div id="editSaveMobileJump" hidden><select id="editSaveJump" aria-labelledby="editSaveJumpLabel"></select></div>
           <div class="save-editor-save-actions">
             <button type="button" class="btn" id="editSaveDownload" data-t="Download Edited Save">Download Edited Save</button>
-            <button type="button" class="btn primary" id="editSaveApply" data-t="Apply to Workspace">Apply to Workspace</button>
-            <button type="button" class="btn primary" id="editSaveWrite" data-t="Review and Write…">Review and Write…</button>
+            <button type="button" class="btn primary" id="editSaveApply" data-t="Apply to Current ROM">Apply to Current ROM</button>
+            <button type="button" class="btn primary" id="editSaveExportRom" hidden>Export New ROM</button>
+            <button type="button" class="btn primary" id="editSaveWrite" data-t="Review and Write Save…">Review and Write Save…</button>
           </div>
           <button type="button" class="btn small" id="editSaveOriginal" data-t="Download Original Save">Download Original Save</button>
           <button type="button" class="btn small" id="editSaveRestart" data-t="Restart Device" hidden>Restart Device</button>
@@ -748,7 +877,12 @@ __ANALYTICS_CARD__
                 <dl><dt>Source file</dt><dd><span id="writeSource"></span><span class="rom-source-edition" id="writeSourceEdition" hidden></span></dd>
                   <dt>Write Content</dt><dd id="writeContent"></dd>
                   <dt>Target device</dt><dd id="writeTarget"></dd>
-                  <dt>Device saves</dt><dd id="writeSaves"></dd></dl>
+                  <dt>Device saves</dt><dd id="writeSaves"></dd>
+                  <dt id="writeFlashAccessLabel" hidden>Flash Tool After Restart</dt>
+                  <dd id="writeFlashAccess" hidden><span id="writeFlashAccessStatus"></span>
+                    <button type="button" class="btn small" id="writeMenuSettings" hidden>Open Menu Settings</button>
+                  </dd>
+                </dl>
                 <div class="tools">
                   <label class="check"><input type="checkbox" id="devOnly" checked> <span data-t="devOnly"></span></label>
                   <label class="check"><input type="checkbox" id="devKeep" checked> <span data-t="devKeep"></span></label>
@@ -1119,8 +1253,11 @@ __ANALYTICS_CARD__
       <div class="launch-copy">
         <h1>ROM Lab</h1>
         <p data-t="Explore characters, edit saves and build a custom ROM for your {editionParadise} or {editionMyLab}.">Explore characters, edit saves and build a custom ROM for your Tamagotchi Paradise or My Lab.</p>
-        <button class="drop" id="drop"><strong>Open ROM</strong><span aria-hidden="true">↗</span></button>
-        <small>Or drop a .bin file anywhere on this card.</small>
+        <div class="launch-actions">
+          <button class="drop" id="drop"><strong>Open ROM</strong><span aria-hidden="true">↗</span></button>
+          <button class="btn" id="launchOpenSave" type="button">Open Save File…</button>
+        </div>
+        <small>Drop a ROM (.bin) or save (.sav) here.</small>
       </div>
     </div>
     <div class="launch-links">
@@ -1258,7 +1395,7 @@ __ANALYTICS_CARD__
       </dialog>
     </section>
     <section id="myLabMenu" role="tabpanel" aria-labelledby="myLabTabMenu" hidden>
-      <header class="menu-intro"><h2 data-t="My Lab Menu">{editionMyLab} Menu</h2><p>Review the device menu and manage the ParaLab entry for this ROM.</p></header>
+      <header class="menu-intro"><h2 data-t="My Lab Menu">{editionMyLab} Menu</h2><p>Review the device menu and manage the ParaLab entry for this ROM.</p><button type="button" class="btn small" id="myLabBackToWrite" hidden>Return to Write Review</button></header>
       <section class="menu-status"><h3 id="myLabMenuStatusHeading">Menu Status</h3>
         <p class="menu-state" role="status" id="myLabMenuInfo"></p>
         <p class="hint" id="myLabMenuDetail" hidden></p>
@@ -1359,7 +1496,7 @@ __ANALYTICS_CARD__
       </details>
     </section>
     <section class="zh-panel" id="myLabZh" role="tabpanel" aria-labelledby="myLabTabZh" hidden>
-      <h3>Traditional Chinese</h3><p>Download a translated copy of the loaded ROM. Open the download in Workspace to use it for a device write.</p>
+      <h3>Traditional Chinese</h3><p>Translate the current ROM, then use the result in Workspace or download a copy.</p>
       <div class="zh-state"><div><strong>Chinese text</strong><span id="myLabZhText">Checking…</span></div><div><strong>Settings language entry</strong><span id="myLabZhMenu">Checking…</span></div></div>
       <div class="zh-form"><label>Variant<select id="myLabZhVariant"><option value="tw">Taiwan</option><option value="hk">Hong Kong</option><option value="standard">Standard Traditional</option></select></label><label>Glyph font<select id="myLabZhFont"><option value="cubic11">Cubic 11</option><option value="fusion">Fusion Pixel</option></select></label><button class="btn primary" id="myLabZhRun" type="button" disabled>Create Translated ROM</button></div>
       <p class="zh-status" id="myLabZhStatus" role="status"></p>
@@ -1376,10 +1513,13 @@ __ANALYTICS_CARD__
       </div>
       <div class="update-path" id="myLabParadiseBuilder" hidden>
         <div class="tools">
-          <label><span data-t="myLabPortBackup"></span> <input id="myLabPortBackup" type="file" accept=".bin,.BIN"></label>
-          <button class="btn small" type="button" id="myLabPortBackupClear" data-t="Reset" hidden>Reset</button>
-          <label id="myLabPortKeyRow"><span data-t="myLabPortKey"></span> <input id="myLabPortKey" type="file" accept=".key"></label>
+          <span id="myLabPortBackupLabel" data-t="myLabPortBackup"></span>
+          <button class="btn" type="button" id="myLabPortBackupOpen" aria-describedby="myLabPortBackupLabel">Open ROM</button>
+          <input id="myLabPortBackup" type="file" accept=".bin,.BIN" hidden>
+          <span class="hint" id="myLabPortBackupName" role="status" hidden></span>
+          <button class="btn small" type="button" id="myLabPortBackupClear" data-t="Reset" aria-describedby="myLabPortBackupLabel" hidden>Reset</button>
         </div>
+        <div id="myLabPortKeySlot"></div>
         <label class="menu-switch">
           <span data-t="myLabPortStage"></span>
           <input id="myLabPortSwitch" type="checkbox" role="switch" aria-describedby="myLabPortStatus" disabled>
@@ -1663,7 +1803,7 @@ __ANALYTICS_CARD__
       </details>
     </div>
     <div class="pane zh-panel" id="pane-zh" hidden>
-      <h3>Traditional Chinese</h3><p>Download a translated copy of the loaded ROM. Open the download in Workspace to use it for a device write.</p>
+      <h3>Traditional Chinese</h3><p>Translate the current ROM, then use the result in Workspace or download a copy.</p>
       <div class="zh-state"><div><strong>Chinese text</strong><span id="zhText">Checking…</span></div><div><strong>Settings language entry</strong><span id="zhMenu">Checking…</span></div></div>
       <div class="zh-form"><label>Variant<select id="zhVariant"><option value="tw">Taiwan</option><option value="hk">Hong Kong</option><option value="standard">Standard Traditional</option></select></label><label>Glyph font<select id="zhFont"><option value="cubic11">Cubic 11</option><option value="fusion">Fusion Pixel</option></select></label><button class="btn primary" id="zhRun" type="button" disabled>Create Translated ROM</button></div>
       <p class="zh-status" id="zhStatus" role="status"></p>

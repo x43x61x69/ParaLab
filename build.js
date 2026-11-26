@@ -101,20 +101,42 @@ html = html.replace('__ANALYTICS_CARD__', web ? analyticsCard : '')
     ? '<script>' + fs.readFileSync(path.join(__dirname, 'src/analytics.js'), 'utf8') + '</script>' : '');
 const outputArg = args.find(arg => arg !== '--web');
 const output = outputArg ? path.resolve(outputArg) : path.join(__dirname, web ? 'dist/web/index.html' : 'dist/ParaLab.html');
-html = html.replace(/__GUIDE_([a-z.-]+)__/g, (_, file) => {
-  const source = path.join(__dirname, 'src/art/guide', file);
+const guideDirectory = path.join(__dirname, 'src/art/guide');
+function guideAsset(file) {
+  const source = path.join(guideDirectory, file);
   if (web) {
-    const directory = path.join(path.dirname(output), 'guide');
-    fs.mkdirSync(directory, { recursive: true });
-    fs.copyFileSync(source, path.join(directory, file));
+    const target = path.join(path.dirname(output), 'guide', file);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.copyFileSync(source, target);
     return 'guide/' + file;
   }
-  const mime = file.endsWith('.gif') ? 'image/gif' : 'image/png';
-  return 'data:' + mime + ';base64,' + fs.readFileSync(source).toString('base64');
-});
+  const mime = path.extname(file).slice(1);
+  return 'data:image/' + mime + ';base64,' + fs.readFileSync(source).toString('base64');
+}
+html = html.replace(/__GUIDE_([a-z.-]+)__/g, (_, file) => guideAsset(file));
+const localeDirectory = path.join(__dirname, 'src/locales');
+const localeFiles = fs.readdirSync(localeDirectory).filter(file => file.endsWith('.json')).sort();
+const taskImages = new Set(Array.from(html.matchAll(/data-frame="([a-z.-]+[.]png)"/g), match => match[1]));
+const guideFrames = Object.fromEntries(Array.from(taskImages, file => {
+  // Device recordings are shared. Website screenshots have a frame in every interface language.
+  const deviceFrame = ['entry.png', 'shortcut.png', 'my-lab-uart.png'].includes(file);
+  const variants = deviceFrame ? [] : localeFiles.map(localeFile => {
+    const locale = path.basename(localeFile, '.json');
+    return [locale, guideAsset(locale + '/' + file.replace(/\.png$/, '.webp'))];
+  });
+  return [file, Object.fromEntries([['en', guideAsset(file)], ...variants])];
+}));
 const webDirectory = web ? 'catalog-v' + v : null;
 const { config: catalogConfig, assets: catalogAssets } = require('./tools/build_catalog.js').buildCatalog(__dirname, webDirectory);
+const linkRelease = require('./tools/build_link')(__dirname, webDirectory, path.dirname(output));
+html = html.replaceAll('__LINK_VERSION__', linkRelease.version)
+  .replace(/__LINK_SCREEN_(home|catalog|bridge)__/g, (_, screen) =>
+    'data:image/png;base64,' + fs.readFileSync(path.join(__dirname, 'assets/paralab-link', screen + '.png')).toString('base64'));
+const linkScript = fs.readFileSync(path.join(__dirname, 'src/link.js'), 'utf8')
+  .replace('/*__LINK_RELEASE__*/ {}', () => JSON.stringify(linkRelease));
 const app = fs.readFileSync(__dirname + '/src/app.js', 'utf8')
+  .replace('/*__LINK_SCRIPT__*/', () => linkScript)
+  .replace('/*__GUIDE_FRAMES__*/ {}', () => JSON.stringify(guideFrames))
   .replace('/*__SAVE_EDITOR__*/', () => fs.readFileSync(path.join(__dirname, 'src/save_editor.js'), 'utf8'))
   .replace('__FLASH_TOOL_REVISION__', String(flashRevision))
   .replace('__FOOD_ARCHIVE__', fs.readFileSync(__dirname + '/six/special-food/food-item.arc2').toString('base64'))
@@ -132,9 +154,7 @@ for (const [marker, file] of Object.entries(zhSources)) {
   new (require('vm').Script)(source, { filename: file });
   html = html.replace(marker, () => source);
 }
-const localeDirectory = path.join(__dirname, 'src/locales');
-const dictionaries = Object.fromEntries(fs.readdirSync(localeDirectory)
-  .filter(file => file.endsWith('.json')).sort().map(file => [
+const dictionaries = Object.fromEntries(localeFiles.map(file => [
     path.basename(file, '.json'), JSON.parse(fs.readFileSync(path.join(localeDirectory, file), 'utf8')),
   ]));
 const editionLabels = JSON.parse(fs.readFileSync(path.join(__dirname, 'src/edition_labels.json'), 'utf8'));

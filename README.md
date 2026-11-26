@@ -8,7 +8,7 @@ An offline ROM Lab for **Tamagotchi Paradise** and **My Lab**. Explore character
 
 **Open ParaLab in your browser:** [https://x43x61x69.github.io/ParaLab/](https://x43x61x69.github.io/ParaLab/)
 
-[Report a problem](https://github.com/x43x61x69/ParaLab/issues) · [Quick Start](#quick-start) · [Workspace](#workspace) · [My Lab on Paradise](#my-lab-on-paradise) · [Device Console](#device-console) · [Lab Codes](#lab-codes) · [My Lab Updates](#my-lab-updates) · [Source Layout](#source-layout) · [Credits and Licenses](#credits-and-licenses)
+[Report a problem](https://github.com/x43x61x69/ParaLab/issues) · [Quick Start](#quick-start) · [Workspace](#workspace) · [My Lab on Paradise](#my-lab-on-paradise) · [Device Console](#device-console) · [ParaLab Link](#paralab-link) · [Lab Codes](#lab-codes) · [My Lab Updates](#my-lab-updates) · [Source Layout](#source-layout) · [Credits and Licenses](#credits-and-licenses)
 
 ## Quick Start
 
@@ -43,11 +43,11 @@ Serve the entire `dist/web/` directory, including the versioned catalog. To choo
 | 🎁 **Lab Items** | Browse downloaded Lab Items in a Paradise ROM, edit or export them, or queue built-in items to include when saving the ROM. |
 | 🛠️ **Menu · Garden · Field** | Prepare on-device menu changes for either device, edit My Lab Garden characters, or use Paradise field tools. |
 | 💾 **Names · Saves** | Edit names, export backups, or open the Save Editor for the loaded ROM. |
-| 🌐 **Translate** | Convert supported ROM text to Traditional Chinese. Choose Taiwan, Hong Kong, or Standard Traditional and a glyph font. Open the exported ROM in Workspace before writing it to a device. |
+| 🌐 **Translate** | Convert supported ROM text to Traditional Chinese. Choose Taiwan, Hong Kong, or Standard Traditional and a glyph font. Choose **Use Translated ROM** to continue in Workspace, or **Download Translated ROM** to save a copy. |
 | 💿 **Update File** | Create or patch a My Lab microSD update using a supported stock ROM and the matching device key. |
 | 🔀 **Experimental → Porting** | Adapt a supported My Lab ROM to run on Paradise hardware. |
 
-Open **Save Editor** next to **Device** to edit the connected device’s save, the save in the loaded ROM, or a backup file. Paradise and My Lab backups use `.sav`. ParaLab identifies the device family from the file contents. It also opens legacy Paradise `.tamasave` and My Lab `.tamastate` or `.mylabsave` backups. Load a matching ROM to see character and item previews. Download a fresh copy of the save, apply changes to the loaded ROM, or review the target and block count before writing to a connected device.
+Open a backup from the home screen with **Open Save File…** or drop it onto the ROM Lab card. In **Save Editor**, choose the save in the loaded ROM or select **Connect and Read Save** to open a device save after connecting. Paradise and My Lab backups use `.sav`. ParaLab identifies the device family from the file contents. It also opens legacy Paradise `.tamasave` and My Lab `.tamastate` or `.mylabsave` backups. Load a matching ROM to see character and item previews. Download an edited save, choose **Apply to Current ROM** and then **Export New ROM**, or review the target and block count before writing the save to a connected device.
 
 Program saves also export as `.sav`, preserving their native bytes. Older `.bin` and `.eep` saves can still be imported. If another program expects an exact filename, use that name when transferring the export.
 
@@ -65,7 +65,7 @@ On Paradise, open **ParaLab → Tama → Stars (Past Tamas)**. Select an empty s
 
 The experimental port adapts My Lab firmware to Tamagotchi Paradise hardware. It displays the center 128 × 128 pixels of the My Lab game screen and maps the Paradise wheel to supported My Lab menus.
 
-1. In **Workspace**, open a supported My Lab v1.0.00 ROM and go to **Experimental → Porting**. If the My Lab ROM has not been prepared, select its matching `.key`.
+1. In **Workspace**, open a supported My Lab v1.0.00 ROM and go to **Experimental → Porting**. If the port needs a My Lab device key, enter it in hexadecimal, load a matching `.key`, or use **Find Key Automatically** on the loaded My Lab ROM. The key is shared with **Menu** and the update tools.
 2. Enable **Include Port in Write and Export**. Use **Save ROM** to export the port. You can optionally select an existing Paradise ROM backup to pair it with the export.
 3. To install, open **Device Console → UART → ROM Transfer → Review and Write…**. On the first installation, the default **Back Up ROM** option reads the connected Paradise and pairs the download with the installation. Download and keep the backup before approving the write. **Skip Backup** installs the port and overwrites the current Paradise firmware and saves without creating a backup.
 
@@ -78,7 +78,7 @@ To update an existing v0.1.89 port, open its exported ROM in ParaLab v0.2.1 or l
 
 | Tool | What you can do |
 | --- | --- |
-| 🔌 **ROM Transfer** | Connect with a USB-UART adapter. Use **Read ROM** or **Quick Read ROM** to save a backup, or **Review and Write…** to check the prepared image and target before writing. |
+| 🔌 **ROM Transfer** | Connect with a USB-UART adapter. Use **Read ROM** or **Quick Read ROM** to save a backup, or **Review and Write…** to check the prepared image and target before writing. For My Lab images, the review shows whether the ROM includes a ParaLab Menu for reopening Flash Tool and links to Menu settings when available. |
 | 💾 **Save Backup & Restore** | Read or restore supported saves over UART. |
 | 📦 **Downloaded Lab Items** | Use **Read Lab Items** to preview, edit, or export items. Choose **Add from Lab Item Catalog…** to install selected items directly through a connected Flash Tool. |
 | 🕒 **Device Clock** | Read the device time in Flash Tool. With a writable Flash Tool, set a date and time manually or sync to the computer’s local time, then return to the game. |
@@ -112,6 +112,14 @@ Built-in Lab Items live in [assets/lab-items](assets/lab-items/). To add an item
 The gift and item tabs load their catalogs and thumbnail atlas when opened. Selecting a Lab Item loads its full ARC2 for the sprite gallery and price editor. The standalone build reads it from its embedded catalog. The static build fetches it as a separate file.
 
 </details>
+
+## ParaLab Link
+
+Open **ParaLab Link** next to **Guide** for the H717 materials list, UART wiring table, and touchscreen previews. The H717 can send gifts and Playdate visitors, look up Lab Codes, and act as a USB–UART bridge for Paradise.
+
+The **H717 USB Firmware Update** panel uses Web Serial in desktop Chrome or Edge. Disconnect the Paradise and use a USB-C data cable to connect the H717. The update option preserves Link settings and favorites. Use first installation or recovery when you intend to erase the H717.
+
+The browser USB updater has been verified on H717 hardware.
 
 ## Lab Codes
 

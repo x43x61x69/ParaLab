@@ -73,9 +73,12 @@ function saveEditorButtons() {
   $('editSaveDeviceControls').hidden = !running || !dv.run;
   $('editSaveStop').disabled = dv.cancel;
   $('editSaveRestart').hidden = !device || !dv.restartReason || busy;
-  $('editSaveApply').hidden = source?.kind !== 'rom';
-  $('editSaveApply').disabled = busy || !session?.working || !saveEditorDirty(session) ||
-    (source?.lab ? myLabRom !== source?.context : state.ctx !== source?.context);
+  const currentRom = source?.kind === 'rom' && (myLabRom || state.ctx) === source.context;
+  const showExport = currentRom && session.applied && !saveEditorDirty(session);
+  $('editSaveApply').hidden = source?.kind !== 'rom' || showExport;
+  $('editSaveApply').disabled = busy || !session?.working || !saveEditorDirty(session) || !currentRom;
+  $('editSaveExportRom').hidden = !showExport;
+  $('editSaveExportRom').disabled = busy || !showExport;
   $('editSaveWrite').disabled = busy || !session?.working || !device || device.info.readOnly ||
     (source?.kind === 'device' && (source.device !== device || session.written || !saveEditorDirty(session))) ||
     (source?.lab ? !usesMyLabDeviceSave(device) : !session?.working.edition || !FL.EDITIONS[device.info.edition] ||
@@ -87,7 +90,7 @@ function saveEditorButtons() {
   const writePrimary = source?.kind === 'device' && !$('editSaveWrite').disabled;
   $('editSaveApply').classList.toggle('primary', applyPrimary);
   $('editSaveWrite').classList.toggle('primary', writePrimary);
-  $('editSaveDownload').classList.toggle('primary', !applyPrimary && !writePrimary);
+  $('editSaveDownload').classList.toggle('primary', !applyPrimary && !writePrimary && !showExport);
 }
 function saveEditorDirty(session) {
   return !!session && (session.changes.size > 0 || session.working !== session.baseline);
@@ -1254,7 +1257,10 @@ function saveEditorApplyWorkspace() {
   session.baseline = session.working = next;
   session.changes.clear();
   refreshSaveEditor(true);
-  saveEditorStatus(source.lab ? 'myLabSaveDirty' : 'petRomDone');
+  session.applied = true;
+  devRender();
+  saveEditorStatus('Applied to {name}.', { name: source.name });
+  $('editSaveExportRom').focus();
 }
 function saveEditorChangedBytes(a, b) {
   return !a || !b || a.length !== b.length || !a.every((byte, i) => byte === b[i]);
@@ -1405,6 +1411,20 @@ $('editSaveJump').onchange = event => {
 $('editSaveOriginal').onclick = () => saveEditorDownload(true);
 $('editSaveDownload').onclick = () => saveEditorDownload(false);
 $('editSaveApply').onclick = () => runSaveEditor(saveEditorApplyWorkspace);
+$('editSaveExportRom').onclick = () => {
+  if (!$('editSaveExportRom').disabled) return $('btnSave').onclick();
+};
+$('editSaveConnect').onclick = () => {
+  if (dv.d || dv.run || dv.opening) return;
+  showDestination('device');
+  if ($('device').hidden) return;
+  showDeviceTab($('deviceTabUart'));
+  saveReadAfterConnect = true;
+  devRender();
+  $('connectionTitle').scrollIntoView({ block: 'center' });
+  $('btnConn').focus({ preventScroll: true });
+  $('btnConn').click();
+};
 $('editSaveWrite').onclick = () => runSaveEditor(saveEditorWrite);
 $('editSaveStop').onclick = () => { dv.cancel = true; saveEditorButtons(); };
 $('editSaveRestart').onclick = restartDevice;
@@ -1427,28 +1447,35 @@ $('editSaveSlot').onchange = () => runSaveEditor(async () => {
   else await openSaveEditorRomSlot(source, slot);
 });
 $('editSaveOpen').onclick = () => $('editSaveFile').click();
-$('editSaveFile').onchange = event => runSaveEditor(async () => {
+$('editSaveFile').onchange = event => {
   const file = event.target.files[0];
   event.target.value = '';
-  if (!file || !await saveEditorSwitchAllowed()) return;
-  const bytes = new Uint8Array(await file.arrayBuffer());
-  const lab = String.fromCharCode(...bytes.subarray(0, 8)) === 'PXMLSAVE';
-  const source = { kind: 'file', name: file.name, lab };
-  let save;
-  if (lab) save = ML.readDeviceSaveBackup(bytes, C, VIS);
-  else {
-    save = SV.paraDecode(bytes);
-    source.candidates = saveEditorGuess(save);
-    if (!source.candidates.length) throw new Error(t('Unknown save layout'));
-    if (save.edition && SV.paraCheck(save, save.edition).errors.length) throw new Error(t('petNoSet'));
-    if (source.candidates.length === 1) save.edition = source.candidates[0];
-  }
-  const session = saveEditorNew(source, EDITOR_LIVE, save, bytes);
-  if (!saveEditorPreview(session))
-    matchSaveEditorPreview(session, (lab ? myLabRom : state.ctx) || saveEditor.preview);
-  openSaveEditorDocument(session);
-  if (!saveEditorPreview(session)) $('editSavePreviewDialog').showModal();
-});
+  if (file) return openSaveEditorFile(file);
+};
+function openSaveEditorFile(file) {
+  return runSaveEditor(async () => {
+    if (saveEditor.running || dv.run || !await saveEditorSwitchAllowed()) return;
+    showDestination('save-editor');
+    if ($('saveEditor').hidden) return;
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const lab = String.fromCharCode(...bytes.subarray(0, 8)) === 'PXMLSAVE';
+    const source = { kind: 'file', name: file.name, lab };
+    let save;
+    if (lab) save = ML.readDeviceSaveBackup(bytes, C, VIS);
+    else {
+      save = SV.paraDecode(bytes);
+      source.candidates = saveEditorGuess(save);
+      if (!source.candidates.length) throw new Error(t('Unknown save layout'));
+      if (save.edition && SV.paraCheck(save, save.edition).errors.length) throw new Error(t('petNoSet'));
+      if (source.candidates.length === 1) save.edition = source.candidates[0];
+    }
+    const session = saveEditorNew(source, EDITOR_LIVE, save, bytes);
+    if (!saveEditorPreview(session))
+      matchSaveEditorPreview(session, (lab ? myLabRom : state.ctx) || saveEditor.preview);
+    openSaveEditorDocument(session);
+    if (!saveEditorPreview(session)) $('editSavePreviewDialog').showModal();
+  });
+}
 $('editSaveEdition').onchange = event => {
   const { session, source } = saveEditor, edition = Number(event.target.value);
   if (!edition || !source.candidates.includes(edition) || saveEditorDirty(session)) {

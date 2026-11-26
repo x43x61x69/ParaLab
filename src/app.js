@@ -111,12 +111,6 @@ const T = {
     myLabPortDevice: '{editionMyLab} on {editionParadise}',
     myLabPortHelp: 'Build the port from the loaded {editionMyLab} ROM. ParaLab offers to back up the connected {editionParadise} before the first write. Select an existing backup to pair it with an exported port.',
     myLabPortBackup: 'Existing {editionParadise} ROM backup (optional)',
-    myLabPortFirstBackupTitle: 'Back Up Paradise Before Installing?',
-    myLabPortFirstBackupHelp: 'Back up the full ROM from this device so you can restore its Paradise firmware and saves. If you skip, the installation will overwrite the current firmware and saves without making a backup.',
-    myLabPortFirstBackupRead: 'Back Up ROM',
-    myLabPortFirstBackupSkip: 'Skip Backup',
-    myLabPortFirstBackupDownloadHelp: 'Download {name} and keep it for restoring this device. Confirm that the file has finished downloading before you approve the write.',
-    myLabPortFirstBackupDownload: 'Download Backup',
     myLabScreenFit: 'Screen correction',
     myLabScreenFitHint: 'Adjusts the layout of some game screens so less content is cut off on {editionParadise}.',
     myLabScreenFitUnsupported: 'Screen correction requires a supported My Lab firmware build and compatible screen resources.',
@@ -132,6 +126,12 @@ const T = {
     myLabWriteMenuBack: 'Return to Menu',
     myLabWriteMenuContinue: 'Continue Writing',
     myLabPortReplacePairingWrite: 'Replace Pairing and Write',
+    myLabPortFirstBackupTitle: 'Back Up Paradise Before Installing?',
+    myLabPortFirstBackupHelp: 'Back up the full ROM from this device so you can restore its Paradise firmware and saves. If you skip, the installation will overwrite the current firmware and saves without making a backup.',
+    myLabPortFirstBackupRead: 'Back Up ROM',
+    myLabPortFirstBackupSkip: 'Skip Backup',
+    myLabPortFirstBackupDownloadHelp: 'Download {name} and keep it for restoring this device. Confirm that the file has finished downloading before you approve the write.',
+    myLabPortFirstBackupDownload: 'Download Backup',
     myLabPortUnsupported: 'Open a supported {editionMyLab} ROM to build a port.',
     myLabMenuInstalled: 'ParaLab menu: {n} KiB · {crc}', myLabCrcOk: 'Checksum valid', myLabCrcBad: 'Checksum invalid',
     myLabField: 'Field', myLabAllFields: 'All fields',
@@ -467,6 +467,7 @@ function applyLang() {
   renderSourceEdition('headerRomEdition', sourceEdition());
   renderGameLabels();
   I18n.applyMarkup();
+  refreshGuideText();
   refreshEditionOptions();
   for (const [key, tabs] of [['paradise', paradiseTabs], ['lab', myLabTabs]]) {
     updateToolLabels(key, tabs);
@@ -1016,22 +1017,39 @@ function renderZhPanel(lab) {
 }
 
 async function runZh(lab) {
-  const prefix = lab ? 'myLabZh' : 'zh', rom = lab ? myLabRom?.rom : state.ctx?.rom;
-  if (!rom || !ZH) return;
+  const prefix = lab ? 'myLabZh' : 'zh';
+  const source = lab ? myLabRom : state.ctx;
+  if (!source || !ZH || warnDeviceWrite()) return;
   const status = $(prefix + 'Status'), button = $(prefix + 'Run');
+  const variant = $(prefix + 'Variant').value, font = $(prefix + 'Font').value;
   button.disabled = true;
-  status.textContent = t("Converting Chinese text and glyphs, then checking the new ROM…");
-  await new Promise(resolve => setTimeout(resolve, 0));
+  status.textContent = '';
   try {
-    const variant = $(prefix + 'Variant').value, font = $(prefix + 'Font').value;
-    const result = ZH.patch(rom, { variant, font });
-    const issues = ZH.verify(rom, result.rom);
-    if (issues.length) throw new Error('Output verification failed: ' + issues.join('; '));
-    const name = romExportName(sourceEdition()?.key, [result.fileSuffix]);
-    download(result.rom, name);
+    const output = await busy(t("Converting Chinese text and glyphs, then checking the new ROM…"), async () => {
+      const draft = lab ? myLabRomExport() : await paradiseRomExport();
+      if (!draft) return;
+      const result = ZH.patch(draft.rom, { variant, font });
+      const issues = ZH.verify(draft.rom, result.rom);
+      if (issues.length) throw new Error(t("Translation verification failed.") + ' ' + issues.join('; '));
+      const name = romExportName(draft.edition, [...draft.features, result.fileSuffix]);
+      return { file: new File([result.rom], name, { type: 'application/octet-stream' }),
+        count: result.report.stats.stringsChanged };
+    });
+    if (!output || source !== (lab ? myLabRom : state.ctx)) return;
     measure('edit', 'translate_rom');
-    const count = result.report.stats.stringsChanged;
-    status.textContent = t("Verified {v1} · {v2} Chinese strings converted. Open the downloaded ROM in Workspace to inspect or write the translation. The current workspace still uses the original file.", { v1: name, v2: count });
+    const { file, count } = output;
+    const dialog = $('translationResult');
+    $('translationResultSummary').textContent = t("Verified {v1} · {v2} Chinese strings converted.", {
+      v1: file.name, v2: count.toLocaleString(locale()),
+    });
+    $('translationDownload').onclick = () => download(file, file.name);
+    dialog.returnValue = '';
+    const choice = await new Promise(resolve => {
+      dialog.addEventListener('close', () => resolve(dialog.returnValue), { once: true });
+      dialog.showModal();
+    });
+    $('translationDownload').onclick = null;
+    if (choice === 'use' && await loadRom(file)) toast(t("Now using {name} in Workspace.", { name: file.name }));
   } catch (error) { status.textContent = em(error); }
   finally { button.disabled = false; }
 }
@@ -1185,6 +1203,7 @@ function renderMyLabMenu() {
   const { menu } = myLabRom.menuDraft || myLabRom;
   const action = myLabRom.menuAction;
   $('myLabMenuActions').hidden = !action || myLabRom.menuCurrent;
+  $('myLabBackToWrite').hidden = writeMenuSource !== myLabRom;
   const toggle = $('myLabMenuSwitch');
   toggle.checked = !!myLabRom.menuDraft;
   renderUartKeyControls();
@@ -1789,6 +1808,7 @@ function showMyLabRom(ctx, name) {
   $('romLabItems').replaceChildren();
   clearDecodedSprites();
   const screenFitSupport = MLM.screenFitSupport(ctx.rom);
+  writeMenuSource = null;
   myLabRom = Object.assign(ctx, {
     name,
     characterCards: new Map(),
@@ -1803,7 +1823,7 @@ function showMyLabRom(ctx, name) {
   state.changed.clear();
   state.labItemScan = state.labItemEdits = state.labItemQueue = null;
   state.launchMap = state.poseSource = state.poseLayers = state.poseCache = null;
-  $('myLabPortBackup').value = $('myLabPortKey').value = '';
+  $('myLabPortBackup').value = '';
   renderMyLabPort();
   $('btnPetClose').onclick();
   $('start').hidden = true;
@@ -1888,6 +1908,7 @@ async function openRomWorkspace(buf, filename, stayOnDevice) {
   ctx.sourceRom = buf;
   if (!stayOnDevice) showDestination('workspace', true);
   clearMyLabPreviews();
+  writeMenuSource = null;
   myLabRom = null;
   $('romLabItems').replaceChildren();
   $('myLabRom').hidden = true;
@@ -3965,12 +3986,14 @@ $('myLabMenuSwitch').onchange = event => {
   }
 };
 function myLabPortNeedsKey(ctx) {
-  return ctx.menuAction === 'install' && !ctx.menuDraft;
+  return ctx?.menuAction === 'install' && !ctx.menuDraft;
 }
 function myLabPortInputs(ctx) {
   const backup = $('myLabPortBackup').files[0];
-  const key = myLabPortNeedsKey(ctx) ? $('myLabPortKey').files[0] : null;
-  if (ctx.menuAction && ctx.screenFitSupport.portSupported && ctx.menu.mode !== 'paradise' && key !== undefined) return { backup, key };
+  const needsKey = myLabPortNeedsKey(ctx);
+  const key = needsKey ? $('myLabUartKeyHex').value.trim() : null;
+  if (ctx.menuAction && ctx.screenFitSupport.portSupported && ctx.menu.mode !== 'paradise' &&
+      (!needsKey || isUartKey(key))) return { backup, key };
 }
 function renderMyLabPort() {
   const action = myLabRom.menu.mode !== 'paradise' && myLabRom.menuAction && myLabRom.screenFitSupport.portSupported;
@@ -3984,24 +4007,28 @@ function renderMyLabPort() {
   $('myLabScreenFitHint').textContent = versionLabel + t(supported ? 'myLabScreenFitHint' : 'myLabScreenFitUnsupported');
   $('myLabParadiseBuilder').hidden = !action;
   $('myLabPortUnsupported').hidden = !!action || existingPort;
-  $('myLabPortKeyRow').hidden = !myLabPortNeedsKey(myLabRom);
+  $('myLabPortKeySlot').hidden = !myLabPortNeedsKey(myLabRom);
   $('myLabPortStatus').textContent = myLabRom.portStatus ? myLabPortError(myLabRom.portStatus) :
     myLabRom.portDraft ? t('myLabPortDone') : '';
   $('myLabPortSwitch').checked = !!myLabRom.portDraft;
-  $('myLabPortBackup').disabled = $('myLabPortKey').disabled = !!myLabRom.portBusy;
-  $('myLabPortBackupClear').hidden = !$('myLabPortBackup').files.length;
-  $('myLabPortBackupClear').disabled = !!myLabRom.portBusy;
-  $('myLabPortSwitch').disabled = !!myLabRom.portBusy || (!myLabRom.portDraft && !myLabPortInputs(myLabRom));
+  const blocked = !!(myLabRom.portBusy || myLabRom.uartKeyBusy || myLabRom.menuBusy);
+  $('myLabPortBackup').disabled = $('myLabPortBackupOpen').disabled = blocked;
+  const backupName = $('myLabPortBackup').files[0]?.name || '';
+  $('myLabPortBackupName').hidden = !backupName;
+  $('myLabPortBackupName').textContent = backupName;
+  $('myLabPortBackupClear').hidden = !backupName;
+  $('myLabPortBackupClear').disabled = blocked;
+  $('myLabPortSwitch').disabled = blocked || (!myLabRom.portDraft && !myLabPortInputs(myLabRom));
 }
 function renderMyLabPortPlan() {
-  renderMyLabPort();
+  renderUartKeyControls();
   renderMyLabOverview();
   renderMyLabChangeStatus();
   devRender();
 }
 async function setMyLabPort(enabled) {
   const ctx = myLabRom;
-  if (!ctx || ctx.portBusy) return;
+  if (!ctx || ctx.portBusy || ctx.uartKeyBusy || ctx.menuBusy) return;
   ctx.portStatus = '';
   ctx.portDraft = null;
   const inputs = enabled && myLabPortInputs(ctx);
@@ -4014,10 +4041,9 @@ async function setMyLabPort(enabled) {
   renderMyLabPortPlan();
   try {
     if (backup && backup.size !== FL.FLASH_SIZE) throw new Error('Choose an original Paradise ROM backup from this device');
-    if (key && key.size > 128) throw new Error('Open the matching eight-digit My Lab device key');
     const source = myLabFlashImage() || ctx.rom;
     const image = await busy(t('myLabPortPreparing'), async () => MLM.createParadiseImage(source,
-      backup ? new Uint8Array(await backup.arrayBuffer()) : undefined, key && (await key.text()).trim()));
+      backup ? new Uint8Array(await backup.arrayBuffer()) : undefined, key));
     if (ctx !== myLabRom) return;
     ctx.portDraft = { flashImage: image, usedFlash: myLabUsedFlash(image), screenFitSupport: MLM.screenFitSupport(image) };
     measure('edit', 'my_lab_port', 'my-lab-on-paradise');
@@ -4028,7 +4054,8 @@ async function setMyLabPort(enabled) {
     if (ctx === myLabRom) renderMyLabPortPlan();
   }
 }
-$('myLabPortBackup').onchange = $('myLabPortKey').onchange = () => setMyLabPort(true);
+$('myLabPortBackupOpen').onclick = () => $('myLabPortBackup').click();
+$('myLabPortBackup').onchange = () => setMyLabPort(true);
 $('myLabPortBackupClear').onclick = () => {
   $('myLabPortBackup').value = '';
   void setMyLabPort(!!myLabRom?.portDraft);
@@ -4151,7 +4178,9 @@ function showUpdateSource() {
 }
 function placeMyLabKeyControls() {
   const onMenu = myLabRom?.menuAction === 'install' && $('myLabTabMenu').getAttribute('aria-selected') === 'true';
-  const slot = $(onMenu ? 'myLabMenuKeySlot' : $('updateSourceRom').checked ? 'updateRomKeySlot' : 'updatePackageKeySlot');
+  const onPort = myLabPortNeedsKey(myLabRom) && $('myLabTabPort').getAttribute('aria-selected') === 'true';
+  const updateSlot = $('updateSourceRom').checked ? 'updateRomKeySlot' : 'updatePackageKeySlot';
+  const slot = $(onMenu ? 'myLabMenuKeySlot' : onPort ? 'myLabPortKeySlot' : updateSlot);
   const controls = $('myLabUartKeyControls');
   if (controls.parentElement !== slot) slot.append(controls);
 }
@@ -4160,7 +4189,7 @@ function renderUartKeyControls() {
   const input = $('myLabUartKeyHex'), value = input.value.trim();
   const valid = isUartKey(value);
   const supported = !!myLabRom && MLM.canCreateUartUpdate(myLabRom.rom);
-  const blocked = !supported || myLabRom.uartKeyBusy || myLabRom.menuBusy;
+  const blocked = !supported || myLabRom.uartKeyBusy || myLabRom.menuBusy || myLabRom.portBusy;
   const canPatch = !blocked && !!myLabRom?.update;
   $('myLabUartKeyControls').hidden = !supported;
   input.disabled = $('myLabUartKeyFileOpen').disabled = $('myLabUartAuto').disabled = !!blocked;
@@ -4171,6 +4200,7 @@ function renderUartKeyControls() {
     (myLabRom?.menuAction === 'install' && (blocked || (!valid && !myLabRom.menuDraft)));
   input.setAttribute('aria-invalid', value && !valid ? 'true' : 'false');
   $('myLabUartKeyHint').textContent = value && !valid ? t('myLabUartKeyInvalid') : '';
+  if (myLabRom) renderMyLabPort();
 }
 async function readUartKeyFile(file) {
   if (file.size > 128) throw new Error(t('myLabUartKeyInvalid'));
@@ -4179,7 +4209,7 @@ async function readUartKeyFile(file) {
   return value.replace(/^0x/i, '').toUpperCase();
 }
 async function withUartKeyControls(ctx, action) {
-  if (!ctx || ctx !== myLabRom || ctx.uartKeyBusy || !MLM.canCreateUartUpdate(ctx.rom)) return;
+  if (!ctx || ctx !== myLabRom || ctx.uartKeyBusy || ctx.portBusy || !MLM.canCreateUartUpdate(ctx.rom)) return;
   ctx.uartKeyBusy = true;
   renderUartKeyControls();
   try { await action(); }
@@ -4316,6 +4346,7 @@ $('myLabUartAuto').onclick = async () => {
 };
 $('fileRom').onchange = (e) => { const f = e.target.files[0]; e.target.value = ''; if (f) loadRom(f); };
 const romDropZone = $('romDropZone');
+$('launchOpenSave').onclick = () => $('editSaveFile').click();
 $('drop').onclick = () => $('fileRom').click();
 for (const event of ['dragenter', 'dragover']) {
   document.addEventListener(event, e => {
@@ -4340,7 +4371,9 @@ document.addEventListener('drop', (e) => {
   }
   const rom = files.find(f => f.size === 16777216 || /\.bin$/i.test(f.name) && f.size > 4194304);
   if (romDropZone.contains(e.target)) {
-    loadRom(rom || files[0]);
+    const first = rom || files[0];
+    if (/\.(?:sav|tamasave|tamastate|mylabsave)$/i.test(first.name)) void openSaveEditorFile(first);
+    else void loadRom(first);
     return;
   }
   if (rom) loadRom(rom);
@@ -5011,28 +5044,21 @@ function myLabSaveExportFeatures(context) {
   return features;
 }
 
-$('btnSave').onclick = () => busy(t("Exporting ROM"), async () => {
-  if (myLabRom) {
-    const port = myLabRom.portDraft;
-    const edition = sourceEdition(!!port)?.key;
-    const features = [];
-    if (port) features.push('port');
-    if (myLabScreenFitChanged() || (port && selectedScreenFit(myLabRom))) features.push('screen-fit');
-    if (myLabRom.menuDraft) features.push('menu');
-    features.push(...myLabSaveExportFeatures(myLabRom));
-    if (myLabRom.spriteChanges.some(edits => edits.size)) features.push('sprites');
-    try {
-      const rom = features.length
-        ? myLabOutputImage(port?.flashImage || myLabFlashImage() || myLabRom.rom)
-        : myLabRom.rom;
-      const name = romExportName(edition, features);
-      download(rom, name);
-      measure('operation', 'export_rom', port ? 'my-lab-on-paradise' : undefined);
-      $('myLabChangeStatus').textContent = t('myLabExported', { name });
-    } catch (error) { toast(em(error), true); }
-    return;
-  }
-  if (!state.ctx) return;
+function myLabRomExport() {
+  const port = myLabRom.portDraft;
+  const edition = sourceEdition(!!port)?.key;
+  const features = [];
+  if (port) features.push('port');
+  if (myLabScreenFitChanged() || (port && selectedScreenFit(myLabRom))) features.push('screen-fit');
+  if (myLabRom.menuDraft) features.push('menu');
+  features.push(...myLabSaveExportFeatures(myLabRom));
+  if (myLabRom.editorSlotWrites?.size && !features.includes('save')) features.push('save');
+  if (myLabRom.spriteChanges.some(edits => edits.size)) features.push('sprites');
+  const rom = features.length ? myLabOutputImage(port?.flashImage || myLabFlashImage() || myLabRom.rom) : myLabRom.rom;
+  return { rom, edition, features };
+}
+
+async function paradiseRomExport() {
   const edition = sourceEdition()?.key, features = paradiseExportFeatures();
   const c = await composeRom({ confirmResidentFallback: true });
   if (!c) return;
@@ -5043,11 +5069,29 @@ $('btnSave').onclick = () => busy(t("Exporting ROM"), async () => {
   if (!c.same && !await packOk(rom)) return;
   if (!c.same && !features.length) features.push('maintenance');
   if (withTool && withTool !== c.rom) features.push('flash-tool');
+  return { rom, edition, features, withTool, res: c.res };
+}
+
+$('btnSave').onclick = () => busy(t("Exporting ROM"), async () => {
+  if (myLabRom) {
+    try {
+      const { rom, edition, features } = myLabRomExport();
+      const name = romExportName(edition, features);
+      download(rom, name);
+      measure('operation', 'export_rom', myLabRom.portDraft ? 'my-lab-on-paradise' : undefined);
+      $('myLabChangeStatus').textContent = t('myLabExported', { name });
+    } catch (error) { toast(em(error), true); }
+    return;
+  }
+  if (!state.ctx) return;
+  const output = await paradiseRomExport();
+  if (!output) return;
+  const { rom, edition, features, withTool, res } = output;
   const name = romExportName(edition, features);
   download(rom, name);
   measure('operation', 'export_rom');
   state.saved = state.changed.size;
-  const msg = c.res ? t('saved', { name, n: state.changed.size, kb: c.res.free / 1024 | 0 }) : t('savedEmu', { name });
+  const msg = res ? t('saved', { name, n: state.changed.size, kb: res.free / 1024 | 0 }) : t('savedEmu', { name });
   toast(withTool ? msg : msg + '\n' + t('fl_noRescue'), !withTool);
 });
 
@@ -5055,6 +5099,8 @@ $('btnSave').onclick = () => busy(t("Exporting ROM"), async () => {
 const FL = window.ParamixFlash;
 const FLASH_TOOL_REVISION = Number('__FLASH_TOOL_REVISION__');
 const hasFlashApp = !!FL.embedded();
+let saveReadAfterConnect = false;
+let writeMenuSource = null;
 const dv = { io: null, d: null, writing: false, writeOperation: null, loaded: false, opening: false, connecting: null, reconnecting: false, run: false, cancel: false };
 let clockDevice = null, clockTime = null;
 const canReadLabItems = device => !!device && device.info.editionIdentified !== false &&
@@ -5080,6 +5126,7 @@ function renderVisitorChoiceHint(lab) {
 }
 function showDeviceTab(tab) {
   if (!selectDevicePanel(deviceTabs, tab)) return;
+  if (tab.id !== 'deviceTabUart') saveReadAfterConnect = false;
   const panel = $(tab.getAttribute('aria-controls'));
   if (panel.id === 'deviceGift') void loadDeviceCatalog('gift');
   if (panel.id === 'deviceItem') void loadDeviceCatalog('lab');
@@ -5135,7 +5182,10 @@ function deviceWritePlan() {
   const onlyChanged = fixedOptions || deviceOnlyChanged;
   const fastWrite = !!device?.info.fastWrite && $('devFast').checked;
   const source = myLabRom || state.ctx;
-  const reviewMyLabMenu = myLabMenuChoicePending(myLabRom) && (myLab || paradiseImage);
+  const showMyLabFlashAccess = !!myLabRom && (myLab || paradiseImage || !device);
+  const hasMyLabFlashAccess = !!(stagedPort || myLabRom?.menuDraft || myLabRom?.menu?.valid);
+  const reviewMyLabMenu = (myLab || paradiseImage) && !!myLabRom &&
+    (myLabMenuChoicePending(myLabRom) || !hasMyLabFlashAccess);
   const paradiseBackup = bridge && !!state.ctx && !!F.edition(state.ctx.rom) && !F.isClean(state.ctx.rom);
   const canWrite = myLab ? !!labImage && !paradiseImage :
     bridge ? paradiseImage || paradiseBackup : !!state.ctx || paradiseImage;
@@ -5168,7 +5218,8 @@ function deviceWritePlan() {
     'Preserve compatible device saves and apply supported workspace save edits.') : t('Replace with save data from the write image.');
   const edition = sourceEdition(!!stagedPort);
   return { device, source, name, edition, target, content, saves, canWrite, raw, myLab, labImage, paradiseImage,
-    portUpdate, keep, onlyChanged, fastWrite, fixedOptions, reviewMyLabMenu, stockMyLabWrite };
+    portUpdate, keep, onlyChanged, fastWrite, fixedOptions, reviewMyLabMenu, stockMyLabWrite,
+    showMyLabFlashAccess, hasMyLabFlashAccess };
 }
 
 function renderWriteContent(container, plan) {
@@ -5188,6 +5239,11 @@ function renderWriteContent(container, plan) {
   container.replaceChildren(list);
 }
 
+function myLabFlashAccessText(plan) {
+  if (!plan.hasMyLabFlashAccess) return t('Flash Tool access may be lost after restart.');
+  return t('The ROM includes a ParaLab Menu for reopening Flash Tool.');
+}
+
 function renderWriteReview(plan) {
   $('writeSource').textContent = plan.name || t("No ROM loaded");
   renderSourceEdition('writeSourceEdition', plan.edition);
@@ -5195,6 +5251,11 @@ function renderWriteReview(plan) {
   $('writeTarget').textContent = plan.target;
   markDeviceEdition($('writeTarget'), plan.device);
   $('writeSaves').textContent = plan.saves;
+  $('writeFlashAccessLabel').hidden = $('writeFlashAccess').hidden = !plan.showMyLabFlashAccess;
+  $('writeFlashAccessStatus').textContent = plan.showMyLabFlashAccess ? myLabFlashAccessText(plan) : '';
+  $('writeFlashAccessStatus').dataset.risk = !plan.hasMyLabFlashAccess;
+  $('writeMenuSettings').hidden = !plan.showMyLabFlashAccess || !myLabRom?.menuAction ||
+    !(plan.reviewMyLabMenu || !plan.hasMyLabFlashAccess);
 }
 
 function deviceDialog(message, title = t("Confirm Device Operation"), action = t("Continue"), hideCancel = false, writeMode = null, alternate = null, confirmations = [], focusAccept = hideCancel) {
@@ -5287,6 +5348,9 @@ function confirmDeviceWrite(plan, image) {
   renderWriteContent($('reviewContent'), plan);
   $('reviewSaves').textContent = plan.saves;
   $('reviewSaves').classList.toggle('replace-saves', !plan.keep);
+  $('reviewFlashAccessLabel').hidden = $('reviewFlashAccess').hidden = !plan.showMyLabFlashAccess;
+  $('reviewFlashAccess').textContent = plan.showMyLabFlashAccess ? myLabFlashAccessText(plan) : '';
+  $('reviewFlashAccess').dataset.risk = !plan.hasMyLabFlashAccess;
   $('reviewMode').textContent = plan.onlyChanged ? t("Only changed sectors") : t("Full write");
   if (plan.fastWrite) $('reviewMode').append(' · ' + t('devFast'));
   $('reviewBytes').textContent = t("{v1} bytes", { v1: changed.toLocaleString(locale()) });
@@ -5415,7 +5479,7 @@ function flMsg(x) {
 }
 function transferProgress(prefix, done, total, label) {
   const percent = total > 0 ? Math.max(0, Math.min(100, Math.floor(done / total * 1000) / 10)) : null;
-  const deviceTransfer = prefix === 'dev' || prefix === 'editSave';
+  const deviceTransfer = prefix === 'dev' || prefix === 'editSave' || prefix === 'link';
   const indeterminate = deviceTransfer && total === 0;
   $(prefix + 'Progress').hidden = percent === null && !indeterminate;
   $(prefix + 'Progress').classList.toggle('indeterminate', indeterminate);
@@ -5514,18 +5578,21 @@ const viewScroll = new Map();
 function showDestination(view, newRom = false) {
   const main = document.querySelector('main');
   if (main.dataset.view !== view && warnDeviceWrite()) return;
+  if (view !== 'device') saveReadAfterConnect = false;
   if (main.dataset.view !== view && !newRom) measure('feature_view', view);
   viewScroll.set(main.dataset.view, window.scrollY);
   main.dataset.view = view;
   rememberNavigation({ view });
+  $('linkPage').hidden = view !== 'link';
   $('helpBox').hidden = view !== 'guide';
   if (view !== 'guide') {
+    stopGuidePlayer();
     for (const button of document.querySelectorAll('.demo-toggle[aria-pressed="true"]')) setDemoPlayback(button, false);
   }
   $('device').hidden = view !== 'device';
   $('labCodesPage').hidden = view !== 'codes';
   $('saveEditor').hidden = view !== 'save-editor';
-  for (const [key, id] of Object.entries({workspace:'btnWorkspace', guide:'btnHelp', device:'btnDevice', 'save-editor':'btnSaveEditor', codes:'btnLabCodes'})) {
+  for (const [key, id] of Object.entries({workspace:'btnWorkspace', guide:'btnHelp', link:'btnLink', device:'btnDevice', 'save-editor':'btnSaveEditor', codes:'btnLabCodes'})) {
     if (key === view) $(id).setAttribute('aria-current', 'page');
     else $(id).removeAttribute('aria-current');
   }
@@ -5539,6 +5606,89 @@ function setDemoPlayback(button, playing) {
   image.src = playing ? image.dataset.animation : image.dataset.poster;
   button.setAttribute('aria-pressed', String(playing));
 }
+const guideFrames = /*__GUIDE_FRAMES__*/ {};
+const guideTopics = [...document.querySelectorAll('.task-guide')];
+let guideTimer;
+function renderGuideFrame(topic, step) {
+  const frames = guideFrames[step.dataset.frame];
+  const playing = topic.querySelector('.task-play').getAttribute('aria-pressed') === 'true';
+  topic.querySelector('.task-screen img').src = (playing && step.dataset.clip) || frames[locale()] || frames.en;
+}
+function stopGuidePlayer() {
+  clearTimeout(guideTimer);
+  const button = document.querySelector('.task-play[aria-pressed="true"]');
+  if (!button) return;
+  button.setAttribute('aria-pressed', 'false');
+  const topic = button.closest('.task-guide');
+  const step = topic.querySelector('[aria-current="step"]').closest('li');
+  if (step.dataset.clip) renderGuideFrame(topic, step);
+}
+
+for (const topic of guideTopics) {
+  topic.querySelector('.task-layout').append($('taskPlayerTemplate').content.cloneNode(true));
+  const steps = [...topic.querySelectorAll('[data-frame]')];
+  const play = topic.querySelector('.task-play');
+  let current = 0;
+  function display(index) {
+    current = index;
+    steps.forEach((step, i) => step.querySelector('button').setAttribute('aria-current', i === index ? 'step' : 'false'));
+    const step = steps[index];
+    renderGuideFrame(topic, step);
+    topic.querySelector('output').textContent = (index + 1) + ' / ' + steps.length;
+  }
+  function advance() {
+    if (current === steps.length - 1) return stopGuidePlayer();
+    display(current + 1);
+    guideTimer = setTimeout(advance, 5000);
+  }
+  steps.forEach((step, i) => {
+    step.querySelector('button').onclick = () => { stopGuidePlayer(); display(i); };
+  });
+  play.onclick = () => {
+    const wasPlaying = play.getAttribute('aria-pressed') === 'true';
+    stopGuidePlayer();
+    if (wasPlaying) return;
+    play.setAttribute('aria-pressed', 'true');
+    display(current === steps.length - 1 && !steps[current].dataset.clip ? 0 : current);
+    guideTimer = setTimeout(advance, 5000);
+  };
+  topic.addEventListener('toggle', () => {
+    if (topic.open) display(current);
+    else if (play.getAttribute('aria-pressed') === 'true') stopGuidePlayer();
+  });
+}
+document.addEventListener('visibilitychange', () => { if (document.hidden) stopGuidePlayer(); });
+
+function filterGuides() {
+  const normalize = value => value.normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase();
+  const words = normalize($('guideSearch').value.trim()).split(/\s+/).filter(Boolean);
+  const demos = [...document.querySelectorAll('.demo-group details')];
+  const references = [...document.querySelectorAll('#helpBox > .guide-workflow, .guide-grid > section, #helpBox > .guide-reference:not(#guideTasks):not(#guide-demos)')];
+  for (const topic of [...guideTopics, ...demos, ...references]) {
+    const heading = topic.closest('.demo-group')?.querySelector('h3').textContent || '';
+    const content = normalize([heading, topic.textContent, topic.dataset.keywords].join(' '));
+    topic.hidden = !words.every(word => content.includes(word));
+    if (topic.hidden && topic.open) topic.open = false;
+  }
+  $('guideTasks').hidden = guideTopics.every(topic => topic.hidden);
+  $('guide-demos').hidden = demos.every(topic => topic.hidden);
+  for (const group of document.querySelectorAll('.demo-group')) group.hidden = !group.querySelector('details:not([hidden])');
+  const grid = document.querySelector('.guide-grid');
+  grid.hidden = !grid.querySelector('section:not([hidden])');
+  $('guideEmpty').hidden = [...guideTopics, ...demos, ...references].some(topic => !topic.hidden);
+}
+$('guideSearch').oninput = filterGuides;
+function refreshGuideText() {
+  for (const element of document.querySelectorAll('[data-guide-copy]')) {
+    element.textContent = document.querySelector(element.dataset.guideCopy).textContent.trim();
+  }
+  filterGuides();
+  for (const topic of guideTopics) {
+    const step = topic.open && topic.querySelector('[aria-current="step"]');
+    if (step) renderGuideFrame(topic, step.closest('[data-frame]'));
+  }
+}
+
 for (const detail of document.querySelectorAll('.demo-group details')) {
   const image = detail.querySelector('img');
   const button = detail.querySelector('.demo-toggle');
@@ -5562,9 +5712,20 @@ for (const link of document.querySelectorAll('[data-view-link]')) {
       showDeviceTab($('deviceTabUart'));
       const tool = uartToolTabs.find(tab => tab === target || $(tab.getAttribute('aria-controls')).contains(target));
       if (tool && !selectDevicePanel(uartToolTabs, tool)) return;
+    } else if (route === 'save-editor') {
+      showDestination(route);
     } else {
       showDestination('workspace');
-      if (route === 'save' && (myLabRom || state.ctx)) {
+      if (route === 'menu') {
+        const compatible = target.id === 'tool-feld' ? state.ctx && !myLabRom : myLabRom;
+        if (compatible) {
+          target.click();
+          target = $(target.getAttribute('aria-controls'));
+        } else {
+          $('fileRom').click();
+          return;
+        }
+      } else if (route === 'save' && (myLabRom || state.ctx)) {
         const tab = myLabRom ? $('myLabTabSave') : $('tool-save');
         tab.click();
         target = tab.offsetWidth ? tab : $(myLabRom ? 'labTool' : 'paradiseTool');
@@ -5582,6 +5743,8 @@ for (const link of document.querySelectorAll('[data-view-link]')) {
 $('btnWorkspace').onclick = () => showDestination('workspace');
 $('btnDevice').onclick = $('launchDevice').onclick = () => showDestination('device');
 $('btnHelp').onclick = $('launchGuide').onclick = () => showDestination('guide');
+/*__LINK_SCRIPT__*/
+$('btnLink').onclick = () => showDestination('link');
 $('btnLabCodes').onclick = () => showDestination('codes');
 $('btnSaveEditor').onclick = () => showDestination('save-editor');
 $('btnUartRelease').onclick = devFree;
@@ -6611,7 +6774,8 @@ function visRender() {
     hint.textContent = t('devNoSerial');
   }
   adapterHint(uartHint, VS.io && owner);
-  $('btnConn').textContent = dv.d || dv.reconnecting ? t("Reconnect") : t('devConnect');
+  $('btnConn').textContent = saveReadAfterConnect ? t('Connect and Read Save') :
+    dv.d || dv.reconnecting ? t("Reconnect") : t('devConnect');
   $('btnConn').disabled = !navigator.serial || !hasFlashApp || dv.run || dv.opening || locked;
   $('btnVis').textContent = t(playdate ? 'visStop' : 'visStart');
   $('btnVis').disabled = !navigator.serial || uartBusy || VS.opening || (!!VS.io && !playdate) || (!VS.io && !!$('visGhost').value && !VS.visitor);
@@ -7625,6 +7789,11 @@ $('btnConn').onclick = async () => {
   try { port = await getDevicePort(); } catch (e) { return; }
   finally { dv.opening = false; devRender(); }
   await connectDevice(port);
+  if (saveReadAfterConnect && dv.d && !dv.run && !dv.cancel &&
+      $('deviceTabUart').getAttribute('aria-selected') === 'true') {
+    showDestination('save-editor');
+    if (!$('saveEditor').hidden) $('editSaveDevice').click();
+  }
 };
 async function connectDevice(port, validate, minimumRevision) {
   // A reconnect must not wait for a lock acknowledgement from the old transport.
@@ -7821,12 +7990,29 @@ async function saveCarry(d, c1) {
   if (out.carried.size < moved.length && !await deviceDialog(t('carryMiss'))) return null;
   return out;
 }
-$('reviewDevice').onclick = () => {
+function showDeviceWriteReview() {
   showDestination('device');
   showDeviceTab($('deviceTabUart'));
   if (!selectDevicePanel(uartToolTabs, $('romTransferTitle'))) return;
   $('writeSource').scrollIntoView({ block: 'center' });
   (dv.d ? $('writeReview') : $('btnConn')).focus({ preventScroll: true });
+}
+function showMyLabMenuFromWrite() {
+  if (!myLabRom || warnDeviceWrite()) return;
+  writeMenuSource = myLabRom;
+  $('myLabBackToWrite').hidden = false;
+  showDestination('workspace');
+  const tab = $('myLabTabMenu');
+  showMyLabTab(tab);
+  $('myLabBackToWrite').focus();
+}
+$('reviewDevice').onclick = showDeviceWriteReview;
+$('writeMenuSettings').onclick = showMyLabMenuFromWrite;
+$('myLabBackToWrite').onclick = () => {
+  if (warnDeviceWrite()) return;
+  writeMenuSource = null;
+  $('myLabBackToWrite').hidden = true;
+  showDeviceWriteReview();
 };
 $('devOnly').onchange = () => {
   deviceOnlyChanged = $('devOnly').checked;
@@ -7861,12 +8047,7 @@ $('btnWrite').onclick = async () => {
       const choice = await deviceDialog(t('myLabWriteMenuHelp'), t('myLabWriteMenuTitle'), t('myLabWriteMenuBack'),
         true, null, t('myLabWriteMenuContinue'));
       if (!samePlan()) return;
-      if (choice === 'accept') {
-        showDestination('workspace');
-        const tab = $('myLabTabMenu');
-        showMyLabTab(tab);
-        (tab.offsetWidth ? tab : $('labTool')).focus();
-      }
+      if (choice === 'accept') showMyLabMenuFromWrite();
       if (choice !== 'alternate') return;
     }
     const keepMyLabSaves = (plan.myLab || plan.portUpdate) && keep;
@@ -9272,7 +9453,7 @@ async function restoreNavigation() {
   try {
     const guideDemoLink = location.hash === '#guide-demos';
     if (guideDemoLink) showDestination('guide');
-    else if (['workspace', 'guide', 'device', 'codes', 'save-editor'].includes(navigation.view)) showDestination(navigation.view);
+    else if (['workspace', 'guide', 'link', 'device', 'codes', 'save-editor'].includes(navigation.view)) showDestination(navigation.view);
     restoreTab(uartToolTabs, navigation.uart);
     restoreTab(deviceTabs, navigation.device);
     if (navigation.file instanceof File && await loadRom(navigation.file, true)) {
