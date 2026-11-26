@@ -72,7 +72,7 @@ The experimental port adapts My Lab firmware to Tamagotchi Paradise hardware. It
 To update an existing v0.1.89 port, open its exported ROM in ParaLab v0.2.1 or later. Workspace recognizes **My Lab on Paradise**, reuses the Paradise backup pairing stored in the ROM, and prepares the update for writing over UART. When updating an installed port, **Keep saves** and **Only write changes** are enabled by default. **Keep saves** preserves the live game, Garden, and save slots.
 
 > [!NOTE]
-> This port has been tested on Paradise hardware, in Capybara, and in host-side write simulations. Keep the original ROM backup for recovery. Hold **C** while pressing the rear **Reset** button to enter ParaLab recovery.
+> This port has been tested on Paradise hardware, in an emulator, and in host-side write simulations. Keep the original ROM backup for recovery. Hold **C** while pressing the rear **Reset** button to enter ParaLab recovery.
 
 ## Device Console
 
