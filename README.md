@@ -121,7 +121,7 @@ Open **Lab Codes** in the main navigation to browse 11 Paradise characters, thei
 
 ### 1. Prepare the UART update
 
-Open a supported stock My Lab ROM or a compatible ParaLab menu ROM and go to **Update File**. Enter the device key as eight hexadecimal digits, load a text `.key` file, or choose **Find Key Automatically** to search the loaded ROM. Both update workflows share the key field.
+Open a supported stock My Lab ROM, a dump with a supported writable UART bootstrap, or a compatible ParaLab menu ROM and go to **Update File**. Enter the device key as eight hexadecimal digits, load a text `.key` file, or choose **Find Key Automatically** to search the loaded ROM. Both update workflows share the key field.
 
 - **Loaded ROM** creates an update from the ROM. Automatic key search runs locally in the browser.
 - **Existing update file** opens a stock `MLTUPD.BIN`. Use **Patch Update with Key** to use the key already in the field, or **Choose Key and Patch Update…** to load a key and patch in one step. ParaLab authenticates the update against the loaded ROM before adding the writable UART Flash Tool.
@@ -133,6 +133,8 @@ Copy the resulting `MLTUPD.BIN` to the root of the microSD card and use the stoc
 1. Use **Device Console → UART → ROM Transfer → Read ROM** to back up the device and open the dump in Workspace.
 2. Install the My Lab Menu using the matching device key, then export a fresh full image.
 3. Open the exported image in Workspace and choose **Review and Write…** in Device Console. ParaLab verifies the image’s writable rescue region on-device before changing the main boot table. Images with the older read-only rescue are rejected.
+
+For supported My Lab v1.0.00 dumps that already have the temporary **UART** entry, installing the full Menu replaces that entry with **ParaLab** in the Computer menu and preserves the saves in the dump. These dumps can also be used as the source for the experimental Paradise port.
 
 > [!WARNING]
 > The stock My Lab Settings update flow with `MLTUPD.BIN` and the full Menu and rescue-region install have been verified on hardware. Keep a working recovery card and a ROM backup.

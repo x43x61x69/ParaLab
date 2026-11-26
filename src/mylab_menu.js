@@ -59,6 +59,14 @@ const ASSETS = 0x211000, ASSET_LIMIT = 0xA6B000;
 const GARDEN_CATALOG = 0xE00000, GARDEN_WORK = 0xFD0000, GARDEN_WORK_END = 0xFEC000;
 const GARDEN_HEADER = 0x1D34, GARDEN_ROW = GARDEN_HEADER + 6 * 8, GARDEN_INDEX = 28;
 const LEGACY_GARDEN_INDEX = 24;
+// Computer's row pointers, row limit and selection handler for each launcher.
+const computerMenuCode = [
+  [0x147468, '48f2b471c1f2070151600421', '4cf28011c1f2080151600521', '4df20011c1f2090151600521'],
+  [0x14749A, '0328', '0428', '0428'],
+  [0x1474A6, '48f2b471c1f20701', '4cf28011c1f20801', '4df20011c1f20901'],
+  [0x14753A, '48f2b470c1f20700', '4cf28010c1f20800', '4df20010c1f20900'],
+  [0x147548, 'ccf7eefa', '55f08afd', '66f05afd'],
+];
 const xip = offset => 0x10000000 + offset - 0x11000;
 function tableSum(image, start) {
   let sum = 0;
@@ -117,11 +125,7 @@ function installNativeMenu(image, hook, stub, size) {
   const label = addMyLabLabel(image, 'PARALAB');
   patchBytes(image, HOME_UPDATE, '1d8e0110', '01c00810');
   // Relocate Computer's rows for creation, cursor restoration and selection.
-  patchBytes(image, 0x147468, '48f2b471c1f2070151600421', '4cf28011c1f2080151600521');
-  patchBytes(image, 0x14749A, '0328', '0428');
-  patchBytes(image, 0x1474A6, '48f2b471c1f20701', '4cf28011c1f20801');
-  patchBytes(image, 0x14753A, '48f2b470c1f20700', '4cf28010c1f20800');
-  patchBytes(image, 0x147548, 'ccf7eefa', '55f08afd'); // BL to the Computer dispatcher at NATIVE_HOOK + 0x60.
+  for (const [offset, stock, menu] of computerMenuCode) patchBytes(image, offset, stock, menu);
   image.copyWithin(ROW_COPY, COMPUTER_ROWS, COMPUTER_ROWS + 32);
   w32(image, label, ROW_COPY + 32);
   w32(image, 0x7FFE, ROW_COPY + 36);
@@ -268,6 +272,7 @@ function build(rom, boot, { feld, flashApp, hook, stub }) {
   const menu = menuTemplate(rom, feld, stub);
 
   const image = Uint8Array.from(rom);
+  if (uartBootstrapLabel(rom) !== null) removeUartBootstrap(image);
   image.set(boot, STOCK_BOOT);
   image.set(menu.subarray(PARADISE_STUB, PARADISE_STUB + 0x1000), STUB);
   image.set(menu.subarray(MENU, MENU + size), MENU);
@@ -389,29 +394,59 @@ const UART_APP = 0x1AF000, UART_APP_CAPACITY = 0xE000;
 const UART_STOCK_ROWS = COMPUTER_ROWS, UART_ROW_BYTES = 32;
 const UPDATE_FIRST = 0x100000, UPDATE_LAST = 0xE00000, UPDATE_HEADER = 0x100;
 
+// Verify the entire reserved area, including erased padding, before reclaiming
+// it. These are writable My Lab UART bootstrap payloads from earlier builds.
+const uartBootstrapCrcs = [0x1DACC93A, 0xD05CCD00];
+
+function uartBootstrapLabel(rom) {
+  if (tag(rom, UART_APP + 8, 8) !== 'PXMLBS01' ||
+      !computerMenuCode.every(([offset, , , uart]) => same(rom.subarray(offset, offset + uart.length / 2), hex(uart))) ||
+      C.crc32(rom.subarray(UART_DISPATCHER, UART_ROWS)) !== 0x4947E324 ||
+      !same(rom.subarray(UART_ROWS, UART_ROWS + UART_ROW_BYTES),
+        rom.subarray(UART_STOCK_ROWS, UART_STOCK_ROWS + UART_ROW_BYTES)) ||
+      u32(rom, UART_ROWS + UART_ROW_BYTES + 4) !== 0x7FFD ||
+      !rom.subarray(UART_ROWS + UART_ROW_BYTES + 8, UART_APP).every(byte => byte === 0xFF) ||
+      !uartBootstrapCrcs.includes(C.crc32(rom.subarray(UART_APP, UART_APP + UART_APP_CAPACITY)))) return null;
+
+  const label = u32(rom, UART_ROWS + UART_ROW_BYTES);
+  try {
+    if (u32(rom, ASSETS + 12) !== 24) return null;
+    const strings = C.arc2Parse(rom, ASSETS).ents[2];
+    const start = ASSETS + strings.offset;
+    if (strings.flags || strings.ulen < 16 || start + strings.ulen > ASSET_LIMIT ||
+        u32(rom, start + 12) !== 9) return null;
+    const languages = C.arc2Files(rom.subarray(start, start + strings.ulen), 0);
+    const words = Array.from('UART', letter => C.TXT_ENC[letter]);
+    if (languages.every(table => table.length >= 2 * (label + 2) && label < u16(table, 0) &&
+        same(C.txtWords({ b: table, offs: [u16(table, 2 * (label + 1))] }, 0), words))) return label;
+  } catch {
+    // A malformed asset archive cannot identify a UART launcher.
+  }
+  return null;
+}
+
+function removeUartBootstrap(image) {
+  for (const [offset, stock, , uart] of computerMenuCode) patchBytes(image, offset, uart, stock);
+  image.fill(0xFF, UART_DISPATCHER, UART_APP + UART_APP_CAPACITY);
+  return image;
+}
+
 function uartProbeRom(stock, entry, app, updatePayloadOnly = false, pram = null) {
   const installedMenu = status(stock) === 'update' && canCreateUartUpdate(stock);
   if (!updatePayloadOnly && status(stock) !== 'install' && !installedMenu) throw new Error('Open a supported stock My Lab v1.0.00 ROM or its ParaLab menu build');
   if (!entry.length || entry.length > UART_ROWS - UART_DISPATCHER ||
       app.length < 16 || app.length > UART_APP_CAPACITY ||
       !['PXMLRO01', 'PXMLBS01'].includes(tag(app, 8, 8))) throw new Error('Invalid My Lab UART tool');
-  if (!stock.subarray(UART_DISPATCHER, UART_APP + UART_APP_CAPACITY)
+  const bootstrapLabel = uartBootstrapLabel(stock);
+  if (bootstrapLabel === null && !stock.subarray(UART_DISPATCHER, UART_APP + UART_APP_CAPACITY)
       .every(byte => byte === 0xFF)) throw new Error('No free space for the UART tool');
   const rom = Uint8Array.from(stock);
-  const label = addMyLabLabel(rom, 'UART');
+  if (bootstrapLabel !== null) removeUartBootstrap(rom);
+  const label = bootstrapLabel ?? addMyLabLabel(rom, 'UART');
   // The full ParaLab menu occupies Computer's fifth row. Put the temporary
   // UART launcher in that same slot so installing ParaLab replaces it in place.
-  if (installedMenu) {
-    patchBytes(rom, 0x147468, '4cf28011c1f2080151600521', '4df20011c1f2090151600521');
-    patchBytes(rom, 0x1474A6, '4cf28011c1f20801', '4df20011c1f20901');
-    patchBytes(rom, 0x14753A, '4cf28010c1f20800', '4df20010c1f20900');
-    patchBytes(rom, 0x147548, '55f08afd', '66f05afd');
-  } else {
-    patchBytes(rom, 0x147468, '48f2b471c1f2070151600421', '4df20011c1f2090151600521');
-    patchBytes(rom, 0x14749A, '0328', '0428');
-    patchBytes(rom, 0x1474A6, '48f2b471c1f20701', '4df20011c1f20901');
-    patchBytes(rom, 0x14753A, '48f2b470c1f20700', '4df20010c1f20900');
-    patchBytes(rom, 0x147548, 'ccf7eefa', '66f05afd'); // BL to UART_DISPATCHER.
+  for (const [offset, original, menu, uart] of computerMenuCode) {
+    if (!installedMenu || menu !== uart) patchBytes(rom, offset, installedMenu ? menu : original, uart);
   }
   rom.copyWithin(UART_ROWS, UART_STOCK_ROWS, UART_STOCK_ROWS + UART_ROW_BYTES);
   w32(rom, label, UART_ROWS + UART_ROW_BYTES);
@@ -908,7 +943,9 @@ const screenFitOperations = {
   }),
 };
 function screenFitSupport(image, legacyCode, firmwareOnly = false) {
-  return screenSupport.inspect(image, id => screenFitOperations[id]?.(legacyCode), firmwareOnly);
+  const stock = uartBootstrapLabel(image) !== null && status(image) === 'install'
+    ? removeUartBootstrap(Uint8Array.from(image)) : image;
+  return screenSupport.inspect(stock, id => screenFitOperations[id]?.(legacyCode), firmwareOnly);
 }
 function requireScreenFitPort(image, legacyCode) {
   const compatibility = screenFitSupport(image, legacyCode);
