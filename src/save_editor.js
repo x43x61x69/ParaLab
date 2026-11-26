@@ -1,12 +1,18 @@
 /* Save Editor coordinates the existing Workspace and Device Console services. */
-const saveEditor = { session: null, source: null, preview: null, running: false, status: null };
+const saveEditor = { session: null, source: null, preview: null, running: false, reading: false, status: null };
 const EDITOR_PAGE = 0x1000;
 const EDITOR_LIVE = 'live';
 const editorResidents = window.ParamixResidents;
 
 function saveEditorStatus(key, params) {
   saveEditor.status = key ? () => t(key, params) : null;
-  $('editSaveStatus').textContent = saveEditor.status?.() || '';
+  renderSaveEditorStatus();
+}
+function renderSaveEditorStatus() {
+  const status = $('editSaveStatus');
+  const target = $(saveEditor.session && !saveEditor.reading ? 'editSaveFooterStatus' : 'editSaveSourceStatus');
+  if (status.parentElement !== target) target.append(status);
+  status.textContent = saveEditor.status?.() || '';
 }
 function saveEditorError(error) {
   saveEditorStatus('devErr', { e: flMsg(error) });
@@ -46,14 +52,22 @@ function saveEditorButtons() {
   const { session, source, running } = saveEditor, device = dv.d;
   const busy = running || dv.run;
   $('editSaveDevice').disabled = busy || !device;
+  $('editSaveDevice').hidden = !device;
   $('editSaveConnect').hidden = !!device;
   const hasRom = !!(state.ctx || myLabRom);
   $('editSaveRom').disabled = busy || !hasRom;
+  $('editSaveRom').hidden = !hasRom;
   $('editSaveOpenRom').hidden = hasRom;
+  $('editSaveOpenRom').disabled = busy;
+  $('editSaveRomName').textContent = myLabRom?.name || state.name || '';
+  $('editSaveRomName').hidden = !hasRom;
+  $('editSaveDeviceName').textContent = device ? connectedEdition(device) : '';
+  $('editSaveDeviceName').hidden = !device;
   $('editSaveOpen').disabled = $('editSaveSlot').disabled = busy;
   $('editSaveOpen').classList.toggle('primary', !session);
   $('editSaveEdition').disabled = busy || saveEditorDirty(session);
   $('editSaveLoadPreview').disabled = busy;
+  $('editSaveNavigation').inert = $('editSaveMobileJump').inert = busy;
   $('editSaveFields').inert = busy;
   $('editSaveUnsaved').hidden = !saveEditorDirty(session) || (session.downloaded === session.working && !session.changes.size);
   $('editSaveDeviceControls').hidden = !running || !dv.run;
@@ -66,11 +80,14 @@ function saveEditorButtons() {
     (source?.kind === 'device' && (source.device !== device || session.written || !saveEditorDirty(session))) ||
     (source?.lab ? !usesMyLabDeviceSave(device) : !session?.working.edition || !FL.EDITIONS[device.info.edition] ||
       SV.family(device.info.edition) !== SV.family(session.working.edition));
-  $('editSaveWrite').hidden = source?.kind === 'rom';
+  $('editSaveWrite').hidden = source?.kind === 'rom' || !device;
   $('editSaveDownload').disabled = busy || !session?.working || (!source?.lab && !session.working.edition);
   $('editSaveOriginal').disabled = busy || !session?.original;
-  const downloadPrimary = source?.kind !== 'rom' && $('editSaveWrite').disabled;
-  $('editSaveDownload').classList.toggle('primary', downloadPrimary);
+  const applyPrimary = source?.kind === 'rom' && !$('editSaveApply').disabled;
+  const writePrimary = source?.kind === 'device' && !$('editSaveWrite').disabled;
+  $('editSaveApply').classList.toggle('primary', applyPrimary);
+  $('editSaveWrite').classList.toggle('primary', writePrimary);
+  $('editSaveDownload').classList.toggle('primary', !applyPrimary && !writePrimary);
 }
 function saveEditorDirty(session) {
   return !!session && (session.changes.size > 0 || session.working !== session.baseline);
@@ -155,6 +172,7 @@ async function saveEditorSwitchAllowed() {
 function saveEditorSection(parent, label, open = false, values) {
   const details = document.createElement('details');
   details.className = 'save-editor-section';
+  details.dataset.section = label;
   details.open = open;
   const summary = document.createElement('summary');
   summary.textContent = t(label, values);
@@ -787,21 +805,65 @@ function saveEditorOccupiedSlots(source) {
   return (source.lab ? source.slots?.slots.flatMap((bank, slot) => bank && !bank.cleared ? [slot] : []) :
     source.slots?.list.flatMap(entry => entry.used && entry.i !== source.slots.live ? [entry.i] : [])) || [];
 }
+function jumpToSaveEditorSection(id) {
+  const section = $(id);
+  if (!section) return;
+  saveEditor.session.section = id;
+  const links = $('editSaveSectionLinks');
+  links.querySelector('[aria-current]')?.removeAttribute('aria-current');
+  links.querySelector('a[href="#' + id + '"]')?.setAttribute('aria-current', 'location');
+  section.open = true;
+  section.firstElementChild.focus({ preventScroll: true });
+  section.scrollIntoView({ block: 'start' });
+}
+function renderSaveEditorNavigation(holder) {
+  const select = $('editSaveJump'), links = $('editSaveSectionLinks');
+  select.replaceChildren(residentOption('', t('Jump to section')));
+  links.replaceChildren();
+  for (const group of holder.children) {
+    const title = group.firstElementChild.textContent;
+    const options = document.createElement('optgroup'), heading = document.createElement('h3');
+    const list = document.createElement('ul');
+    options.label = heading.textContent = title;
+    for (const section of group.querySelectorAll(':scope > details')) {
+      const summary = section.firstElementChild;
+      section.id = group.firstElementChild.id + '-' + section.dataset.section.toLowerCase().replace(/\W+/g, '-');
+      options.append(residentOption(section.id, summary.textContent));
+      const item = document.createElement('li'), link = document.createElement('a');
+      link.href = '#' + section.id;
+      link.textContent = summary.textContent;
+      if (saveEditor.session.section === section.id) link.setAttribute('aria-current', 'location');
+      link.onclick = event => {
+        event.preventDefault();
+        jumpToSaveEditorSection(section.id);
+      };
+      item.append(link);
+      list.append(item);
+    }
+    select.append(options);
+    links.append(heading, list);
+  }
+  $('editSaveNavigation').hidden = $('editSaveMobileJump').hidden = select.options.length < 2;
+}
 function refreshSaveEditor(redraw = false) {
   const { source, session } = saveEditor;
   saveEditorButtons();
-  $('editSaveStatus').textContent = saveEditor.status?.() || '';
+  renderSaveEditorStatus();
   $('saveEditor').dataset.source = source?.kind || '';
-  if (!source || !session) { $('editSaveDocument').hidden = true; $('editSaveSlots').hidden = true; return; }
+  if (!source || !session) {
+    $('editSaveDocument').hidden = $('editSaveSlots').hidden = $('editSaveNavigation').hidden = $('editSaveMobileJump').hidden = true;
+    return;
+  }
   $('editSaveDocument').hidden = false;
   const context = saveEditorPreview();
   const device = source.kind === 'device' ? source.device : null;
   const edition = device ? device.info.edition : source.lab ? (source.edition || 0xFE) : session.working.edition;
   const editionName = device ? connectedEdition(device) : edition ? saveEditorEdition(edition) : t('Choose the save edition');
   const key = device?.info.editionIdentified === false ? null : romEditionKey(edition);
-  $('editSaveSourceName').textContent = !device && source.name ? source.name + ' · ' : '';
+  const slotName = source.kind === 'file' ? '' : saveEditorSlotLabel(source, session.slot);
+  $('editSaveSource').textContent = source.name || slotName || editionName;
   renderSourceEdition('editSaveSourceEdition', { name: editionName, key });
-  $('editSaveSourceSlot').textContent = source.kind === 'file' ? '' : ' · ' + saveEditorSlotLabel(source, session.slot);
+  $('editSaveSourceSlot').textContent = source.name ? slotName : '';
   $('editSavePreviewNotice').hidden = !!context;
   $('editSaveLoadPreview').hidden = source.kind !== 'file' && !!context;
   if (source.kind !== 'file') {
@@ -827,11 +889,13 @@ function refreshSaveEditor(redraw = false) {
       session.renderedPreview === context && session.renderedPreviewRom === context?.rom) return;
   session.renderedPreview = context;
   session.renderedPreviewRom = context?.rom;
-  const open = new Map(Array.from(holder.querySelectorAll('.save-editor-data'),
-    group => [group.className, Array.from(group.querySelectorAll(':scope > details'), node => node.open)]));
+  const open = holder.dataset.session === String(session.serial)
+    ? new Map(Array.from(holder.querySelectorAll('.save-editor-data > details'), node => [node.id, node.open]))
+    : new Map();
   session.bookPortraitObserver?.disconnect();
   session.bookPortraitPaint = new Map();
   holder.replaceChildren();
+  $('editSaveNavigation').hidden = $('editSaveMobileJump').hidden = true;
   holder.dataset.session = session.serial;
   if (!source.lab && !session.working.edition) return;
   if (context && !source.lab && !context.saveEditorVisitors) {
@@ -849,12 +913,9 @@ function refreshSaveEditor(redraw = false) {
     saveEditorParadiseFields(native, extensions, session, info, config, context);
     if (extensions.children.length === 1) extensions.remove();
   }
-  for (const group of holder.children) {
-    const states = open.get(group.className);
-    if (states) group.querySelectorAll(':scope > details').forEach((node, i) => {
-      if (states[i] !== undefined) node.open = states[i];
-    });
-  }
+  renderSaveEditorNavigation(holder);
+  for (const node of holder.querySelectorAll('.save-editor-data > details'))
+    if (open.has(node.id)) node.open = open.get(node.id);
 }
 function saveEditorWorking(session, extras = {}) {
   if (!session?.working || (!session.source.lab && !session.working.edition)) throw new Error(t('Choose the save edition'));
@@ -908,6 +969,7 @@ function openSaveEditorDocument(session) {
   session.serial = ++saveEditorSerial;
   saveEditor.session = session;
   saveEditor.source = session.source;
+  $('editSaveSourcePicker').open = false;
   saveEditorStatus();
   refreshSaveEditor();
   $('editSaveSource').focus();
@@ -916,18 +978,17 @@ async function runSaveEditor(fn) {
   try { return await fn(); }
   catch (error) { saveEditorError(error); return false; }
 }
-function saveEditorFileName(session, suffix, extension) {
+function saveEditorFileName(session, suffix) {
   const base = session.source.name || (session.source.lab ? 'my-lab' : edSlug(session.working.edition));
-  return base.replace(/\.(?:tamasave|tamastate|mylabsave|sav|bin)$/i, '') + suffix + extension;
+  return base.replace(/\.(?:tamasave|tamastate|mylabsave|sav|bin)$/i, '') + suffix + TAMA_SAVE_EXT;
 }
 function saveEditorExport(session, save, original) {
   const lab = session.source.lab;
   const standalone = !lab && session.slot !== EDITOR_LIVE && session.snapshot?.head ?
     { ...save, pages: F.slotExportPages(save.pages, session.snapshot.head) } : save;
   const bytes = original || (lab ? ML.editorBackup(save, C, VIS) : SV.paraWrite(standalone, standalone.edition));
-  const extension = lab ? (!save.data && /\.sav$/i.test(session.source.name) ? '.sav' : MY_LAB_SAVE_EXT) : '.tamasave';
   const suffix = original ? '-original' : '-edited-' + stamp();
-  const name = saveEditorFileName(session, suffix, extension);
+  const name = saveEditorFileName(session, suffix);
   download(bytes, name);
   return name;
 }
@@ -1129,7 +1190,9 @@ async function openSaveEditorDeviceSlot(source, slot) {
 async function runSaveEditorDevice(fn, write = false) {
   if (saveEditor.running || dv.run || !dv.d) return;
   saveEditor.running = true;
-  saveEditorStatus(write ? 'Checking Save Changes…' : 'Reading Device Save');
+  saveEditor.reading = !write;
+  $(write ? 'editSaveFooterTransfer' : 'editSaveSourceTransfer').append($('editSaveDeviceControls'));
+  saveEditorStatus(write ? 'Checking Save Changes…' : null);
   $('editSaveReadProgress').hidden = write;
   if (!write) saveEditorDeviceProgress('prepare');
   try {
@@ -1144,7 +1207,10 @@ async function runSaveEditorDevice(fn, write = false) {
     });
   } finally {
     saveEditor.running = false;
+    saveEditor.reading = false;
     $('editSaveReadProgress').hidden = true;
+    $('editSaveSourceTransfer').append($('editSaveDeviceControls'));
+    renderSaveEditorStatus();
     saveEditorButtons();
   }
 }
@@ -1332,6 +1398,10 @@ async function saveEditorWrite() {
   }, true);
 }
 $('editSaveForm').onsubmit = event => event.preventDefault();
+$('editSaveJump').onchange = event => {
+  jumpToSaveEditorSection(event.target.value);
+  event.target.value = '';
+};
 $('editSaveOriginal').onclick = () => saveEditorDownload(true);
 $('editSaveDownload').onclick = () => saveEditorDownload(false);
 $('editSaveApply').onclick = () => runSaveEditor(saveEditorApplyWorkspace);

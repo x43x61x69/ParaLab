@@ -3,7 +3,7 @@
  *
  * Paradise: the game keeps its progress in the flash after the edition ID page
  * (0xD4A000, Tropical/Glacier 0xD2A000, Neon Planets 0xD86000) up to 0xF00000. Exported as a
- * .tamasave (format 3 of the TamaParadise app): every page of that region,
+ * .sav (format 3 of the TamaParadise app, formerly named .tamasave): every page of that region,
  * the seconds counter of the device and an armed wake alarm, so the app
  * continues instead of starting like a fresh battery. Behind the pages a
  * Paramix trailer ("PMXE", edition, region) that the app ignores and the
@@ -90,7 +90,7 @@ function paraFromImage(img, edition) {
   return pages;
 }
 /**
- * .tamasave from pages (Map address -> 4 KB). clock: { counter, ctrl } of the device or null.
+ * Paradise backup from pages (Map address -> 4 KB). clock: { counter, ctrl } of the device or null.
  */
 function paraEncode(pages, edition, clock, now = Math.floor(Date.now() / 1000)) {
   const counter = clock ? clock.counter >>> 0 : 0;
@@ -130,9 +130,9 @@ function paraWrite(save, edition) {
   w32(out, o, TRAILER); w32(out, o + 4, ed); w32(out, o + 8, region(ed)[0]); w32(out, o + 12, region(ed)[1]);
   return out;
 }
-/** Read a .tamasave (format 3). Throws on anything else. */
+/** Read a Paradise backup (format 3). Throws on anything else. */
 function paraDecode(b) {
-  if (b.length < 40 || String.fromCharCode(...b.subarray(0, 8)) !== MAGIC) throw new Error('not a Paradise save (.tamasave)');
+  if (b.length < 40 || String.fromCharCode(...b.subarray(0, 8)) !== MAGIC) throw new Error('not a Paradise save (.sav)');
   if (u32(b, 8) !== VERSION) throw new Error('unknown save version ' + u32(b, 8));
   const stamp = u32(b, 12) + u32(b, 16) * 4294967296, counter = u32(b, 20), alarm = u32(b, 24), status = u32(b, 28);
   const nr = u32(b, 32); let o = 36;

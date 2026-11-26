@@ -297,8 +297,8 @@ __STUDIO_LAYOUT__
 <input type="file" id="fileOne" hidden accept=".png">
 <input type="file" id="fileDim" hidden accept=".bin,.BIN">
 <input type="file" id="fileEmu" hidden accept=".bin,.BIN,.sav,.SAV">
-<input type="file" id="fileSave" hidden accept=".tamasave">
-<input type="file" id="fileMyLabSave" hidden accept=".tamastate,.mylabsave,.sav">
+<input type="file" id="fileSave" hidden accept=".sav,.tamasave">
+<input type="file" id="fileMyLabSave" hidden accept=".sav,.tamasave,.tamastate,.mylabsave">
 <input type="file" id="fileEmuSav" hidden accept=".sav,.SAV,.bin,.BIN,.eep,.EEP">
 <input type="file" id="fileT7Fig" hidden multiple accept=".bin,.BIN">
 <input type="file" id="fileApp" hidden accept=".bin,.BIN">
@@ -538,26 +538,37 @@ __ANALYTICS_CARD__
   <section class="save-editor" id="saveEditor" aria-labelledby="saveEditorTitle" hidden>
     <h1 id="saveEditorTitle" data-t="Save Editor">Save Editor</h1>
     <div class="save-editor-layout">
-      <section class="save-editor-sources" aria-labelledby="editSaveSourcesLabel">
-        <h2 id="editSaveSourcesLabel" data-t="Save Source">Save Source</h2>
-        <div class="save-editor-source" data-kind="file">
-          <button class="btn primary" type="button" id="editSaveOpen" data-t="Open Save File…">Open Save File…</button>
-          <input type="file" id="editSaveFile" accept=".tamasave,.tamastate,.mylabsave,.sav" hidden>
-          <p class="hint">.tamasave · .tamastate · .mylabsave · .sav</p>
-        </div>
-        <div class="save-editor-source" data-kind="rom">
-          <button class="btn" type="button" id="editSaveRom" data-t="Edit ROM Save">Edit ROM Save</button>
-          <button type="button" class="text-action" id="editSaveOpenRom" data-t="open" hidden>Open ROM</button>
-        </div>
-        <div class="save-editor-source" data-kind="device">
-          <button class="btn" type="button" id="editSaveDevice" data-t="Read Device Save">Read Device Save</button>
-          <a class="text-action" id="editSaveConnect" href="#connectionTitle" data-view-link="uart" data-t="Connect Device">Connect Device</a>
-        </div>
-        <div class="save-editor-context" id="editSaveSlots" hidden>
-          <label for="editSaveSlot" data-t="saveSlotL">Slot</label>
-          <select id="editSaveSlot"></select>
-        </div>
-        <div id="editSaveDeviceControls" hidden>
+      <aside class="save-editor-rail">
+        <details class="save-editor-sources" id="editSaveSourcePicker" open>
+          <summary data-t="Save Source">Save Source</summary>
+          <div class="save-editor-source-grid">
+            <div class="save-editor-source" data-kind="file">
+              <span class="save-editor-source-icon" aria-hidden="true"><i></i></span>
+              <div class="save-editor-source-content">
+                <button class="btn primary" type="button" id="editSaveOpen" data-t="Open Save File…">Open Save File…</button>
+                <input type="file" id="editSaveFile" accept=".sav,.tamasave,.tamastate,.mylabsave" hidden>
+                <p class="hint">.sav</p>
+              </div>
+            </div>
+            <div class="save-editor-source" data-kind="rom">
+              <span class="save-editor-source-icon" aria-hidden="true"><i></i></span>
+              <div class="save-editor-source-content">
+                <button class="btn" type="button" id="editSaveOpenRom" data-t="Open ROM">Open ROM</button>
+                <button class="btn" type="button" id="editSaveRom" data-t="Edit ROM Save" hidden>Edit ROM Save</button>
+                <p class="hint" id="editSaveRomName" hidden></p>
+              </div>
+            </div>
+            <div class="save-editor-source" data-kind="device">
+              <span class="save-editor-source-icon" aria-hidden="true"><i></i></span>
+              <div class="save-editor-source-content">
+                <a class="btn" id="editSaveConnect" href="#connectionTitle" data-view-link="uart" data-t="Connect Device">Connect Device</a>
+                <button class="btn" type="button" id="editSaveDevice" data-t="Read Device Save" hidden>Read Device Save</button>
+                <p class="hint" id="editSaveDeviceName" hidden></p>
+              </div>
+            </div>
+          </div>
+        </details>
+        <div id="editSaveSourceTransfer"><div id="editSaveDeviceControls" hidden>
           <div id="editSaveReadProgress" hidden>
             <div class="device-progress-details">
               <span id="editSavePhase"></span>
@@ -569,22 +580,34 @@ __ANALYTICS_CARD__
             </div>
           </div>
           <button type="button" class="btn small" id="editSaveStop" data-t="Cancel">Cancel</button>
-        </div>
-        <button type="button" class="btn small" id="editSaveRestart" data-t="Restart Device" hidden>Restart Device</button>
-        <p id="editSaveStatus" role="status" class="hint"></p>
-      </section>
+        </div></div>
+        <div id="editSaveSourceStatus"><p id="editSaveStatus" role="status" class="hint"></p></div>
+        <nav class="save-editor-navigation" id="editSaveNavigation" aria-labelledby="editSaveJumpLabel" hidden>
+          <h2 id="editSaveJumpLabel" data-t="Jump to section">Jump to section</h2>
+          <div id="editSaveSectionLinks"></div>
+        </nav>
+      </aside>
       <section id="editSaveDocument" aria-labelledby="editSaveSource" hidden>
         <div class="save-editor-meta">
           <div class="save-editor-title-row">
-            <h2 id="editSaveSource" tabindex="-1"><span id="editSaveSourceName"></span><span id="editSaveSourceEdition"></span><span id="editSaveSourceSlot"></span></h2>
+            <div class="save-editor-identity">
+              <h2 id="editSaveSource" tabindex="-1"></h2>
+              <div class="save-editor-identity-meta"><span id="editSaveSourceEdition"></span><span id="editSaveSourceSlot"></span></div>
+            </div>
             <div class="save-editor-title-actions">
               <p id="editSaveUnsaved" data-t="Unsaved Changes" hidden>Unsaved Changes</p>
               <button type="button" class="btn small" id="editSaveLoadPreview" data-t="Load Matching ROM…">Load Matching ROM…</button>
             </div>
           </div>
-          <div class="save-editor-context" id="editSaveEditionRow" hidden>
-            <label for="editSaveEdition" data-t="Edition">Edition</label>
-            <select id="editSaveEdition" class="model-select"></select>
+          <div class="save-editor-document-controls">
+            <div class="save-editor-context" id="editSaveSlots" hidden>
+              <label for="editSaveSlot" data-t="saveSlotL">Slot</label>
+              <select id="editSaveSlot"></select>
+            </div>
+            <div class="save-editor-context" id="editSaveEditionRow" hidden>
+              <label for="editSaveEdition" data-t="Edition">Edition</label>
+              <select id="editSaveEdition" class="model-select"></select>
+            </div>
           </div>
           <div class="save-editor-preview-notice" id="editSavePreviewNotice">
             <p id="editSavePreviewHint" class="hint" data-t="Load a matching ROM to show previews. You can edit using text now.">Load a matching ROM to show previews. You can edit using text now.</p>
@@ -592,12 +615,16 @@ __ANALYTICS_CARD__
         </div>
         <form id="editSaveForm"><div id="editSaveFields" class="save-editor-fields"></div></form>
         <div class="save-editor-actions">
+          <div id="editSaveFooterTransfer"></div>
+          <div id="editSaveFooterStatus"></div>
+          <div id="editSaveMobileJump" hidden><select id="editSaveJump" aria-labelledby="editSaveJumpLabel"></select></div>
           <div class="save-editor-save-actions">
             <button type="button" class="btn" id="editSaveDownload" data-t="Download Edited Save">Download Edited Save</button>
             <button type="button" class="btn primary" id="editSaveApply" data-t="Apply to Workspace">Apply to Workspace</button>
             <button type="button" class="btn primary" id="editSaveWrite" data-t="Review and Write…">Review and Write…</button>
           </div>
           <button type="button" class="btn small" id="editSaveOriginal" data-t="Download Original Save">Download Original Save</button>
+          <button type="button" class="btn small" id="editSaveRestart" data-t="Restart Device" hidden>Restart Device</button>
         </div>
       </section>
     </div>
@@ -1267,7 +1294,7 @@ __ANALYTICS_CARD__
         <button type="button" class="btn small" id="editSaveLabLink" data-t="Save Editor">Save Editor</button>
           <button class="btn small" id="myLabSaveExport" type="button" data-t="myLabSaveExport"></button>
         <button class="btn small" id="myLabSaveReplace" type="button" data-t="myLabSaveReplace"></button>
-        <input id="myLabSaveFile" type="file" accept=".tamastate,.mylabsave,.sav" hidden>
+        <input id="myLabSaveFile" type="file" accept=".sav,.tamasave,.tamastate,.mylabsave" hidden>
         <button class="btn small" id="myLabSaveDelete" type="button" data-t="paraClear"></button>
         <button class="btn small" id="myLabSaveUndo" type="button" data-t="emuUndo" hidden></button>
       </div>
@@ -1576,7 +1603,7 @@ __ANALYTICS_CARD__
       <div class="tools">
         <button class="btn small" id="btnPetOpen" data-t="petOpen"></button>
         <button class="btn small" id="btnPetRom" data-t="petRom"></button>
-        <input type="file" id="filePet" accept=".tamasave" hidden>
+        <input type="file" id="filePet" accept=".sav,.tamasave" hidden>
       </div>
       <div class="tools" id="petRow" hidden>
         <label><span data-t="petLevel"></span> <select id="petLevel"></select></label>
@@ -1598,7 +1625,7 @@ __ANALYTICS_CARD__
         <h3 class="section-title" id="residentTitle">Field Residents</h3>
         <div class="tools">
           <button class="btn small" id="residentBackupOpen" type="button" data-t="Open Save Backup">Open Save Backup</button>
-          <input id="residentBackupFile" type="file" accept=".tamasave" hidden>
+          <input id="residentBackupFile" type="file" accept=".sav,.tamasave" hidden>
           <button class="btn small" id="residentBackupClose" type="button" hidden data-t="Return to ROM Save">Return to ROM Save</button>
           <button class="btn small" id="residentBackupSave" type="button" hidden data-t="Download Edited Save">Download Edited Save</button>
         </div>

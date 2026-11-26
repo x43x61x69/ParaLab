@@ -137,11 +137,11 @@ const T = {
     myLabSaveReplaceGarden: 'Replace the game progress and Garden with this backup?',
     myLabSaveReplacePage: 'Replace game progress with this save page? The Garden will be kept.',
     myLabSaveDirty: 'Save change ready. Use Save ROM to export a new file.',
-    myLabSaveHint: 'Replace the save in this ROM with a My Lab backup (.tamastate, .mylabsave, or .SAV). To apply the change when writing to a device, turn off Keep saves.',
-    deviceSaveFormats: '{editionParadise} (.tamasave) · {editionMyLab} (.tamastate)',
-    portSaveBackup: 'Back up the active game, Garden, crafted items, and clock when available (.tamastate).',
+    myLabSaveHint: 'Replace the save in this ROM with a My Lab backup (.sav). To apply the change when writing to a device, turn off Keep saves.',
+    deviceSaveFormats: '.sav · {editionParadise} / {editionMyLab}',
+    portSaveBackup: 'Back up the active game, Garden, crafted items, and clock when available (.sav).',
     portSaveWrongRom: 'The device no longer contains a compatible ported ROM. Reconnect using the Flash Tool for the installed firmware.',
-    myLabDeviceSaveHint: 'Back up or restore the active {editionMyLab} game, Garden, crafted items, and clock (.tamastate).',
+    myLabDeviceSaveHint: 'Back up or restore the active {editionMyLab} game, Garden, crafted items, and clock (.sav).',
     myLabSaveRecovery: 'Open the My Lab ParaLab menu to finish the pending save recovery first.',
     devReadOnly: 'Read-only',
     myLabSaveSummary: '{p} points · researcher level {l} · {n} Tamas encountered',
@@ -202,7 +202,7 @@ const T = {
     'Neon Planets character preview data is missing': '{editionNeon} character preview data is missing',
     'menu program too old for Neon Planets': 'menu program too old for {editionNeon}',
     neonProfileHint: 'Update the planet artwork in Tama Files.',
-    appsOnlyOn: 'Programs menu', appsOnlyHint: 'Open ParaLab alongside the {editionNeon} game to use programs and the Flash Tool.', neonSaves: 'Three {editionNeon} save slots', neonSaveFields: 'New saves use the game’s setup. The game unlocks fields with progress.', neonSaveFull: 'Writing a {editionNeon} menu slot requires a complete .tamasave backup.',
+    appsOnlyOn: 'Programs menu', appsOnlyHint: 'Open ParaLab alongside the {editionNeon} game to use programs and the Flash Tool.', neonSaves: 'Three {editionNeon} save slots', neonSaveFields: 'New saves use the game’s setup. The game unlocks fields with progress.', neonSaveFull: 'Writing a {editionNeon} menu slot requires a complete .sav backup.',
     neonTamaOn: 'Tama in Programs menu (care, appearance, age)', petPoints: 'Tamapoints', petMission: 'Mission', petMissionAction: 'Completion', petMissionComplete: 'Mark complete', petMissionReset: 'Reset completion',
     open: 'Open ROM', save: 'Save New ROM',
     startTitle: 'Make your ROM your own',
@@ -346,9 +346,9 @@ const T = {
     doomBoth: 'Emulator and DOOM do not fit into one ROM together. Please choose only one.',
     doomBig: 'No episode of this WAD fits into the ROM.', doomNoMusic: 'This episode only fits without music.',
     emuPick: 'Choose Firmware or ROM', emuOff: 'Remove Emulator',
-    emuHint: 'Colour tamas (TamaEmu), Tama-Go and Friends (T7Emu), Meets and On (T18Emu), first Tamagotchis and Digimon (V1Emu), Connection V3 (V3Emu). The first is the main program, every further one goes to the menu. The filled star marks the main program, a click on an empty star makes another one the main program. Bring your own files.', t7Ok: 'V7 ROM recognised (T7Emu). It is built in on save.', t7OkFr: 'Tamagotchi Friends recognised (T7Emu, test). It is built in on save. There are no figures for it.', t7Has: 'This ROM contains T7Emu.', t7HasFr: 'This ROM contains T7Emu with Tamagotchi Friends.', t7Use: 'Start: hold A and C together on the home screen. Back: hold the wheel (saves). Wheel short: settings and figure. If T7Emu hangs: start with A and C, release them and press the wheel within the first 3 seconds and confirm with A.', t7FigPick: 'Add Figures', t7FigNone: 'No figures yet.', t7FigBad: '{f}: not a figure.', t7FigFull: 'No room left for {f}.', t7FigMax: 'No room for more figures.', t7FigDup: '{f} is already in.', appPick: 'Add Another Emulator', appHint: 'One more Tama-Go or Friends ROM (T7Emu). Started from the menu (A and C), so something in the Menu tab must be switched on.', appNone: 'No other emulators.', appBad: '{f}: not a Tama-Go or Friends ROM.', appBadL: '{f}: neither a Tama-Go or Friends ROM nor a colour Tama or TG18 firmware.', appT18One: 'T18Emu goes only once per ROM.', appHintL: 'In a start device: Tama-Go or Friends ROM, colour Tama firmware (TamaEmu) or TG18 firmware (T18Emu, once only).', ruleLaunch: 'Start device: emulators and DOOM fit together as long as there is room.', appMax: 'At most 12 more emulators.', appNeedMenu: 'More emulators start from the menu: switch on the field switch or items in the Menu tab.', appFail: 'More emulators: {e}', appSix: 'Six fields do not go together with more emulators.', t7SaveBtn: 'T7Emu save (.bin)', saveFor: 'Program', saveMain: 'Main emulator', v1SaveBtn: 'V1Emu save (.bin)', saveT18No: 'T18Emu: backing up its save is not possible here yet.', saveNoBatt: 'This game keeps no save on its cartridge.', saveNone: 'No save yet.', saveWrongFile: 'This file does not fit {n}.', saveCartIn: 'Save for {n} taken over. Now save the ROM or write it to the device. A kept game state is dropped.', t7SaveXDone: 'Save for {n} taken over. Now save the ROM or write it to the device.', t7NoSave: 'The Tama has no save yet.', t7SaveInDone: 'T7Emu save taken over. Now save the ROM or write it to the device.', t7SaveNeed: 'This save requires a ROM with matching Tama-Go support.', saveT18Need: 'This save requires a ROM with matching TG18 support.', saveEmuAny: 'Emulator save (.sav / .bin)',
+    emuHint: 'Colour tamas (TamaEmu), Tama-Go and Friends (T7Emu), Meets and On (T18Emu), first Tamagotchis and Digimon (V1Emu), Connection V3 (V3Emu). The first is the main program, every further one goes to the menu. The filled star marks the main program, a click on an empty star makes another one the main program. Bring your own files.', t7Ok: 'V7 ROM recognised (T7Emu). It is built in on save.', t7OkFr: 'Tamagotchi Friends recognised (T7Emu, test). It is built in on save. There are no figures for it.', t7Has: 'This ROM contains T7Emu.', t7HasFr: 'This ROM contains T7Emu with Tamagotchi Friends.', t7Use: 'Start: hold A and C together on the home screen. Back: hold the wheel (saves). Wheel short: settings and figure. If T7Emu hangs: start with A and C, release them and press the wheel within the first 3 seconds and confirm with A.', t7FigPick: 'Add Figures', t7FigNone: 'No figures yet.', t7FigBad: '{f}: not a figure.', t7FigFull: 'No room left for {f}.', t7FigMax: 'No room for more figures.', t7FigDup: '{f} is already in.', appPick: 'Add Another Emulator', appHint: 'One more Tama-Go or Friends ROM (T7Emu). Started from the menu (A and C), so something in the Menu tab must be switched on.', appNone: 'No other emulators.', appBad: '{f}: not a Tama-Go or Friends ROM.', appBadL: '{f}: neither a Tama-Go or Friends ROM nor a colour Tama or TG18 firmware.', appT18One: 'T18Emu goes only once per ROM.', appHintL: 'In a start device: Tama-Go or Friends ROM, colour Tama firmware (TamaEmu) or TG18 firmware (T18Emu, once only).', ruleLaunch: 'Start device: emulators and DOOM fit together as long as there is room.', appMax: 'At most 12 more emulators.', appNeedMenu: 'More emulators start from the menu: switch on the field switch or items in the Menu tab.', appFail: 'More emulators: {e}', appSix: 'Six fields do not go together with more emulators.', t7SaveBtn: 'T7Emu save (.sav)', saveFor: 'Program', saveMain: 'Main emulator', v1SaveBtn: 'V1Emu save (.sav)', saveT18No: 'T18Emu: backing up its save is not possible here yet.', saveNoBatt: 'This game keeps no save on its cartridge.', saveNone: 'No save yet.', saveWrongFile: 'This file does not fit {n}.', saveCartIn: 'Save for {n} taken over. Now save the ROM or write it to the device. A kept game state is dropped.', t7SaveXDone: 'Save for {n} taken over. Now save the ROM or write it to the device.', t7NoSave: 'The Tama has no save yet.', t7SaveInDone: 'T7Emu save taken over. Now save the ROM or write it to the device.', t7SaveNeed: 'This save requires a ROM with matching Tama-Go support.', saveT18Need: 'This save requires a ROM with matching TG18 support.', saveEmuAny: 'Emulator save (.sav)',
     emuUse: 'Start: hold A and C together on the home screen. Back: hold the wheel (saves). If TamaEmu hangs: start with A and C, release them and press the wheel within the first 3 seconds and confirm with A. It then starts over from the save the Tama keeps itself.',
-    emuNone: 'No emulator chosen.', petT: 'Change save', feldNeon: '{editionNeon}: the game switches its planets itself. Items, Tamapoints, Tama and programs work.', neonSave: '{editionNeon}: ROM Lab cannot edit its saves yet.', petOpen: 'Open Paradise Save', petRom: 'Save in the ROM', petClose: 'Close', petRomDone: 'Changed in the ROM. Now save the ROM or write it to the device (without "Keep saves", otherwise the device keeps its save).', petLevel: 'Level', petChar: 'Tama', petCare: 'Fed, happy, healthy, and clean', petSave: 'Save Changed Save', petKeep: 'unchanged', petKid: 'Kid', petYoung: 'Teen', petAdult: 'Adult', petNow: 'In the save: level {l}, Tama {c}, hunger {h}/6, happiness {j}/20{s}.', petSick: ', sick', petOther: 'The save is for another edition than the loaded ROM.', petNoSet: 'The settings block is missing in the save.', petDone: '{n} saved. Send it with "Save to device".', petNothing: 'Nothing changed.', tabSave: 'Save', tabNames: 'Names', cardNoChars: 'no characters on this card', noRoomFrag: 'The ROM has enough free space in total, but the selected content needs a larger contiguous block.', noRoomKB: 'Not enough room: about {k} KB missing. Remove a program. (The top 64 KB stay free for the write protection.)', noRoomAdd: 'No room left for {n}: about {k} KB missing. (The top 64 KB stay free for the write protection.)', eyeMvT: 'Move the eyes', mouthMvT: 'Move the mouth', poseNr: 'Pose {i} of {n}', faceBig: 'Big', faceSmall: 'Small', poseOnly: 'This pose only', poseOnlyHint: 'The arrows move eyes or mouth only in the pose shown. For your own figures where single poses do not fit.', eyeMvHint: 'Applies on the field to Tamas that hatch or grow after writing. The small figure moves half as far.', planEyes: 'Eyes and mouth', namesHint: 'Change names: capitals, digits, space and . & \' ! ? /. Applies to every language with Latin letters on the device.', namesFields: 'Fields', namesChars: 'Tamas', namesItems: 'Items', namesFind: 'Search', namesUndo: 'Reset All', planNames: 'Names', planNamesN: '{n} changed', saveParaOut: 'Paradise save (.tamasave)', saveEmuOut: 'TamaEmu save (.sav)', saveInfo: 'Export takes the saves out of this ROM. An emulator save (TamaEmu .sav or T7Emu .bin) goes into the ROM, then save the ROM or write it to the device. A Paradise save goes straight to the device, connect it above for that.', saveOutT: 'Export', saveInT: 'Import', saveSecProg: 'Programs', saveSecPara: 'Paradise', saveParaOutB: 'Export (.tamasave)', saveParaInB: 'Write to Device (.tamasave)', saveProgInfo: 'Export takes the save of the chosen program out of this ROM. Import puts it into the ROM, then save the ROM or write it to the device.', saveParaInfo: 'Export takes the Paradise save out of this ROM. Write to device goes straight to the device, connect it above for that. Slot: which save.', saveSlotL: 'Slot', slotLive: '{n} (active)', slotEmpty: '{n} (empty)', slotNone: 'There is no save in this slot.', slotField: 'The save is for {a}, the slot for {b}.', slotDevOther: 'The menu on the device does not match the loaded ROM. Load the ROM from the device first.', slotSure: 'The save goes into {n} on the device and replaces the one there. Continue?', slotDone: 'Done: {n} replaced on the device.', slotClearB: 'Clear Slot', slotClearSure: '{n} is deleted on the device. A new game starts there afterwards, the field can be chosen. Continue?', slotClearDone: 'Done: {n} is empty.', saveNoProg: 'No matching program save was found in this ROM.', saveBtnOut: 'Export ({f})', saveBtnIn: 'Import ({f})', saveEmuInDone: 'TamaEmu save taken over ({d}). Now save the ROM or write it to the device.', saveEmuOther: 'The ROM has TamaEmu for {a}, the save is for {b}. Take it anyway?', saveNoRoom: 'This ROM has no room for TamaEmu.', saveEmuBad: 'This is not a fitting save for this program.', saveNoEmu: 'This ROM has no emulator.', saveDone: '{n} saved.', saveNoClock: '{n} saved. The clock is not included, set it in the app if needed.', devSaveRead: 'Back Up Save', devSaveWrite: 'Save to Device', devSaveHint: 'Back up your {editionParadise} save to a .tamasave file, or restore a backup to the connected device. The backup includes the device clock when available.', devSaveSure: 'The save is written to the device ({ed}) and replaces the current one. Continue?', devSaveDone: 'Done: {w} pages written. {c} The device can be restarted.', devSaveClock: 'Clock taken over.', devSaveClockNo: 'Please set the clock on the device.', devSaveGot: 'Backed up: {n}.', fl_saveOtherEd: 'the save is from another edition ({s}), the device is {d}', fl_saveFamily: 'the save does not fit this edition', fl_saveNoSettings: 'the settings block is missing, this is not a complete Paradise save', fl_saveOutside: '{n} pages lie outside the save and are not written', fl_saveIncomplete: 'the save does not hold every page, missing ones stay as on the device', emuUndo: 'Undo Choice', progMain: 'Starts with A and C', progMainL: 'First entry of the menu', progMenu: 'Starts from the menu', progGone: 'will be removed', progUndo: 'Undo', progDel: 'Remove', progNone: 'No emulator yet. Choose firmware or ROM, every further one goes to the menu.', appBadMain: '{f}: colour Tama and TG18 firmware go as a further program only in a start device. Otherwise remove the emulator above with × first.', emuInList: 'In the ROM as further programs: {n}. No need to choose them again.', doomLinkLess: ', {m} MB less with DOOM', emuPack: 'Pack the firmware', emuPackHint: 'Saves room (about 1 MB for an iD L), but the game runs slower.', packWarn: 'Note: the firmware of {n} gets packed so it fits. Packed, the game runs slower. For full speed put fewer programs into the ROM and switch off "Pack the firmware".\n\nContinue anyway?', savePackAsk: 'With this save the firmware only fits packed. Packed, the game runs slower. Switch on "Pack the firmware" and take it?', packNeed: 'This firmware only fits here packed: switch on "Pack the firmware" in the row of TamaEmu.', packFew: 'As the main program the firmware only fits partly packed. At some places the game can run slower because of that. Fully unpacked it runs in a start device as a program in the menu.', packTip: ' Tip: "Pack the firmware" for TamaEmu saves room.', emuNfc: '4U: emulate the NFC chip', emuNfcHint: 'The menu reacts to one press. Unticked it works as before.', emuClock: 'Take the clock from the Paradise at the start', emuClockHint: 'At every start the Paradise\'s time applies. The time in between is not played through.', emuAuto: 'Start when switched on', emuAutoHint: 'Hold the wheel: back to the Paradise, it stays there. Back into the emulator: A and C, or the reset button.', autoHintL: 'Starts at switching on instead of the menu. Hold B while switching on: menu.', emuHas: 'This ROM contains an emulator.', emuBig: 'This firmware is big: the field switch of the menu has no room next to it.', emuUp: 'Saving puts in the new emulator version. With "Keep saves" the save stays.',
+    emuNone: 'No emulator chosen.', petT: 'Change save', feldNeon: '{editionNeon}: the game switches its planets itself. Items, Tamapoints, Tama and programs work.', neonSave: '{editionNeon}: ROM Lab cannot edit its saves yet.', petOpen: 'Open Paradise Save', petRom: 'Save in the ROM', petClose: 'Close', petRomDone: 'Changed in the ROM. Now save the ROM or write it to the device (without "Keep saves", otherwise the device keeps its save).', petLevel: 'Level', petChar: 'Tama', petCare: 'Fed, happy, healthy, and clean', petSave: 'Save Changed Save', petKeep: 'unchanged', petKid: 'Kid', petYoung: 'Teen', petAdult: 'Adult', petNow: 'In the save: level {l}, Tama {c}, hunger {h}/6, happiness {j}/20{s}.', petSick: ', sick', petOther: 'The save is for another edition than the loaded ROM.', petNoSet: 'The settings block is missing in the save.', petDone: '{n} saved. Send it with "Save to device".', petNothing: 'Nothing changed.', tabSave: 'Save', tabNames: 'Names', cardNoChars: 'no characters on this card', noRoomFrag: 'The ROM has enough free space in total, but the selected content needs a larger contiguous block.', noRoomKB: 'Not enough room: about {k} KB missing. Remove a program. (The top 64 KB stay free for the write protection.)', noRoomAdd: 'No room left for {n}: about {k} KB missing. (The top 64 KB stay free for the write protection.)', eyeMvT: 'Move the eyes', mouthMvT: 'Move the mouth', poseNr: 'Pose {i} of {n}', faceBig: 'Big', faceSmall: 'Small', poseOnly: 'This pose only', poseOnlyHint: 'The arrows move eyes or mouth only in the pose shown. For your own figures where single poses do not fit.', eyeMvHint: 'Applies on the field to Tamas that hatch or grow after writing. The small figure moves half as far.', planEyes: 'Eyes and mouth', namesHint: 'Change names: capitals, digits, space and . & \' ! ? /. Applies to every language with Latin letters on the device.', namesFields: 'Fields', namesChars: 'Tamas', namesItems: 'Items', namesFind: 'Search', namesUndo: 'Reset All', planNames: 'Names', planNamesN: '{n} changed', saveParaOut: 'Paradise save (.sav)', saveEmuOut: 'TamaEmu save (.sav)', saveInfo: 'Export takes the saves out of this ROM. An emulator save (TamaEmu .sav or T7Emu .bin) goes into the ROM, then save the ROM or write it to the device. A Paradise save goes straight to the device, connect it above for that.', saveOutT: 'Export', saveInT: 'Import', saveSecProg: 'Programs', saveSecPara: 'Paradise', saveParaOutB: 'Export (.sav)', saveParaInB: 'Write to Device (.sav)', saveProgInfo: 'Export takes the save of the chosen program out of this ROM. Import puts it into the ROM, then save the ROM or write it to the device.', saveParaInfo: 'Export takes the Paradise save out of this ROM. Write to device goes straight to the device, connect it above for that. Slot: which save.', saveSlotL: 'Slot', slotLive: '{n} (active)', slotEmpty: '{n} (empty)', slotNone: 'There is no save in this slot.', slotField: 'The save is for {a}, the slot for {b}.', slotDevOther: 'The menu on the device does not match the loaded ROM. Load the ROM from the device first.', slotSure: 'The save goes into {n} on the device and replaces the one there. Continue?', slotDone: 'Done: {n} replaced on the device.', slotClearB: 'Clear Slot', slotClearSure: '{n} is deleted on the device. A new game starts there afterwards, the field can be chosen. Continue?', slotClearDone: 'Done: {n} is empty.', saveNoProg: 'No matching program save was found in this ROM.', saveBtnOut: 'Export ({f})', saveBtnIn: 'Import ({f})', saveEmuInDone: 'TamaEmu save taken over ({d}). Now save the ROM or write it to the device.', saveEmuOther: 'The ROM has TamaEmu for {a}, the save is for {b}. Take it anyway?', saveNoRoom: 'This ROM has no room for TamaEmu.', saveEmuBad: 'This is not a fitting save for this program.', saveNoEmu: 'This ROM has no emulator.', saveDone: '{n} saved.', saveNoClock: '{n} saved. The clock is not included, set it in the app if needed.', devSaveRead: 'Back Up Save', devSaveWrite: 'Save to Device', devSaveHint: 'Back up your {editionParadise} save to a .sav file, or restore a backup to the connected device. The backup includes the device clock when available.', devSaveSure: 'The save is written to the device ({ed}) and replaces the current one. Continue?', devSaveDone: 'Done: {w} pages written. {c} The device can be restarted.', devSaveClock: 'Clock taken over.', devSaveClockNo: 'Please set the clock on the device.', devSaveGot: 'Backed up: {n}.', fl_saveOtherEd: 'the save is from another edition ({s}), the device is {d}', fl_saveFamily: 'the save does not fit this edition', fl_saveNoSettings: 'the settings block is missing, this is not a complete Paradise save', fl_saveOutside: '{n} pages lie outside the save and are not written', fl_saveIncomplete: 'the save does not hold every page, missing ones stay as on the device', emuUndo: 'Undo Choice', progMain: 'Starts with A and C', progMainL: 'First entry of the menu', progMenu: 'Starts from the menu', progGone: 'will be removed', progUndo: 'Undo', progDel: 'Remove', progNone: 'No emulator yet. Choose firmware or ROM, every further one goes to the menu.', appBadMain: '{f}: colour Tama and TG18 firmware go as a further program only in a start device. Otherwise remove the emulator above with × first.', emuInList: 'In the ROM as further programs: {n}. No need to choose them again.', doomLinkLess: ', {m} MB less with DOOM', emuPack: 'Pack the firmware', emuPackHint: 'Saves room (about 1 MB for an iD L), but the game runs slower.', packWarn: 'Note: the firmware of {n} gets packed so it fits. Packed, the game runs slower. For full speed put fewer programs into the ROM and switch off "Pack the firmware".\n\nContinue anyway?', savePackAsk: 'With this save the firmware only fits packed. Packed, the game runs slower. Switch on "Pack the firmware" and take it?', packNeed: 'This firmware only fits here packed: switch on "Pack the firmware" in the row of TamaEmu.', packFew: 'As the main program the firmware only fits partly packed. At some places the game can run slower because of that. Fully unpacked it runs in a start device as a program in the menu.', packTip: ' Tip: "Pack the firmware" for TamaEmu saves room.', emuNfc: '4U: emulate the NFC chip', emuNfcHint: 'The menu reacts to one press. Unticked it works as before.', emuClock: 'Take the clock from the Paradise at the start', emuClockHint: 'At every start the Paradise\'s time applies. The time in between is not played through.', emuAuto: 'Start when switched on', emuAutoHint: 'Hold the wheel: back to the Paradise, it stays there. Back into the emulator: A and C, or the reset button.', autoHintL: 'Starts at switching on instead of the menu. Hold B while switching on: menu.', emuHas: 'This ROM contains an emulator.', emuBig: 'This firmware is big: the field switch of the menu has no room next to it.', emuUp: 'Saving puts in the new emulator version. With "Keep saves" the save stays.',
     emuOk: 'Firmware recognised ({size}). It is built in on save.', emuBad: 'Firmware not recognised: {e}', t18Ok: 'TG18 firmware recognised (T18Emu, Meets/On). It is built in on save.', t18Has: 'This ROM contains T18Emu.', t18Use: 'Start: hold A and C together on the home screen. Back: hold the wheel (saves). If T18Emu hangs: start with A and C, release them, press the wheel within the first 3 seconds and confirm with A. The firmware then starts over from its own save. Experimental: the Tama still runs slower than the real one.',
     emuGone: 'The emulator is removed on save.', emuMissing: 'This build does not contain the emulator program.',
     emuFail: 'Emulator not built in: {e}', savedEmu: 'Saved: {name}',
@@ -1039,7 +1039,7 @@ for (const link of document.querySelectorAll('a[href="#license"]')) {
 const myLabFields = { 1: 'Land', 2: 'Water', 3: 'Sky', 4: 'Forest', 5: 'Tropical', 6: 'Ice',
   7: 'Cosmic', 8: 'New Tamagotchi', 9: 'Tamagotchi' };
 const myLabFlashImage = () => myLabRom?.menuDraft?.flashImage || myLabRom?.flashImage;
-const MY_LAB_SAVE_EXT = '.tamastate';
+const TAMA_SAVE_EXT = '.sav';
 const myLabSaveView = () => myLabRom.saveDraft || myLabRom;
 const myLabFileBase = () => myLabRom.name.replace(/\.[^.]+$/, '');
 function myLabRomWithSave(image) {
@@ -4030,11 +4030,11 @@ $('myLabPortSwitch').onchange = event => setMyLabPort(event.target.checked);
 $('myLabSavePage').onchange = renderMyLabSavePage;
 $('myLabSaveBackup').onclick = () => {
   const page = myLabSelectedPage();
-  if (page) download(ML.saveBackup(page, VIS), myLabFileBase() + '-page-' + $('myLabSavePage').value + MY_LAB_SAVE_EXT);
+  if (page) download(ML.saveBackup(page, VIS), myLabFileBase() + '-page-' + $('myLabSavePage').value + TAMA_SAVE_EXT);
 };
 $('myLabSaveExport').onclick = () => {
   const save = myLabSaveView();
-  if (save.latest) download(ML.deviceSaveBackup(save.data, null, C, VIS), myLabFileBase() + MY_LAB_SAVE_EXT);
+  if (save.latest) download(ML.deviceSaveBackup(save.data, null, C, VIS), myLabFileBase() + TAMA_SAVE_EXT);
 };
 function myLabSetSaveDraft(draft) {
   myLabRom.saveDraft = draft;
@@ -8150,7 +8150,6 @@ function romExtras(rom) { const fe = F.embedded(); return fe ? E.appsRead(rom, F
 /* 1.6.11 test2: every kind has an export and import: T18Emu the firmware with its save (as the T18Emu app), Game Boy and
  * Master System the cartridge RAM (.sav as other emulators), Wolf3D its saved game */
 const SAVE_KINDS = new Set(['tama', 't7', 'v1', 't18', 'gb', 'sms', 'pm', 'ab', 'wolf']);
-function saveExt(k) { return k === 'tama' || k === 'gb' || k === 'sms' ? '.sav' : k === 'pm' || k === 'ab' ? '.eep' : '.bin'; }
 function savePrograms() {
   const rom = state.ctx.rom, out = [];
   if (emuInstalled()) { const ty = F.emuType(rom); if (SAVE_KINDS.has(ty)) out.push({ key: 'm', kind: ty, name: mainName(rom) || 'EMU', saveOff: 0xC0000, off: 0xA0000 }); }
@@ -8366,7 +8365,7 @@ $('residentBackupClose').onclick = () => {
 $('residentBackupSave').onclick = () => {
   const backup = residentBackup;
   if (!backup?.dirty || !state.ctx) return;
-  const name = backup.name.replace(/\.tamasave$/i, '') + '-residents-' + stamp() + '.tamasave';
+  const name = backup.name.replace(/\.(?:sav|tamasave)$/i, '') + '-residents-' + stamp() + TAMA_SAVE_EXT;
   download(SV.paraWrite(backup.save, backup.save.edition || state.ctx.editionId), name);
   backup.dirty = false;
   $('residentStatus').textContent = t('Edited resident save downloaded.');
@@ -8381,8 +8380,9 @@ function renderSave() {
   if ([...sel.options].some((o) => o.value === cur)) sel.value = cur;
   $('saveForRow').hidden = !ps.length;
   $('programSaveTools').hidden = !ps.length;
-  const p = saveProg(), f = !p ? '.sav / .bin' : saveExt(p.kind);
-  $('btnEmuOut').textContent = t('saveBtnOut', { f }); $('btnEmuIn').textContent = t('saveBtnIn', { f });
+  const p = saveProg();
+  $('btnEmuOut').textContent = t('saveBtnOut', { f: TAMA_SAVE_EXT });
+  $('btnEmuIn').textContent = t('saveBtnIn', { f: TAMA_SAVE_EXT });
   $('btnEmuOut').disabled = !p; $('btnEmuIn').disabled = false; $('btnEmuOut').title = '';
   $('saveStat').textContent = !p ? t('saveNoProg') : t('saveProgInfo');
   $('btnPetOpen').disabled = $('btnPetRom').disabled = !!state.ctx.clean || (neonRom() && !SV.neonSaveLayout(state.ctx.rom));
@@ -8705,7 +8705,7 @@ $('btnPetSave').onclick = () => {
     $('petStat').textContent = t('petRomDone'); renderPlan(); return;
   }
   const out = SV.paraWrite(nw, ed);
-  const name = petName.replace(/\.tamasave$/i, '') + '-' + stamp() + '.tamasave';
+  const name = petName.replace(/\.(?:sav|tamasave)$/i, '') + '-' + stamp() + TAMA_SAVE_EXT;
   download(out, name);
   if (neon) petOpen(nw, petName, false);
   $('petStat').textContent = t('petDone', { n: name });
@@ -8724,7 +8724,7 @@ $('btnParaOut').onclick = () => busy(t("Exporting Paradise Save"), async () => {
     const field = !ss.saves && F.fieldNames(rom)[i];
     tag = '-' + (field || 'Save ' + (i + 1)).toLowerCase().replace(/[^a-z0-9]+/g, '');
   }
-  const name = edSlug(ed) + tag + '-' + stamp() + '.tamasave';
+  const name = edSlug(ed) + tag + '-' + stamp() + TAMA_SAVE_EXT;
   download(SV.paraEncode(pages, ed, null), name);
   $('saveStat').textContent = t('saveNoClock', { n: name });
 });
@@ -8733,53 +8733,53 @@ $('btnEmuOut').onclick = () => busy(t("Exporting Program Save"), async () => {
   const rom = state.ctx.rom, slug = p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
   if (p.kind === 't7') {
     const sv = t7SaveOutSel(); if (!sv) { toast(t('t7NoSave'), true); return; }
-    const name = 't7emu-' + slug + '-' + stamp() + '-save.bin'; download(sv, name);
+    const name = 't7emu-' + slug + '-' + stamp() + '-save' + TAMA_SAVE_EXT; download(sv, name);
     $('saveStat').textContent = t('saveDone', { n: name }); return;
   }
   if (p.kind === 'v1') {
     const sv = rom.slice(p.saveOff, p.saveOff + 0x2000);
     if (sv.subarray(0, 0x1000).every((v) => v === 0xFF)) { toast(t('t7NoSave'), true); return; }
-    const name = 'v1emu-' + slug + '-' + stamp() + '-save.bin'; download(sv, name);
+    const name = 'v1emu-' + slug + '-' + stamp() + '-save' + TAMA_SAVE_EXT; download(sv, name);
     $('saveStat').textContent = t('saveDone', { n: name }); return;
   }
   if (p.kind === 'tama') {
     const cfg = p.key === 'm' ? romEmuCfg(rom) : SV.emuCfg(rom.subarray(p.off, p.off + 0x1000)); if (!cfg) { toast(t('saveNoEmu'), true); return; }
     const g = await SV.emuGuestAsync((a, n) => rom.subarray(a, a + n), cfg);
-    const name = cfg.app + '-' + (p.key === 'm' ? '' : slug + '-') + stamp() + '.sav';
+    const name = cfg.app + '-' + (p.key === 'm' ? '' : slug + '-') + stamp() + TAMA_SAVE_EXT;
     download(g, name);
     $('saveStat').textContent = t('saveDone', { n: name }); return;
   }
   const slug2 = (k) => k + '-' + slug + '-' + stamp();
   if (p.kind === 't18') {
     const fw = p.key === 'm' ? E.t18FromRom(rom) : E.t18FromRom(rom, p.off); if (!fw) { toast(t('saveNone'), true); return; }
-    const name = 't18emu-' + stamp() + '-save.bin'; download(fw, name);
+    const name = 't18emu-' + stamp() + '-save' + TAMA_SAVE_EXT; download(fw, name);
     $('saveStat').textContent = t('saveDone', { n: name }); return;
   }
   if (p.kind === 'ab') {
     const x = romExtras(rom)[p.key], sv = x && x.save;
     if (!sv || sv.length < 0x1400) { toast(t('saveNone'), true); return; }
     const out = sv.slice(0x1000, 0x1400); if (out.every((v) => v === 0xFF)) { toast(t('saveNone'), true); return; }
-    const name = slug + '-' + stamp() + '.eep'; download(out, name);
+    const name = slug + '-' + stamp() + TAMA_SAVE_EXT; download(out, name);
     $('saveStat').textContent = t('saveDone', { n: name }); return;
   }
   if (p.kind === 'pm') {
     const x = romExtras(rom)[p.key], sv = x && x.save;
     if (!sv || sv.length < 0x3000) { toast(t('saveNone'), true); return; }
     const out = sv.slice(0x1000, 0x3000); if (out.every((v) => v === 0xFF)) { toast(t('saveNone'), true); return; }
-    const name = slug + '-' + stamp() + '.eep'; download(out, name);
+    const name = slug + '-' + stamp() + TAMA_SAVE_EXT; download(out, name);
     $('saveStat').textContent = t('saveDone', { n: name }); return;
   }
   if (p.kind === 'gb' || p.kind === 'sms' || p.kind === 'wolf') {
     const x = romExtras(rom)[p.key], sv = x && x.save;
     if (!sv) { toast(t('saveNone'), true); return; }
     let out, name;
-    if (p.kind === 'wolf') { if ((sv[0x1000] | sv[0x1001] << 8 | sv[0x1002] << 16 | sv[0x1003] << 24) >>> 0 !== 0x56533357) { toast(t('saveNone'), true); return; } out = sv.slice(0, 0x10000); name = slug2(E.wolfSod(x.pack) ? 'sod' : 'wolf3d') + '-save.bin'; }
+    if (p.kind === 'wolf') { if ((sv[0x1000] | sv[0x1001] << 8 | sv[0x1002] << 16 | sv[0x1003] << 24) >>> 0 !== 0x56533357) { toast(t('saveNone'), true); return; } out = sv.slice(0, 0x10000); name = slug2(E.wolfSod(x.pack) ? 'sod' : 'wolf3d') + '-save' + TAMA_SAVE_EXT; }
     else {
       const n = p.kind === 'gb' ? gbSaveLen(x.rom) : smsSaveLen(sv);
       if (!n) { toast(t('saveNoBatt'), true); return; }
       out = sv.slice(0x1000, 0x1000 + n);
       if (out.every((v) => v === 0xFF)) { toast(t('saveNone'), true); return; }
-      name = slug + '-' + stamp() + '.sav';
+      name = slug + '-' + stamp() + TAMA_SAVE_EXT;
     }
     download(out, name);
     $('saveStat').textContent = t('saveDone', { n: name }); return;
@@ -8927,7 +8927,7 @@ async function backupMyLabDevice(d, cancel) {
   const first = ML.DEVICE_SAVE_FIRST, end = ML.DEVICE_SAVE_END;
   const region = await d.readSparse(first, end, devProg, cancel);
   const clock = await d.clockRead();
-  const name = (port ? 'my-lab-on-paradise-' : 'my-lab-') + stamp() + MY_LAB_SAVE_EXT;
+  const name = (port ? 'my-lab-on-paradise-' : 'my-lab-') + stamp() + TAMA_SAVE_EXT;
   download(ML.deviceSaveBackup(region, (clock?.ctrl & 0x80) ? clock.counter : null, C, VIS), name);
   measure('operation', 'backup_save', romEditionKey(d.info.edition));
   devRender(() => t('devSaveGot', { n: name }));
@@ -9068,7 +9068,7 @@ $('btnSaveRead').onclick = () => devTask(async () => {
     for (let p = a; p < b; p += 0x1000) pages.set(p, region.subarray(p - a, p - a + 0x1000));
   }
   const clock = await d.clockRead();
-  const names = [edSlug(ed) + '-' + stamp() + '.tamasave'];
+  const names = [edSlug(ed) + '-' + stamp() + TAMA_SAVE_EXT];
   download(SV.paraEncode(pages, ed, clock && (clock.ctrl & 0x80) ? clock : null), names[0]);
   measure('operation', 'backup_save', romEditionKey(ed));
   // TamaEmu on the device?
@@ -9080,7 +9080,7 @@ $('btnSaveRead').onclick = () => devTask(async () => {
     const part = new Uint8Array(SV.T7_EE + 0x4000);
     part.set(await d.read(SV.T7_EE, 0x4000), SV.T7_EE);
     const sv = SV.t7SaveOut(part);
-    if (sv) { names.push('t7emu-' + stamp() + '-save.bin'); download(sv, names[names.length - 1]); }
+    if (sv) { names.push('t7emu-' + stamp() + '-save' + TAMA_SAVE_EXT); download(sv, names[names.length - 1]); }
   }
   // further T7Emus (1.6.0): where the loaded ROM has them, if the device has the same program there
   if (state.ctx) for (const x of romExtras(state.ctx.rom)) {
@@ -9089,7 +9089,7 @@ $('btnSaveRead').onclick = () => devTask(async () => {
     const part = new Uint8Array(x.saveOff + 0x5000);
     part.set(await d.read(x.saveOff + 0x1000, 0x4000), x.saveOff + 0x1000);
     const sv = SV.t7SaveOut(part, x.saveOff);
-    if (sv) { names.push('t7emu-' + x.name.toLowerCase() + '-' + stamp() + '-save.bin'); download(sv, names[names.length - 1]); }
+    if (sv) { names.push('t7emu-' + x.name.toLowerCase() + '-' + stamp() + '-save' + TAMA_SAVE_EXT); download(sv, names[names.length - 1]); }
   }
   if (cfg) {
     // read less: if the loaded ROM has the same firmware layout, only the sectors that differ
@@ -9111,7 +9111,7 @@ $('btnSaveRead').onclick = () => devTask(async () => {
     const read = base ? (x, k) => base.subarray(x, x + k) : (x, k) => d.read(x, k);
     const guestProgress = (phase, done, total) => d.reportProgress(phase, done * 0x10000, total * 0x10000, devProg);
     const g = await SV.emuGuestAsync(read, cfg, base ? null : guestProgress);
-    names.push(cfg.app + '-' + stamp() + '.sav');
+    names.push(cfg.app + '-' + stamp() + TAMA_SAVE_EXT);
     download(g, names[1]);
   }
   devRender(() => t('devSaveGot', { n: names.join(', ') }) + (clock ? '' : ' ' + t('devSaveClockNo')));

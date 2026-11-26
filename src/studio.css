@@ -730,47 +730,91 @@ body:has(main[data-view="codes"]) .interface-language { margin-inline-start:auto
   padding:clamp(24px,4vw,54px) clamp(14px,4vw,48px) clamp(40px,6vw,80px);
 }
 .save-editor h1 { margin:0 0 clamp(16px,2.5vw,28px); font-size:clamp(1.8rem,4vw,2.65rem); line-height:1.15; letter-spacing:-.055em; }
-.save-editor-layout { display:grid; gap:clamp(16px,2.2vw,28px); align-items:start; }
-.save-editor-layout:has(#editSaveDocument:not([hidden])) { grid-template-columns:minmax(14rem,17rem) minmax(0,1fr); }
-.save-editor-sources,#editSaveDocument {
+.save-editor-layout { display:grid; gap:clamp(16px,2.5vw,28px); align-items:start; }
+.save-editor-layout:has(#editSaveDocument:not([hidden])) { grid-template-columns:minmax(12.5rem,15rem) minmax(0,1fr); }
+.save-editor-rail { min-width:0; display:grid; gap:12px; }
+.save-editor-sources,.save-editor-navigation,#editSaveDocument {
   min-width:0; background:var(--panel); border:1px solid var(--line); border-radius:16px;
   box-shadow:0 4px 14px #18263308;
 }
-.save-editor-sources { padding:clamp(14px,2vw,22px); }
-.save-editor-sources h2 { margin:0 0 14px; font-size:1rem; }
-.save-editor-layout:not(:has(#editSaveDocument:not([hidden]))) .save-editor-sources {
-  display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px;
+.save-editor-sources > summary {
+  cursor:pointer; padding:14px 16px; font-size:.93rem; font-weight:750;
+  border-radius:inherit; color:var(--ink); line-height:1.45; overflow-wrap:anywhere;
 }
-.save-editor-layout:not(:has(#editSaveDocument:not([hidden]))) .save-editor-sources > :not(.save-editor-source) { grid-column:1/-1; }
-.save-editor-layout:not(:has(#editSaveDocument:not([hidden]))) .save-editor-sources h2 { margin:0; }
+.save-editor-sources > summary::marker { color:var(--sky); }
+.save-editor-sources > summary:hover { background:var(--check-a); }
+.save-editor-sources[open] > summary { border-end-start-radius:0; border-end-end-radius:0; }
+.save-editor-source-grid { display:grid; gap:8px; padding:0 12px 12px; }
+.save-editor-layout:not(:has(#editSaveDocument:not([hidden]))) .save-editor-source-grid {
+  grid-template-columns:repeat(3,minmax(0,1fr)); padding:0 clamp(16px,3vw,26px) clamp(16px,3vw,26px);
+  gap:clamp(10px,2vw,18px);
+}
+.save-editor-layout:not(:has(#editSaveDocument:not([hidden]))) .save-editor-sources > summary {
+  padding:clamp(16px,3vw,26px); font-size:1.125rem;
+}
 .save-editor-source {
-  display:flex; flex-direction:column; align-items:flex-start; gap:6px;
-  padding:10px; border:1px solid transparent; border-radius:10px; background:var(--check-a);
+  display:grid; grid-template-columns:auto minmax(0,1fr); align-items:start; gap:10px;
+  padding:10px; border:1px solid var(--line); border-radius:11px; background:var(--panel);
 }
-.save-editor-layout:has(#editSaveDocument:not([hidden])) .save-editor-source + .save-editor-source { margin-top:8px; }
+.save-editor-layout:not(:has(#editSaveDocument:not([hidden]))) .save-editor-source {
+  grid-template-columns:minmax(0,1fr); grid-template-rows:auto 1fr; gap:18px;
+  padding:clamp(12px,2.4vw,22px); background:linear-gradient(150deg,var(--check-a),var(--panel) 85%);
+}
 .save-editor[data-source="file"] [data-kind="file"],
 .save-editor[data-source="rom"] [data-kind="rom"],
-.save-editor[data-source="device"] [data-kind="device"] { background:var(--check-b); border-color:var(--grass); }
+.save-editor[data-source="device"] [data-kind="device"] { background:var(--check-a); border-color:var(--grass); }
+.save-editor-source-icon {
+  width:34px; height:34px; display:grid; place-items:center; border-radius:9px;
+  background:var(--check-a); color:var(--sky);
+}
+.save-editor-layout:not(:has(#editSaveDocument:not([hidden]))) .save-editor-source-icon {
+  width:52px; height:52px; border-radius:12px; background:var(--panel);
+  border:1px solid var(--line);
+}
+.save-editor-source-icon i { position:relative; display:block; width:14px; height:17px; border:1.5px solid; border-radius:3px; box-sizing:border-box; }
+.save-editor-source-icon i::after { content:""; position:absolute; inset:7px 3px auto; height:1px; background:currentColor; box-shadow:0 3px; }
+[data-kind="rom"] > .save-editor-source-icon i { width:17px; height:14px; }
+[data-kind="rom"] > .save-editor-source-icon i::after { inset:3px; height:auto; border:1px solid; background:none; box-shadow:none; }
+[data-kind="device"] > .save-editor-source-icon i { width:17px; height:18px; border-radius:7px; }
+[data-kind="device"] > .save-editor-source-icon i::after { inset:3px 3px auto; height:5px; border-radius:1px; box-shadow:none; }
+.save-editor-source-content { display:grid; gap:5px; min-width:0; align-self:start; }
 .save-editor .btn { max-width:100%; white-space:normal; overflow-wrap:anywhere; }
-.save-editor-source .btn { width:100%; text-align:start; min-height:42px; }
-.save-editor-source .text-action { margin:3px 2px; font-size:.85rem; }
-.save-editor-source .hint,.save-editor-preview-notice .hint { margin:0; line-height:1.55; overflow-wrap:anywhere; }
-.save-editor-source .hint { padding-inline:2px; font-size:.76rem; }
-#editSaveStatus:empty { margin:0; display:none; }
-#editSaveStatus:not(:empty) { padding:10px; margin:12px 0 0; background:var(--check-a); border-radius:8px; overflow-wrap:anywhere; }
-#editSaveRestart,#editSaveDeviceControls { margin-block-start:10px; }
+.save-editor-source .btn { min-height:42px; display:flex; align-items:center; justify-content:flex-start; text-align:start; text-decoration:none; }
+.save-editor-source a.btn { color:var(--ink); }
+.save-editor-source .hint,.save-editor-preview-notice .hint { margin:0; line-height:1.5; overflow-wrap:anywhere; }
+.save-editor-source .hint { padding-inline:2px; font-size:.77rem; }
+#editSaveStatus:empty,#editSaveSourceStatus:not(:has(p:not(:empty))),#editSaveFooterStatus:not(:has(p:not(:empty))) { display:none; }
+#editSaveStatus { margin:0; padding:9px 11px; border-radius:8px; background:var(--check-a); color:var(--ink); overflow-wrap:anywhere; }
+#editSaveFooterStatus { flex:1 0 100%; }
+#editSaveFooterTransfer:not(:has(> :not([hidden]))),#editSaveSourceTransfer:not(:has(> :not([hidden]))) { display:none; }
+#editSaveFooterTransfer { flex:1 0 100%; }
 #editSaveReadProgress { padding:10px; margin-block-end:8px; border-radius:8px; background:var(--check-a); }
 #editSaveReadProgress .device-progress-details { justify-content:space-between; row-gap:4px; font-size:.85rem; }
 #editSaveAmount { color:var(--soft); font-variant-numeric:tabular-nums; }
 #editSaveReadProgress .transfer-progress { margin-block-end:0; }
-.save-editor-context:not([hidden]) { display:grid; gap:5px; margin-top:12px; min-width:0; }
+.save-editor-navigation { padding:12px; }
+.save-editor-navigation > h2 { margin:0; font-size:.82rem; font-weight:750; }
+#editSaveMobileJump { display:none; flex:1 0 100%; min-width:0; }
+#editSaveJump { min-height:42px; width:100%; min-width:0; }
+#editSaveSectionLinks h3 { margin:13px 4px 3px; color:var(--soft); font-size:.76rem; }
+#editSaveSectionLinks ul { margin:0; padding:0; list-style:none; }
+#editSaveSectionLinks a { display:block; padding:6px 8px; border-radius:6px; color:var(--ink); font-size:.86rem; text-decoration:none; overflow-wrap:anywhere; }
+#editSaveSectionLinks a:hover,#editSaveSectionLinks a[aria-current] { background:var(--check-a); color:var(--sky); }
+.save-editor-document-controls { display:flex; flex-wrap:wrap; gap:10px; }
+.save-editor-context:not([hidden]) { display:grid; gap:5px; margin-top:12px; min-width:0; flex:1 1 12rem; max-width:23rem; }
 .save-editor-context label { font-size:.8rem; font-weight:650; color:var(--soft); }
-.save-editor-context select { min-width:0; max-width:100%; min-height:38px; }
-.save-editor-meta { padding:clamp(14px,2.2vw,24px); border-bottom:1px solid var(--line); }
-.save-editor-title-row { display:flex; flex-wrap:wrap; gap:8px 12px; align-items:center; }
-.save-editor-title-row h2 { flex:1 1 16rem; min-width:0; margin:0; font-size:clamp(1rem,2vw,1.25rem); line-height:1.45; overflow-wrap:anywhere; }
-.save-editor-title-actions { display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:8px; margin-inline-start:auto; }
-.save-editor-title-actions .btn { min-height:40px; }
+.save-editor-context select { width:100%; min-width:0; min-height:42px; }
+.save-editor-meta {
+  padding:clamp(16px,3vw,25px); border-bottom:1px solid var(--line); border-radius:15px 15px 0 0;
+  background:linear-gradient(155deg,var(--check-a),var(--panel) 68%);
+}
+.save-editor-title-row { display:flex; flex-wrap:wrap; gap:12px 16px; align-items:center; }
+.save-editor-identity { flex:1 1 18rem; min-width:0; }
+.save-editor-identity h2 { margin:0; font-size:clamp(1.2rem,2.3vw,1.6rem); line-height:1.35; letter-spacing:-.02em; overflow-wrap:anywhere; }
+.save-editor-identity-meta { display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; margin-top:8px; color:var(--soft); font-size:.85rem; }
+.save-editor-identity-meta > span:empty { display:none; }
+.save-editor-title-actions { display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:8px; }
+.save-editor-title-actions .btn { min-height:42px; }
 .save-editor-preview-dialog { padding:clamp(18px,4vw,28px); }
 .save-editor-preview-dialog h2 { font-size:1.25rem; margin:0 0 .65rem; }
 .save-editor-preview-dialog p { margin:0; line-height:1.55; }
@@ -829,19 +873,43 @@ body:has(main[data-view="codes"]) .interface-language { margin-inline-start:auto
 .save-editor-actions {
   position:sticky; bottom:0; z-index:2; justify-content:space-between;
   background:var(--panel); border-top:1px solid var(--line); border-radius:0 0 15px 15px;
-  padding:12px clamp(14px,2.2vw,24px); box-shadow:0 -4px 12px #18263308;
+  padding:10px clamp(14px,2.2vw,24px) max(10px,env(safe-area-inset-bottom));
+  box-shadow:0 -4px 16px #18263312;
 }
-.save-editor-actions .btn { min-height:40px; }
+.save-editor-actions .btn { min-height:44px; }
+#editSaveOriginal { font-size:.8rem; }
+body:has(#saveEditor:not([hidden]) #editSaveDocument:not([hidden])) .toast {
+  top:max(14px,env(safe-area-inset-top)); bottom:auto; pointer-events:none;
+}
+.save-editor-fields > .save-editor-data > details { scroll-margin-top:22px; scroll-margin-bottom:105px; }
 .save-editor :is(button,a,select,input,summary):focus-visible { outline:2px solid var(--sky); outline-offset:2px; }
-@media (max-width:760px) {
-  .save-editor-layout:has(#editSaveDocument:not([hidden])),
-  .save-editor-layout:not(:has(#editSaveDocument:not([hidden]))) .save-editor-sources { grid-template-columns:minmax(0,1fr); }
-  .save-editor-actions { position:static; box-shadow:none; }
+@media (min-width:901px) and (min-height:730px) {
+  .save-editor-layout:has(#editSaveDocument:not([hidden])) .save-editor-rail {
+    position:sticky; top:20px; max-height:calc(100dvh - 40px); overflow:auto; padding:2px;
+  }
 }
-@media (max-width:440px) {
+@media (max-width:900px) {
+  .save-editor-layout:has(#editSaveDocument:not([hidden])) { grid-template-columns:minmax(0,1fr); }
+  .save-editor-navigation { display:none; }
+  #editSaveMobileJump:not([hidden]) { display:block; }
+  .save-editor-source-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+}
+@media (max-width:580px) {
+  .save-editor-source-grid,.save-editor-layout:not(:has(#editSaveDocument:not([hidden]))) .save-editor-source-grid { grid-template-columns:minmax(0,1fr); }
+  .save-editor-layout:not(:has(#editSaveDocument:not([hidden]))) .save-editor-source {
+    grid-template-columns:auto minmax(0,1fr); grid-template-rows:auto; gap:12px;
+  }
+  .save-editor-layout:not(:has(#editSaveDocument:not([hidden]))) .save-editor-source-icon { width:40px; height:40px; }
   .save-editor-inline-actions > label { flex-basis:100%; max-width:none; }
-  .save-editor-actions,.save-editor-save-actions { display:grid; grid-template-columns:minmax(0,1fr); }
+  .save-editor-controls { gap:10px; }
+  .save-editor-save-actions { flex:1 0 100%; }
+  .save-editor-actions:not(:has(.save-editor-save-actions > .btn:not([hidden]) ~ .btn:not([hidden]))) .save-editor-save-actions { flex:1 1 9rem; }
+  .save-editor-save-actions > .btn { flex:1 1 8rem; }
 }
+@media (min-width:360px) and (max-width:580px) {
+  .save-editor-group { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media (max-height:520px) { .save-editor-actions { position:static; box-shadow:none; } }
 .save-editor-controls > label.save-editor-book-entry { min-height:48px; }
 .save-editor-book-portrait:not([hidden]),.save-editor-choice-portrait:not([hidden]) {
   flex:0 0 32px; width:32px; height:32px; display:grid; place-items:center;

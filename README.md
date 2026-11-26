@@ -47,9 +47,11 @@ Serve the entire `dist/web/` directory, including the versioned catalog. To choo
 | 💿 **Update File** | Create or patch a My Lab microSD update using a supported stock ROM and the matching device key. |
 | 🔀 **Experimental → Porting** | Adapt a supported My Lab ROM to run on Paradise hardware. |
 
-Open **Save Editor** next to **Device** to edit the connected device’s save, the save in the loaded ROM, or a backup file. The editor opens Paradise `.tamasave` and My Lab `.tamastate` or supported legacy `.SAV` backups. Load a matching ROM to see character and item previews. Download a fresh copy of the save, apply changes to the loaded ROM, or review the target and block count before writing to a connected device.
+Open **Save Editor** next to **Device** to edit the connected device’s save, the save in the loaded ROM, or a backup file. Paradise and My Lab backups use `.sav`. ParaLab identifies the device family from the file contents. It also opens legacy Paradise `.tamasave` and My Lab `.tamastate` or `.mylabsave` backups. Load a matching ROM to see character and item previews. Download a fresh copy of the save, apply changes to the loaded ROM, or review the target and block count before writing to a connected device.
 
-In Neon Planets, open **Save Editor → Planet Residents** to add, replace, move or remove residents in the loaded ROM or a matching `.tamasave` backup. For on-device editing, enable **Tama Editor** in **Menu** before exporting the ROM. On Neon Planets, open **ParaLab → Progress → Planet Residents** to add an adult Tama, edit its appearance, move residents between planets or remove them.
+Program saves also export as `.sav`, preserving their native bytes. Older `.bin` and `.eep` saves can still be imported. If another program expects an exact filename, use that name when transferring the export.
+
+In Neon Planets, open **Save Editor → Planet Residents** to add, replace, move or remove residents in the loaded ROM or a matching `.sav` backup. For on-device editing, enable **Tama Editor** in **Menu** before exporting the ROM. On Neon Planets, open **ParaLab → Progress → Planet Residents** to add an adult Tama, edit its appearance, move residents between planets or remove them.
 
 In Neon Planets, open **ParaLab → Tama → Planet Travel** to let Young and Adult Tama move between unlocked planets. The switch starts off and is saved with the active game.
 
@@ -154,7 +156,7 @@ The updater checks the ROM and the installed rescue region, then verifies each s
 
 **Save backup to SD** shows separate progress bars for reading the save, writing the card, and verifying the card. Flash Tool reads each batch back before publishing the file in the card root.
 
-The filename uses the device clock, for example `ML0-YYYYMMDD-HHMMSS-00.tamastate`. The digit after `ML` identifies the active game (`0`) or save slot (`1` or `2`). The last two digits distinguish backups made in the same second. Flash Tool uses a shorter numbered filename when the clock is unavailable. ParaLab also imports older My Lab `.SAV` backups.
+The filename uses the device clock, for example `ML0-YYYYMMDD-HHMMSS-00.sav`. The digit after `ML` identifies the active game (`0`) or save slot (`1` or `2`). The last two digits distinguish backups made in the same second. Flash Tool uses a shorter numbered filename when the clock is unavailable. Older My Lab backups can be imported under their original filenames.
 
 ## Source Layout
 

@@ -11,6 +11,7 @@
 #define SD_SLOT_SIZE (SD_GARDEN_SIZE+0x5000u)
 #define SD_ACTIVE_FIRST 0xCA1000u
 #define SD_ACTIVE_END 0xE00000u
+#define SD_BACKUP_SUFFIX ".sav"
 
 static const char sd_backup_cancel_message[]="BACKUP CANCELLED";
 static volatile int *const sd_backup_io_error=(int*)0x1801A840u;
@@ -214,7 +215,7 @@ static int sd_backup_entry(SdFat *fs,const char *path,u32 cluster,u32 size,int p
       if(tail_lba!=lba && !sd_backup_read(tail_lba,sec,1)) return 0;
       u8 *tail=sec+tail_pos;
       if(tail[0]!=tail_order || tail[11]!=0x0F || tail[13]!=sum || sd_le16(tail+unit)!='_') return 0;
-      tail[unit]='e';
+      tail[unit]=path[3+last];
       return sd_backup_sector(tail_lba,sec,fs->block);
     }
   }
@@ -280,17 +281,19 @@ static const char *sd_backup_file(u32 bank,u32 slot,u32 want,char *path,SdAlloca
   int dated=path[6]=='-';
   u32 last=0;
   while(path[last+1]) last++;
+  char suffix_end=path[last];
   int opened=0;
   for(u32 i=0;i<100 && code==8 && !sd_backup_cancelled();i++){
     const char digits[]="0123456789ABCDEF";
     if(dated) sd_digits(path+23,i,2);
-    else for(u32 j=0;j<5;j++) path[6+j]=digits[((stamp+i)>>(16-4*j))&15];
+    // The nine-character stem ensures FAT creates a long-name entry for publishing.
+    else for(u32 j=0;j<6;j++) path[6+j]=digits[((stamp+i)>>(20-4*j))&15];
     code=SD_FAT_OPEN(file,path,1); /* Keep any existing backup with this name. */
     if(!code){ SD_FAT_CLOSE(file); code=8; continue; }
     if(code!=4) break;
     path[last]='_';
     code=SD_FAT_OPEN(file,path,6); /* FA_WRITE | FA_CREATE_NEW */
-    path[last]='e';
+    path[last]=suffix_end;
     opened=!code;
   }
   const char *error=0;
@@ -328,8 +331,8 @@ static const char *sd_backup_file(u32 bank,u32 slot,u32 want,char *path,SdAlloca
 }
 
 static void sd_backup(u32 bank,u32 slot,u32 crc,u32 time){
-  char path[sizeof("0:/ML0-00000000-000000-00.tamastate")];
-  const char *pattern=time?"0:/ML0-00000000-000000-00.tamastate":"0:/ML000000.tamastate";
+  char path[sizeof("0:/ML0-00000000-000000-00" SD_BACKUP_SUFFIX)];
+  const char *pattern=time?"0:/ML0-00000000-000000-00" SD_BACKUP_SUFFIX:"0:/ML0000000" SD_BACKUP_SUFFIX;
   for(u32 i=0;(path[i]=pattern[i]);i++){}
   if(time) sd_backup_date(path+7,time);
   REG(SD_LAST_R1)=0;
@@ -373,7 +376,7 @@ static void sd_backup(u32 bank,u32 slot,u32 crc,u32 time){
     if(time){
       path[25]=0;
       sd_text(5,57,path+3,UI_WHITE);
-      sd_text(5,70,".tamastate",UI_WHITE);
+      sd_text(5,70,SD_BACKUP_SUFFIX,UI_WHITE);
     } else sd_text(5,57,path+3,UI_WHITE);
     push_fb();
     if(sd_wait_key(SD_B|SD_C)&SD_B) reset_system();

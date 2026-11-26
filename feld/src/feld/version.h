@@ -1,14 +1,14 @@
 /* Generated from feld/VERSION by gen_version.py. */
 #ifndef PARAMIX_VERSION_H
 #define PARAMIX_VERSION_H
-#define PARAMIX_VERSION "0.2.85"
+#define PARAMIX_VERSION "0.2.88"
 #ifndef HOST
 #ifdef __ELF__
 #define PARAMIX_VERSION_SECTION __attribute__((section(".pmxversion")))
 #else
 #define PARAMIX_VERSION_SECTION
 #endif
-static const char paramix_version_tag[] __attribute__((used)) PARAMIX_VERSION_SECTION = "PMXVER:0.2.85";
+static const char paramix_version_tag[] __attribute__((used)) PARAMIX_VERSION_SECTION = "PMXVER:0.2.88";
 #undef PARAMIX_VERSION_SECTION
 #endif
 #endif
