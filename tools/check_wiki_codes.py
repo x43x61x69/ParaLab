@@ -12,6 +12,9 @@ from urllib.request import Request, urlopen
 PAGE = "Tamagotchi_Paradise/List_of_Codes"
 WIKI = "https://tamagotchi.fandom.com"
 CATALOG = Path(__file__).resolve().parents[1] / "src" / "collection_reference.json"
+# Fandom lists a final S. The sticker code has a final 8:
+# https://vpets.org/codes/tamagotchi-paradise
+LAB_TRANSCRIPTIONS = {("Tropical Meowtchi", "4AEX49VS"): "4AEX49V8"}
 
 
 class CodeTables(HTMLParser):
@@ -65,6 +68,8 @@ def read_codes(html):
             for value in reversed(candidates):
                 if re.fullmatch(pattern, value.upper()):
                     code = re.sub(r"\s+", "", value).upper()
+                    if kind == "Lab":
+                        code = LAB_TRANSCRIPTIONS.get((row[0], code), code)
                     codes[kind][code] = row[0]
                     break
     if len(codes["Lab"]) < 15 or len(codes["Shop"]) < 47:

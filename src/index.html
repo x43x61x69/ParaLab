@@ -1122,7 +1122,10 @@ __ANALYTICS_CARD__
       <button class="tab" id="myLabTabSprites" role="tab" aria-controls="myLabSprites" aria-selected="false" tabindex="-1" data-t="tabAll"></button>
       <span class="nav-group" role="presentation">Device &amp; Data</span>
       <button class="tab" id="myLabTabGarden" role="tab" aria-controls="myLabGarden" aria-selected="false" tabindex="-1" data-rom-term="garden" data-rom-profile="my-lab">Garden</button>
-      <button class="tab" id="myLabTabMenu" role="tab" aria-controls="myLabMenu" aria-selected="false" tabindex="-1"><span data-tool-label data-t="myLabMenuTitle"></span><span class="tool-attention" aria-hidden="true" hidden>!</span></button>
+      <button class="tab" id="myLabTabMenu" role="tab" aria-controls="myLabMenu" aria-selected="false" tabindex="-1">
+        <span><span data-tool-label data-t="myLabMenuTitle"></span><small id="myLabMenuNavStatus" aria-hidden="true" hidden></small></span>
+        <span class="tool-attention" aria-hidden="true" hidden>!</span>
+      </button>
       <button class="tab" id="myLabTabSave" role="tab" aria-controls="myLabSave" aria-selected="false" tabindex="-1" data-t="tabSave"></button>
       <button class="tab" id="myLabTabUpdate" role="tab" aria-controls="myLabUpdate" aria-selected="false" tabindex="-1" data-t="myLabUpdateHeading"></button>
       <span class="nav-group" role="presentation">Language</span>
@@ -1229,7 +1232,10 @@ __ANALYTICS_CARD__
           <input id="myLabMenuSwitch" type="checkbox" role="switch" aria-describedby="myLabMenuHint">
         </label>
         <p class="hint" id="myLabMenuHint"></p>
-        <input type="file" id="myLabMenuKey" accept=".key" hidden>
+        <aside class="device-risk" id="myLabMenuRisk" hidden>
+          <p data-t="myLabWriteMenuHelp"></p>
+        </aside>
+        <div id="myLabMenuKeySlot"></div>
       </section>
       <section class="menu-group" id="myLabMenuContents" hidden>
         <h3 class="menu-heading" id="myLabEntriesHeading">Device Menu Entries</h3>

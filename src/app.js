@@ -99,10 +99,11 @@ const T = {
     'Paradise Menu': '{editionParadise} Menu', 'My Lab Menu': '{editionMyLab} Menu',
     myLabMenuTitle: 'Menu', myLabStock: 'Stock {editionMyLab}', myLabComputer: 'Computer → ParaLab',
     myLabMenuDraft: 'ParaLab menu staged',
-    myLabInstallHint: 'Choose the device key to add ParaLab to the Computer menu.',
+    myLabInstallHint: 'Provide the device key below, then turn on the switch to add ParaLab to the Computer menu.',
     myLabRefreshHint: 'Update the ParaLab menu in the exported ROM and keep its save.',
     myLabMenuChecking: 'Checking for an update…', myLabMenuCurrent: 'Up to date',
     myLabMenuAvailable: 'Update available',
+    myLabMenuNotIncluded: 'ParaLab Menu not included',
     myLabFlashUsage: '{pct}% used · {used} of {total} in programmed flash blocks',
     myLabSettings: 'Settings → ParaLab', myLabBoot: 'ParaLab at startup', myLabParadise: 'ParaLab at startup ({editionParadise})',
     myLabExperimental: 'Experimental', myLabPortTab: 'Porting',
@@ -120,6 +121,10 @@ const T = {
     myLabPortLoadedBackup: 'Loaded {editionParadise} backup',
     myLabPortReplacePairingTitle: 'Replace Paired ROM Backup?',
     myLabPortReplacePairingHelp: 'This port was built with a different {editionParadise} ROM backup. Continue only if the new backup came from this device before it was ported. After writing, keep the new backup for restoring the original firmware.',
+    myLabWriteMenuTitle: 'Write Without Enabling the ParaLab Menu?',
+    myLabWriteMenuHelp: 'If the written ROM lacks a working ParaLab Menu entry, you may be unable to reopen Flash Tool after restarting. You may need an external flash programmer to rewrite the ROM.',
+    myLabWriteMenuBack: 'Return to Menu',
+    myLabWriteMenuContinue: 'Continue Writing',
     myLabPortReplacePairingWrite: 'Replace Pairing and Write',
     myLabPortUnsupported: 'Open a supported {editionMyLab} ROM to build a port.',
     myLabMenuInstalled: 'ParaLab menu: {n} KiB · {crc}', myLabCrcOk: 'Checksum valid', myLabCrcBad: 'Checksum invalid',
@@ -965,6 +970,7 @@ function showMyLabTab(tab) {
     button.tabIndex = active ? 0 : -1;
     $(button.getAttribute('aria-controls')).hidden = !active;
   }
+  placeMyLabKeyControls();
   rememberNavigation({ lab: tab.id });
   $('labHeading').textContent = toolLabel(tab);
   $('labTool').value = tab.id;
@@ -1086,6 +1092,9 @@ function myLabUsedFlash(rom) {
   }
   return used;
 }
+function myLabMenuChoicePending(ctx) {
+  return !!ctx?.menuAction && !ctx.menuCurrent && !ctx.menuDraft && !ctx.portDraft;
+}
 function renderMyLabOverview() {
   const { rom, menuDraft, menuBusy, menuCurrent, menuAction, portDraft, usedFlash } = myLabRom;
   const edition = sourceEdition();
@@ -1109,7 +1118,15 @@ function renderMyLabOverview() {
   $('myLabMenuPlan').textContent = status ? t(status) : $('myLabMenuInfo').textContent;
   const updateAvailable = status === 'myLabMenuAvailable';
   $('myLabUpdateNotice').hidden = !updateAvailable;
-  renderToolAttention('lab', $('myLabTabMenu'), updateAvailable ? ['myLabMenuAvailable'] : []);
+  const navStatus = !menuBusy && myLabMenuChoicePending(myLabRom)
+    ? menuAction === 'install' ? 'myLabMenuNotIncluded' : 'myLabMenuAvailable'
+    : null;
+  $('myLabMenuRisk').hidden = !navStatus;
+  $('myLabMenuSwitch').setAttribute('aria-describedby', navStatus ? 'myLabMenuHint myLabMenuRisk' : 'myLabMenuHint');
+  const navLabel = $('myLabMenuNavStatus');
+  navLabel.hidden = !navStatus;
+  navLabel.textContent = navStatus ? t(navStatus) : '';
+  renderToolAttention('lab', $('myLabTabMenu'), navStatus ? [navStatus] : []);
   $('myLabMenuChip').parentElement.hidden = updateAvailable;
   $('myLabMenuChip').className = 'chip ' + (menuDraft ? 'new' : menuCurrent ? 'keep' : 'off');
   renderFlashLayout($('myLabLayoutBar'), $('myLabLayoutLegend'), [
@@ -1164,7 +1181,7 @@ function renderMyLabMenu() {
   $('myLabMenuActions').hidden = !action || myLabRom.menuCurrent;
   const toggle = $('myLabMenuSwitch');
   toggle.checked = !!myLabRom.menuDraft;
-  toggle.disabled = !!myLabRom.menuBusy;
+  renderUartKeyControls();
   $('myLabMenuSwitchLabel').textContent = action === 'update' ? t("Include ParaLab Menu Update") : t("Include ParaLab Menu");
   $('myLabMenuHint').textContent = myLabRom.menuBusy ? t('myLabMenuChecking') :
     myLabRom.menuDraft ? t("Included in the next ROM export.") : t(action === 'update' ? 'myLabRefreshHint' : 'myLabInstallHint');
@@ -3936,20 +3953,9 @@ $('myLabMenuSwitch').onchange = event => {
   } else if (myLabRom.menuAction === 'update') {
     void myLabPrepareMenu(myLabRom);
   } else {
-    // Keep the switch off until the selected key successfully prepares the draft.
     event.target.checked = false;
-    $('myLabMenuKey').click();
-  }
-};
-$('myLabMenuKey').onchange = async event => {
-  const file = event.target.files[0], ctx = myLabRom;
-  event.target.value = '';
-  if (!file || !ctx) return;
-  try {
-    if (file.size > 128) throw new Error('Open the matching eight-digit My Lab device key');
-    await myLabPrepareMenu(ctx, (await file.text()).trim());
-  } catch (error) {
-    if (ctx === myLabRom) toast(em(error), true);
+    const key = $('myLabUartKeyHex').value.trim();
+    if (isUartKey(key)) void myLabPrepareMenu(myLabRom, key);
   }
 };
 function myLabPortNeedsKey(ctx) {
@@ -4129,20 +4135,28 @@ function showUpdateSource() {
   const fromRom = $('updateSourceRom').checked;
   $('updateFromRom').hidden = !fromRom;
   $('updateFromPackage').hidden = fromRom;
-  $(fromRom ? 'updateRomKeySlot' : 'updatePackageKeySlot').append($('myLabUartKeyControls'));
+  placeMyLabKeyControls();
+}
+function placeMyLabKeyControls() {
+  const onMenu = myLabRom?.menuAction === 'install' && $('myLabTabMenu').getAttribute('aria-selected') === 'true';
+  const slot = $(onMenu ? 'myLabMenuKeySlot' : $('updateSourceRom').checked ? 'updateRomKeySlot' : 'updatePackageKeySlot');
+  const controls = $('myLabUartKeyControls');
+  if (controls.parentElement !== slot) slot.append(controls);
 }
 function isUartKey(value) { return /^(?:0x)?[0-9a-f]{8}$/i.test(value); }
 function renderUartKeyControls() {
   const input = $('myLabUartKeyHex'), value = input.value.trim();
   const valid = isUartKey(value);
   const supported = !!myLabRom && MLM.canCreateUartUpdate(myLabRom.rom);
-  const blocked = !supported || myLabRom.uartKeyBusy;
+  const blocked = !supported || myLabRom.uartKeyBusy || myLabRom.menuBusy;
   const canPatch = !blocked && !!myLabRom?.update;
   $('myLabUartKeyControls').hidden = !supported;
   input.disabled = $('myLabUartKeyFileOpen').disabled = $('myLabUartAuto').disabled = !!blocked;
   $('myLabUartCreate').disabled = blocked || !valid;
   $('myLabUpdatePatch').disabled = !canPatch;
   $('myLabUpdatePatchWithKey').disabled = !canPatch || !valid;
+  $('myLabMenuSwitch').disabled = !!myLabRom?.menuBusy ||
+    (myLabRom?.menuAction === 'install' && (blocked || (!valid && !myLabRom.menuDraft)));
   input.setAttribute('aria-invalid', value && !valid ? 'true' : 'false');
   $('myLabUartKeyHint').textContent = value && !valid ? t('myLabUartKeyInvalid') : '';
 }
@@ -5098,7 +5112,9 @@ function deviceWritePlan() {
   const myLab = device?.info.edition === 0xFE;
   const bridge = device?.info.edition === FL.MY_LAB_ON_PARADISE;
   const stagedPort = myLabRom?.portDraft;
-  const labImage = stagedPort?.flashImage || myLabFlashImage();
+  const installedLabImage = stagedPort?.flashImage || myLabFlashImage();
+  const stockMyLabWrite = myLab && !installedLabImage && myLabRom?.menuAction === 'install';
+  const labImage = installedLabImage || (stockMyLabWrite ? myLabRom.rom : null);
   const paradiseImage = !!stagedPort || (!!labImage && ML.isParadiseFlashImage(labImage, C));
   const raw = myLab || bridge || paradiseImage;
   const portUpdate = bridge && paradiseImage;
@@ -5107,6 +5123,7 @@ function deviceWritePlan() {
   const onlyChanged = fixedOptions || deviceOnlyChanged;
   const fastWrite = !!device?.info.fastWrite && $('devFast').checked;
   const source = myLabRom || state.ctx;
+  const reviewMyLabMenu = myLabMenuChoicePending(myLabRom) && (myLab || paradiseImage);
   const paradiseBackup = bridge && !!state.ctx && !!F.edition(state.ctx.rom) && !F.isClean(state.ctx.rom);
   const canWrite = myLab ? !!labImage && !paradiseImage :
     bridge ? paradiseImage || paradiseBackup : !!state.ctx || paradiseImage;
@@ -5138,7 +5155,8 @@ function deviceWritePlan() {
   const saves = !device || !canWrite ? '—' : keep ? t(myLab || portUpdate ? 'Keep the device save and Garden.' :
     'Preserve compatible device saves and apply supported workspace save edits.') : t('Replace with save data from the write image.');
   const edition = sourceEdition(!!stagedPort);
-  return { device, source, name, edition, target, content, saves, canWrite, raw, myLab, labImage, paradiseImage, portUpdate, keep, onlyChanged, fastWrite, fixedOptions };
+  return { device, source, name, edition, target, content, saves, canWrite, raw, myLab, labImage, paradiseImage,
+    portUpdate, keep, onlyChanged, fastWrite, fixedOptions, reviewMyLabMenu, stockMyLabWrite };
 }
 
 function renderWriteContent(container, plan) {
@@ -5167,7 +5185,7 @@ function renderWriteReview(plan) {
   $('writeSaves').textContent = plan.saves;
 }
 
-function deviceDialog(message, title = t("Confirm Device Operation"), action = t("Continue"), notice = false, writeMode = null, alternate = null, confirmations = []) {
+function deviceDialog(message, title = t("Confirm Device Operation"), action = t("Continue"), hideCancel = false, writeMode = null, alternate = null, confirmations = []) {
   const dialog = $('deviceDialog');
   if (dialog.open) return Promise.resolve(false);
   const review = writeMode === 'review';
@@ -5177,7 +5195,7 @@ function deviceDialog(message, title = t("Confirm Device Operation"), action = t
   $('deviceDialogMessage').hidden = review;
   $('writeSummary').hidden = !review;
   dialog.setAttribute('aria-describedby', (review ? 'writeSummary' : 'deviceDialogMessage') + (writeMode ? ' writeRisk' : ''));
-  $('deviceDialogCancel').hidden = notice;
+  $('deviceDialogCancel').hidden = hideCancel;
   $('deviceDialogAlternate').hidden = !alternate;
   $('deviceDialogAlternate').textContent = alternate || '';
   const accept = $('deviceDialogAccept');
@@ -5212,7 +5230,7 @@ function deviceDialog(message, title = t("Confirm Device Operation"), action = t
         ? (alternate ? choice : true) : false);
     }, { once: true });
     dialog.showModal();
-    $(notice ? 'deviceDialogAccept' : 'deviceDialogCancel').focus();
+    $(hideCancel ? 'deviceDialogAccept' : 'deviceDialogCancel').focus();
   });
 }
 
@@ -7823,6 +7841,21 @@ $('btnWrite').onclick = async () => {
   if (!device || dv.run || device.info.readOnly || !plan.canWrite) return;
   if (plan.raw) {
     const screenFit = myLabRom?.screenFit;
+    const samePlan = () => dv.d === device && !dv.run && !dv.opening &&
+      (myLabRom || state.ctx) === plan.source && myLabRom?.screenFit === screenFit &&
+      deviceWritePlan().labImage === labImage;
+    if (plan.reviewMyLabMenu) {
+      const choice = await deviceDialog(t('myLabWriteMenuHelp'), t('myLabWriteMenuTitle'), t('myLabWriteMenuBack'),
+        true, null, t('myLabWriteMenuContinue'));
+      if (!samePlan()) return;
+      if (choice === 'accept') {
+        showDestination('workspace');
+        const tab = $('myLabTabMenu');
+        showMyLabTab(tab);
+        (tab.offsetWidth ? tab : $('labTool')).focus();
+      }
+      if (choice !== 'alternate') return;
+    }
     const keepMyLabSaves = (plan.myLab || plan.portUpdate) && keep;
     let image;
     try {
@@ -7832,9 +7865,6 @@ $('btnWrite').onclick = async () => {
       toast(em(error), true);
       return;
     }
-    const samePlan = () => dv.d === device && (myLabRom || state.ctx) === plan.source &&
-      myLabRom?.screenFit === screenFit &&
-      (myLabRom?.portDraft?.flashImage || myLabFlashImage()) === labImage;
     if (!samePlan()) return;
     if (!await confirmDeviceWrite(plan, image) ||
         (!keepMyLabSaves && !await deviceDialog(t(plan.myLab || plan.portUpdate ? 'devMyLabReplace' : 'devSureFull')))) return;
@@ -7842,7 +7872,10 @@ $('btnWrite').onclick = async () => {
     await devWriteTask(async () => {
       const confirmParadiseBackupReplacement = () => confirmFlashOperation(t('myLabPortReplacePairingHelp'),
         t('myLabPortReplacePairingTitle'), t('myLabPortReplacePairingWrite'));
-      const result = await device.write(image, { onlyChanged, fastWrite, keepMyLabSaves, confirmParadiseBackupReplacement, confirmWrite: confirmFlashWriteCount }, devProg, () => dv.cancel);
+      const result = await device.write(image, {
+        onlyChanged, fastWrite, keepMyLabSaves, confirmParadiseBackupReplacement, confirmWrite: confirmFlashWriteCount,
+        stockMyLabRescueApp: plan.stockMyLabWrite ? MLM.flashToolBinary(false) : null,
+      }, devProg, () => dv.cancel);
       if (result.cancelled) { devRender(t('devCancelled')); return; }
       const kept = result.kept ? t('devKept', { k: result.kept }) : '';
       dv.restartReason = result.written > 0 ? 'rom' : null;

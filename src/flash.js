@@ -1120,10 +1120,32 @@ class Paradise {
       !myLab && !installBridge && !restoreParadise;
     let keepPortSlotMarker = false;
     if (myLab) {
-      if (!ML?.isFlashImage(img, { crc32 }) || ML.isParadiseFlashImage(img, { crc32 })) {
+      const menuInstalled = ML?.isFlashImage(img, { crc32 }) && !bridgeImage;
+      const stockWrite = !menuInstalled && opts.stockMyLabRescueApp && ML?.isMyLab(img) && u32(img, 8) === 0x13;
+      if (!menuInstalled && !stockWrite) {
         throw new Error('Choose a My Lab image with Menu and Flash Tool installed for My Lab hardware');
       }
-      if (await this.crc(RESCUE_OFF, BLOCK64) !== crc32(img, RESCUE_OFF, BLOCK64)) {
+      if (stockWrite) {
+        const existing = await this.read(RESCUE_OFF, BLOCK64);
+        const header = img.subarray(0, SECTOR);
+        const existingWritable = validFlashTool(existing, RESCUE_OFF) &&
+          String.fromCharCode(...existing.subarray(8, 16)) === 'PXMLSD01';
+        if (!existingWritable && !this.info.rescueBootstrap)
+          throw new Error('The image must retain the My Lab rescue region installed on the device');
+        const rescueBlockImage = rescueBlock(existingWritable ? existing.subarray(0, RESCUE_CODE) : opts.stockMyLabRescueApp, header);
+        if (!rescueBlockImage) throw new Error('Invalid My Lab rescue image');
+        const table = rescueBlockImage.subarray(RESCUE_CODE, RESCUE_CODE + SECTOR);
+        w32(table, 0x1FC, bootTableSum(table));
+        if (existingWritable &&
+            table.some((byte, i) => byte !== existing[RESCUE_CODE + i]))
+          throw new Error('The My Lab boot header does not match this device');
+        const target = existingWritable ? existing : rescueBlockImage;
+        if (!allFF(img, RESCUE_OFF, BLOCK64) && target.some((byte, i) => byte !== img[RESCUE_OFF + i]))
+          throw new Error('The My Lab rescue area contains unrelated data');
+        image = new Uint8Array(img);
+        image.set(target, RESCUE_OFF);
+        bootstrapRescue = !existingWritable;
+      } else if (await this.crc(RESCUE_OFF, BLOCK64) !== crc32(img, RESCUE_OFF, BLOCK64)) {
         if (!this.info.rescueBootstrap) throw new Error('The image must retain the My Lab rescue region installed on the device');
         bootstrapRescue = true;
       }
