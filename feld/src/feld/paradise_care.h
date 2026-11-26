@@ -1,7 +1,8 @@
 #ifndef PARADISE_CARE_H
 #define PARADISE_CARE_H
 
-#define CARE_SAVE 0xF80u
+#define CARE_SAVE 0xFC8u
+#define CARE_LEGACY_SAVE 0xF80u
 #define CARE_MARK 0xC7u
 #define CARE_FOOD 1u
 #define CARE_JOY 2u
@@ -16,8 +17,10 @@
 #define CARE_HOOK_OFF 0xC00u
 #define CARE_HOOK_MAGIC 0x45524143u
 #define CARE_OPTIONS_MAGIC 0x32524143u
+#define CARE_STORAGE_MAGIC 0x33524143u
 #define CARE_AUTOPILOT_PATCH 1u
 #define CARE_FUEL_PATCH 2u
+#define CARE_NO_LEGACY 4u
 #define CARE_FUEL_MAX 60u
 
 /* Offsets in the CRC-prefixed settings page. These are shared by the
@@ -32,9 +35,14 @@ static const struct CareLayout care_layouts[] = {
   {0x114,0x151,0x190,0x1AA,0x220,0x19C,0x153},
 };
 
-static inline unsigned care_enabled(const unsigned char *save){
-  unsigned raw=save[CARE_SAVE+1u];
-  return save[CARE_SAVE]!=CARE_MARK ? 0u : raw==CARE_LEGACY_AUTOPILOT ? CARE_AUTOPILOT : raw&CARE_MASK;
+static inline unsigned care_enabled(const unsigned char *save,unsigned no_legacy){
+  unsigned off=CARE_SAVE;
+  if(save[off]!=CARE_MARK){
+    if(no_legacy || save[CARE_LEGACY_SAVE]!=CARE_MARK) return 0u;
+    off=CARE_LEGACY_SAVE;
+  }
+  unsigned raw=save[off+1u];
+  return raw==CARE_LEGACY_AUTOPILOT ? CARE_AUTOPILOT : raw&CARE_MASK;
 }
 
 static inline void care_clear_event(unsigned char *save,unsigned pet,unsigned event){

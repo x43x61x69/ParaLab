@@ -172,7 +172,8 @@ function keepAwakeSupport(rom, menu) {
     !!(menu?.flags & F_KEEP_AWAKE), true);
 }
 const CARE_OFFSET = 0xC00, CARE_RECORD = 0x40, CARE_MAGIC = 0x45524143, CARE_OPTIONS_MAGIC = 0x32524143;
-const CARE_AUTOPILOT_PATCH = 1, CARE_FUEL_PATCH = 2, CARE_FUEL_ENTRY = 0x68;
+const CARE_STORAGE_MAGIC = 0x33524143;
+const CARE_AUTOPILOT_PATCH = 1, CARE_FUEL_PATCH = 2, CARE_NO_LEGACY = 4, CARE_FUEL_ENTRY = 0x68;
 const CARE_PROFILES = {
   gen1: { layout: 0, settings: 0x18000B9C, fuelOffset: 0x11F,
     tick: [0x22800, 0xB0D0B580, 0x914E904F, 0xFE7BF067], fuel: [0x67730, 0xF8ADB083, 0xF640000A, 0xF6C130A0] },
@@ -188,7 +189,16 @@ function careOptions(rom, menu) {
   if (!menu) return 0;
   const at = menu.stubOff + CARE_OFFSET;
   if (u32(rom, at + CARE_RECORD) !== CARE_MAGIC) return 0;
-  return u32(rom, at + 0x58) === CARE_OPTIONS_MAGIC ? u32(rom, at + 0x5C) : CARE_AUTOPILOT_PATCH;
+  const magic = u32(rom, at + 0x58);
+  return magic === CARE_STORAGE_MAGIC || magic === CARE_OPTIONS_MAGIC
+    ? u32(rom, at + 0x5C) & (CARE_AUTOPILOT_PATCH | CARE_FUEL_PATCH) : CARE_AUTOPILOT_PATCH;
+}
+function careBookOverlap(rom, menu) {
+  return !!(menu && ((menu.flags & F_BOOK_SKY) ||
+    ((menu.flags & F_BOOK6) && u32(rom, menu.stubOff + 0x304) <= 3)));
+}
+function careUsesLegacyStorage(rom, menu) {
+  return !!menu && u32(rom, menu.stubOff + CARE_OFFSET + 0x58) !== CARE_STORAGE_MAGIC;
 }
 function careSiteMatches(rom, [off, original, ...tail], helper) {
   return tail.every((word, i) => u32(rom, off + 4 * (i + 1)) === word)
@@ -203,7 +213,7 @@ function careSupport(rom, menu) {
   return CARE_AUTOPILOT_PATCH | (careSiteMatches(rom, profile.fuel,
     installed & CARE_FUEL_PATCH ? at + CARE_FUEL_ENTRY : undefined) ? CARE_FUEL_PATCH : 0);
 }
-function careInstall(rom, stub, profile, options) {
+function careInstall(rom, stub, profile, options, bookOverlap) {
   const { layout, settings, tick, fuel, fuelOffset } = CARE_PROFILES[profile];
   if (!careSiteMatches(rom, tick) || (options & CARE_FUEL_PATCH && !careSiteMatches(rom, fuel)))
     throw new Error('Optional care patches do not match this firmware');
@@ -211,7 +221,7 @@ function careInstall(rom, stub, profile, options) {
     ? (typeof require === 'undefined' ? null : require('node:fs').readFileSync(__dirname + '/../feld/paradise-care.bin'))
     : b64(CARE_B64);
   const at = stub + CARE_OFFSET;
-  if (!bytes || u32(bytes, CARE_RECORD) !== CARE_MAGIC || u32(bytes, 0x58) !== CARE_OPTIONS_MAGIC ||
+  if (!bytes || u32(bytes, CARE_RECORD) !== CARE_MAGIC || u32(bytes, 0x58) !== CARE_STORAGE_MAGIC ||
       bytes.length > 0x1000 - CARE_OFFSET ||
       !isFF(rom, at, bytes.length)) throw new Error('Paradise care helper does not fit the menu launcher');
   const code = new Uint8Array(bytes);
@@ -220,7 +230,7 @@ function careInstall(rom, stub, profile, options) {
   w32(code, 0x4C, layout);
   w32(code, 0x50, tick[1]);
   bw(xip(at + 0x54), xip(tick[0] + 4)).forEach((word, i) => w16(code, 0x54 + 2 * i, word));
-  w32(code, 0x5C, options);
+  w32(code, 0x5C, options | (bookOverlap ? CARE_NO_LEGACY : 0));
   w32(code, 0x60, options & CARE_FUEL_PATCH ? fuel[0] : 0);
   w32(code, 0x64, settings + fuelOffset);
   rom.set(code, at);
@@ -620,7 +630,7 @@ function slotRead(rom, f, i) {
   else p.stream.set(rom.subarray(p.b + 0x1000, p.b + 0x1000 + p.bytes));
   return p;
 }
-async function slotReadAsync(read, f, i) {
+async function slotReadAsync(read, f, i, progress) {
   const head = new Uint8Array(await read(slotAddr(f, i), 0x1000));
   const p = slotParse(f, i, head);
   if (!p) {
@@ -628,8 +638,16 @@ async function slotReadAsync(read, f, i) {
     return null;
   }
   p.stream = new Uint8Array(p.bytes);
-  if (p.pool) for (let k = 0; k < p.list.length; k++) slotFill(p, await read(p.list[k], 0x1000), k);
-  else p.stream.set((await read(p.b + 0x1000, (p.bytes + 0xFFF) & ~0xFFF)).subarray(0, p.bytes));
+  const total = p.pool ? p.list.length * 0x1000 : (p.bytes + 0xFFF) & ~0xFFF;
+  progress?.(0, total);
+  if (p.pool) {
+    for (let k = 0; k < p.list.length; k++) {
+      slotFill(p, await read(p.list[k], 0x1000), k);
+      progress?.((k + 1) * 0x1000, total);
+    }
+  } else {
+    p.stream.set((await read(p.b + 0x1000, total, progress)).subarray(0, p.bytes));
+  }
   return p;
 }
 /**
@@ -1548,7 +1566,7 @@ function feldApply(rom, opts, saved, emb, E, placeCatalogAfterAssets = false) {
     }
   }
   if (tama || neonTama) appearanceRebuild(out, true);
-  if (care) careInstall(out, stubOff, P.name, care);
+  if (care) careInstall(out, stubOff, P.name, care, careBookOverlap(out, { stubOff, flags: u32(out, prog + ci + 36) }));
   if (keepAwake) {
     if (!keepAwakePatch(out, stubOff, P.name)) throw new Error('Keep awake hook does not match this ROM');
     w32(out, prog + ci + 36, u32(out, prog + ci + 36) | F_KEEP_AWAKE);
@@ -1686,6 +1704,8 @@ root.ParamixFeld = { F_KEEP_AWAKE, F_NEON_TRAVEL, keepAwakeSupport, poolCount, s
 if (typeof module !== 'undefined') module.exports = root.ParamixFeld;
 root.ParamixFeld.menuPayload = menuPayload;
 root.ParamixFeld.menuVersion = menuVersion;
+root.ParamixFeld.careUsesLegacyStorage = careUsesLegacyStorage;
+root.ParamixFeld.careBookOverlap = careBookOverlap;
 root.ParamixFeld.fieldNameRows = fieldNameRows;
 root.ParamixFeld.preserveMenuVersion = preserveMenuVersion;
 })(typeof window !== 'undefined' ? window : globalThis);

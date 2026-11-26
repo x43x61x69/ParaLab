@@ -557,7 +557,17 @@ __ANALYTICS_CARD__
           <label for="editSaveSlot" data-t="saveSlotL">Slot</label>
           <select id="editSaveSlot"></select>
         </div>
-        <div class="tools" id="editSaveDeviceControls" hidden>
+        <div id="editSaveDeviceControls" hidden>
+          <div id="editSaveReadProgress" hidden>
+            <div class="device-progress-details">
+              <span id="editSavePhase"></span>
+              <small id="editSaveAmount"></small>
+            </div>
+            <div class="transfer-progress" id="editSaveProgress" hidden>
+              <div class="flash" id="editSaveMeter" role="progressbar" aria-labelledby="editSavePhase" aria-valuemin="0" aria-valuemax="100"><span class="seg emu" id="editSaveBar"></span></div>
+              <span id="editSavePercent" aria-hidden="true"></span>
+            </div>
+          </div>
           <button type="button" class="btn small" id="editSaveStop" data-t="Cancel">Cancel</button>
         </div>
         <button type="button" class="btn small" id="editSaveRestart" data-t="Restart Device" hidden>Restart Device</button>

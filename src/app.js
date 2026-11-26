@@ -5403,7 +5403,8 @@ function flMsg(x) {
 }
 function transferProgress(prefix, done, total, label) {
   const percent = total > 0 ? Math.max(0, Math.min(100, Math.floor(done / total * 1000) / 10)) : null;
-  const indeterminate = prefix === 'dev' && total === 0;
+  const deviceTransfer = prefix === 'dev' || prefix === 'editSave';
+  const indeterminate = deviceTransfer && total === 0;
   $(prefix + 'Progress').hidden = percent === null && !indeterminate;
   $(prefix + 'Progress').classList.toggle('indeterminate', indeterminate);
   $(prefix + 'Percent').hidden = indeterminate;
@@ -5411,7 +5412,7 @@ function transferProgress(prefix, done, total, label) {
   if (indeterminate) $(prefix + 'Meter').removeAttribute('aria-valuenow');
   if (percent !== null) {
     $(prefix + 'Bar').style.setProperty('--end', percent + '%');
-    const displayPercent = prefix === 'dev' ? Math.round(percent) : percent;
+    const displayPercent = deviceTransfer ? Math.round(percent) : percent;
     $(prefix + 'Percent').textContent = displayPercent + '%';
     $(prefix + 'Meter').setAttribute('aria-valuenow', displayPercent);
   }

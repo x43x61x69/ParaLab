@@ -11,6 +11,7 @@ const V = root.ParamixVisit || (typeof require !== 'undefined' ? require('./visi
 const PAGE = 0x1000, RECORD = 0x4000;
 const COMPOSITES = 0x600, SPRITES = 0x1D34;
 const SIX_SET = 0xF04, SIX_DNA_MARK = 0xF0F, SIX_ROSTER = 0xF64, SIX_EXPANSION = 0xF70;
+const SIX_NAMES = ['Tropical', 'Glacier', 'Forest', 'Land', 'Water', 'Sky'];
 const layouts = {
   gen1: { table: 0x94214, count: 24, zero: 0xDEE000, first: 0xDF2000, index: 1, roster: 0x1BC, stride: 8, packed: true },
   jade: { table: 0x9954C, count: 24, zero: 0xDEE000, first: 0xDF2000, index: 1, roster: 0x1C0, stride: 8, packed: true },
@@ -154,6 +155,10 @@ function flashAddress(rom, d, i) {
   const off = i === 0 ? d.zero : d.first + (i - d.index) * RECORD;
   return native === 0x60000000 + off && u32(rom, d.table + (d.count + i) * 4) === RECORD ? off : 0;
 }
+function residentBanks() {
+  return root.ParamixResidentBanks ||
+    (typeof require !== 'undefined' ? require('./paradise_resident_banks.js') : null);
+}
 function settings(rom, neon) {
   if (neon) {
     const ring = new Map(S.NEON_SETTINGS.map(at => [at, rom.subarray(at, at + PAGE)]));
@@ -163,8 +168,7 @@ function settings(rom, neon) {
   return page ? { page } : null;
 }
 function bankPatch(rom) {
-  const banks = root.ParamixResidentBanks ||
-    (typeof require !== 'undefined' ? require('./paradise_resident_banks.js') : null);
+  const banks = residentBanks();
   return banks?.inspect(rom) ? banks : null;
 }
 function info(rom) {
@@ -205,7 +209,7 @@ function fieldView(rom, data, id) {
     ? flags(store.page, d, (active ? inactive : d.roster) + physical * d.stride) : 0;
   const slots = Array.from({ length: own & 0xF0 ? 8 : capacity }, (_, slot) => {
     const index = d.index + physical * (d.packed ? 4 : 8) + slot;
-    const primary = flashAddress(rom, d, index);
+    const primary = data.readOnly ? d.first + (index - d.index) * RECORD : flashAddress(rom, d, index);
     const privateAddress = banks && primary ? banks.address(index) : 0;
     const marker = privateAddress ? banks.markerAddress(index) : 0;
     const committed = marker && u32(rom, marker) === banks.commitValue;
@@ -214,20 +218,38 @@ function fieldView(rom, data, id) {
     const occupied = !!(own & (1 << slot));
     const oppositeOccupied = !!(other & (1 << slot));
     const blocked = !available || !address || (!banks && oppositeOccupied);
-    const resident = occupied && readAddress ? nativeGhost(rom.subarray(readAddress, readAddress + RECORD)) : null;
+    const sharedConflict = data.readOnly && !banks && !active && oppositeOccupied;
+    const resident = occupied && readAddress && !sharedConflict ? nativeGhost(rom.subarray(readAddress, readAddress + RECORD)) : null;
     const preserve = privateAddress && !committed && !bank && oppositeOccupied ? privateAddress : 0;
     return { field: id, slot, address, occupied, blocked, status: resident ? 'ready' : occupied ? 'unreadable' : 'empty',
       id: resident?.id ?? null, bytes: resident?.bytes ?? null, marker, preserve };
   });
   return { id, name: names[id], bank, active, available, physical, roster, capacity, slots };
 }
-function inspect(rom) {
-  const data = info(rom);
+function inspect(rom, save) {
+  let data = info(rom);
+  // A stock ROM can supply pictures for a supported six-field backup.
+  // Its firmware tables cannot establish how to write the added bank.
+  if (save && S.family(save.edition) === 'gen3' && !data.banks) {
+    const store = settings(rom, false);
+    if (store?.page[SIX_DNA_MARK] === 0x5A) {
+      const candidate = residentBanks();
+      const banks = candidate?.ranges.every(([a, b]) => {
+        for (let at = a; at < b; at += PAGE) if (save.pages.get(at)?.length !== PAGE) return false;
+        return true;
+      }) ? candidate : null;
+      if (banks || !(data.names?.length > 3)) data = {
+        d: layouts.gen3, store, names: SIX_NAMES, bank: Number(store.page[SIX_SET] === 1), banks,
+        six: { kind: 'gen3' }, separate: true, physicalField: store.page[499], edition: save.edition, readOnly: true,
+      };
+    }
+  }
   if (data.reason) return { reason: data.reason, fields: [], current: null };
   const fields = data.names.map((_, id) => fieldView(rom, data, id));
   const active = nativeGhost(rom.subarray(data.d.zero, data.d.zero + RECORD));
   const currentField = fields.find(field => field.active && field.physical === data.physicalField)?.id;
-  return { edition: data.edition, fields, currentField, current: active ? { id: active.id, bytes: active.bytes } : null };
+  return { edition: data.edition, fields, currentField, readOnly: data.readOnly,
+    current: active ? { id: active.id, bytes: active.bytes } : null };
 }
 
 function memorial(rom, slot, appearance) {

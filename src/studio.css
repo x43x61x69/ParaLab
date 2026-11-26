@@ -465,10 +465,10 @@ button,input,select,textarea { font-family:inherit; }
   right:calc(100% - round(nearest,var(--end,0%),var(--pitch)));
 }
 .transfer-progress { display:grid; grid-template-columns:minmax(0,1fr) 6ch; align-items:center; gap:10px; margin-block:8px; }
-#devProgress.indeterminate { grid-template-columns:minmax(0,1fr); }
-#devProgress.indeterminate #devBar { left:0; right:auto; width:25%; animation:uart-progress 1.4s ease-in-out infinite alternate; }
+.transfer-progress.indeterminate { grid-template-columns:minmax(0,1fr); }
+.transfer-progress.indeterminate .seg { left:0; right:auto; width:25%; animation:uart-progress 1.4s ease-in-out infinite alternate; }
 @keyframes uart-progress { to { transform:translateX(300%); } }
-@media (prefers-reduced-motion:reduce) { #devProgress.indeterminate #devBar { animation:none; left:37.5%; } }
+@media (prefers-reduced-motion:reduce) { .transfer-progress.indeterminate .seg { animation:none; left:37.5%; } }
 .device-progress-details { display:flex; flex-wrap:wrap; align-items:baseline; column-gap:1em; }
 .device-progress-details > * { flex:0 0 auto; max-width:100%; }
 #devEta { margin-inline-start:auto; color:var(--soft); }
@@ -759,6 +759,10 @@ body:has(main[data-view="codes"]) .interface-language { margin-inline-start:auto
 #editSaveStatus:empty { margin:0; display:none; }
 #editSaveStatus:not(:empty) { padding:10px; margin:12px 0 0; background:var(--check-a); border-radius:8px; overflow-wrap:anywhere; }
 #editSaveRestart,#editSaveDeviceControls { margin-block-start:10px; }
+#editSaveReadProgress { padding:10px; margin-block-end:8px; border-radius:8px; background:var(--check-a); }
+#editSaveReadProgress .device-progress-details { justify-content:space-between; row-gap:4px; font-size:.85rem; }
+#editSaveAmount { color:var(--soft); font-variant-numeric:tabular-nums; }
+#editSaveReadProgress .transfer-progress { margin-block-end:0; }
 .save-editor-context:not([hidden]) { display:grid; gap:5px; margin-top:12px; min-width:0; }
 .save-editor-context label { font-size:.8rem; font-weight:650; color:var(--soft); }
 .save-editor-context select { min-width:0; max-width:100%; min-height:38px; }

@@ -446,6 +446,7 @@ const EDITOR_LAYOUTS = {
   gen3: { points: 0xC0, bag: 0x270, poop: 0x150, timers: 0x188, elapsed: 0x1A2, stars: 0x20C, active: 0xDCE000, table: 0xACBB8 },
   neon: { points: 0xC0, bag: 0x284, poop: 0x151, timers: 0x190, elapsed: 0x1AA, stars: 0x220, active: 0xE4E000, table: 0xAE954 },
 };
+const CARE_SAVE = 0xFC8, CARE_LEGACY_SAVE = 0xF80, CARE_MARK = 0xC7;
 const MISSION_NAMES = [
   'Feed Meals', 'Feed Snacks', 'Clean Tamas', 'Play Wins', 'Clean Poop', 'Collect Poop',
   'Fast Collections', 'Visit Planets', 'Put to Sleep', 'Wake Tamas', 'Connections', 'Send Gifts',
@@ -489,6 +490,9 @@ function paradiseEditorInfo(save, config) {
   const neon = kind === 'neon', progress = neon && neonProgress(save), page = paraSettings(save, save.edition);
   if (!page || (neon && !progress)) return null;
   const tama = paraPet(save, save.edition), at = pet.tama, delta = neon ? 1 : 0;
+  const legacyCare = !config?.careBookOverlap && !config?.split;
+  const care = legacyCare && (config?.legacyCare || page[CARE_SAVE] !== CARE_MARK) ? CARE_LEGACY_SAVE : CARE_SAVE;
+  const careFlags = page[care] === CARE_MARK ? page[care + 1] : null;
   const shift = kind === 'gen3' ? 12 : 0, starShift = neon ? 13 : 4, starMax = neon ? 1023 : 255;
   const items = [];
   for (let i = 0; i < 640; i++) {
@@ -505,8 +509,8 @@ function paradiseEditorInfo(save, config) {
     cleanliness: page[at + 0x14] & 16 ? 0 : Math.max(0, 3 - page[pet.dirt]),
     fuel: page[at + 0x1B], poop: page[layout.poop], meals: page[at + 0x3A + delta],
     happinessCount: page[at + 0x3B + delta], mistakes: page[at + 0x1E], vitamin: !!(page[at + 0x14] & 2),
-    autopilot: page[0xF80] === 0xC7 ? (page[0xF81] === 15 ? 47 : page[0xF81] & 63) : 0,
-    autopilotStored: page[0xF80] === 0xC7 && (page[0xF81] & 0xC0) === 0x80,
+    autopilot: careFlags === 15 ? 47 : careFlags & 63,
+    autopilotStored: careFlags !== null && (careFlags & 0xC0) === 0x80,
     awake: page[0xFC0] === 0xA7, planetTravel: neon && page[0xFC4] === 0xB6,
     planet: neon ? page[0x207] : null, planets: neon ? page[0x89] & 7 : null,
     cells: cells && (config?.ids || [0, 1, 2]).map(id => ({ id, count: cells.filter(value => value === id).length })),
@@ -636,8 +640,10 @@ function paradiseEditorSet(save, changes, config) {
     page[at + 0x1E] = count;
   }
   if (changes.autopilot !== undefined && config?.autopilot) {
-    page[0xF80] = 0xC7;
-    page[0xF81] = 128 | editorNumber(changes.autopilot, 63);
+    const care = config.legacyCare ? CARE_LEGACY_SAVE : CARE_SAVE;
+    if (config.legacyCare && (config.careBookOverlap || config.split)) throw new Error('ParaLab Menu Update Available');
+    page[care] = CARE_MARK;
+    page[care + 1] = 128 | editorNumber(changes.autopilot, 63);
   }
   if (changes.awake !== undefined && config?.awake) {
     page[0xFC0] = changes.awake ? 0xA7 : 0;

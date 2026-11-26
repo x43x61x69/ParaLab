@@ -13,8 +13,9 @@ static u32 care_patches(void){
   u32 at=g_cfg.stub_off+CARE_HOOK_OFF;
   if(!care_layout() || g_cfg.stub_off<0x90000u || g_cfg.stub_off>=0x110000u ||
      rd32(at+0x40u)!=CARE_HOOK_MAGIC) return 0;
-  return rd32(at+0x58u)==CARE_OPTIONS_MAGIC ? rd32(at+0x5Cu) : CARE_AUTOPILOT_PATCH;
+  return (rd32(at+0x58u)&~0x01000000u)==CARE_OPTIONS_MAGIC ? rd32(at+0x5Cu) : CARE_AUTOPILOT_PATCH;
 }
+static u32 care_menu_enabled(void){ return care_enabled(g_set,care_patches()&CARE_NO_LEGACY); }
 static void care_label(char *out,const char *s){ while((*out++=*s++)){} }
 static int care_confirm(const char *title,const char *label){
   rect(0,0,FELD_SCREEN_W,FELD_SCREEN_H,BG);

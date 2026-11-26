@@ -57,6 +57,7 @@ function saveEditorButtons() {
   $('editSaveFields').inert = busy;
   $('editSaveUnsaved').hidden = !saveEditorDirty(session) || (session.downloaded === session.working && !session.changes.size);
   $('editSaveDeviceControls').hidden = !running || !dv.run;
+  $('editSaveStop').disabled = dv.cancel;
   $('editSaveRestart').hidden = !device || !dv.restartReason || busy;
   $('editSaveApply').hidden = source?.kind !== 'rom';
   $('editSaveApply').disabled = busy || !session?.working || !saveEditorDirty(session) ||
@@ -88,7 +89,7 @@ function saveEditorCompatible(context, lab, edition) {
 function saveEditorPreview(session = saveEditor.session) {
   if (!session) return null;
   const { lab, context } = session.source, edition = session.working?.edition;
-  return [context, saveEditor.preview, lab ? myLabRom : state.ctx]
+  return [context, session.preview, lab ? myLabRom : state.ctx, saveEditor.preview]
     .find(ctx => saveEditorCompatible(ctx, lab, edition)) || null;
 }
 function matchSaveEditorPreview(session, context) {
@@ -101,7 +102,8 @@ function syncSaveEditorRomPreview() {
   if (!session || session.source.kind === 'rom') return;
   const context = myLabRom || state.ctx;
   if (!matchSaveEditorPreview(session, context)) return;
-  saveEditor.preview = context;
+  session.preview = context;
+  $('editSavePreviewDialog').close();
   refreshSaveEditor();
 }
 function saveEditorGeometry(source, session) {
@@ -112,8 +114,11 @@ function saveEditorGeometry(source, session) {
   const menu = rom && F.embedded() && F.feldFind(rom, F.embedded().stub);
   const options = rom ? F.careOptions(rom, menu) : 0;
   const split = rom && names.length > 3 && !!(rom[0x10F020] & 8);
-  const inferred = rom ? null : SV.paradiseEditorDefaultConfig(session.working);
+  const inferred = SV.paradiseEditorDefaultConfig(session.working);
   const cellIds = inferred?.ids || (split ? names.length === 4 ? [0, 1, 2, 4] : [0, 1, 2, 3, 4, 5] : [0, 1, 2]);
+  const legacyCare = rom && F.careUsesLegacyStorage(rom, menu);
+  const careBookOverlap = !!(inferred?.split || (rom && F.careBookOverlap(rom, menu)));
+  const careNeedsUpdate = !!(options & F.CARE_AUTOPILOT_PATCH) && legacyCare && careBookOverlap;
   const assetSource = context?.rom || null;
   if (session.rosterROM !== rom || session.rosterAssets !== assetSource || !session.roster) {
     session.roster = F.saveEditorRoster(rom, ed, menu, names, assetSource);
@@ -121,7 +126,8 @@ function saveEditorGeometry(source, session) {
     session.rosterAssets = assetSource;
   }
   return {
-    ids: cellIds, split: split || inferred?.split, names, autopilot: !!(options & F.CARE_AUTOPILOT_PATCH),
+    ids: cellIds, split: split || inferred?.split, names, legacyCare, careBookOverlap, careNeedsUpdate,
+    autopilot: !!(options & F.CARE_AUTOPILOT_PATCH) && !careNeedsUpdate,
     infiniteFuel: !!(options & F.CARE_FUEL_PATCH), itemLimits: context?.itemLimits, catalog: context?.saveEditorItems,
     awake: !!(menu?.flags & F.F_KEEP_AWAKE),
     planetTravel: ed === 8 && !!(menu?.flags & F.F_NEON_TRAVEL),
@@ -198,12 +204,11 @@ function saveEditorPortrait(context, id, bytes, memorial = false) {
   if (!context) return null;
   const visitor = context?.saveEditorVisitors?.get(id) || context?.characters?.get(id);
   try {
-    const ghost = bytes && editorResidents.preview(bytes, visitor, C, memorial);
-    if (ghost) {
-      const picture = gardenPortrait(ghost);
-      if (picture) return picture;
+    if (bytes) {
+      const ghost = editorResidents.preview(bytes, visitor, C, memorial);
+      return ghost ? gardenPortrait(ghost) : null;
     }
-  } catch (_) { /* Try the species' ROM portrait if its saved poses cannot be rendered. */ }
+  } catch (_) { return null; }
   if (!visitor) return null;
   try {
     const picture = gardenPortrait(VIS.buildRomGhost(visitor, C));
@@ -211,6 +216,29 @@ function saveEditorPortrait(context, id, bytes, memorial = false) {
   } catch (_) { /* Use an individual sprite when the complete pose exceeds preview limits. */ }
   try { return C.spriteDecode(visitor.entries[visitor.sprites[0]]).subs[0]; }
   catch (_) { return null; }
+}
+function saveEditorAppearance(info, changes) {
+  const [body, stage] = (changes.body || info.id + ':' + info.stage).split(':').map(Number);
+  const [eyes, eyeStage] = (changes.eyes || (stage === info.stage ? info.eyeId : body) + ':' + stage).split(':').map(Number);
+  return { body, eyes, stage, eyeStage, color: Number(changes.bodyColor ?? info.color) };
+}
+function saveEditorCarePortrait(context, { body, eyes, stage, eyeStage, color }) {
+  if (!context || stage !== eyeStage) return null;
+  const visitors = context.saveEditorVisitors;
+  const visitor = visitors.get(body), eye = visitors.get(eyes);
+  if (!visitor || !eye || visitor.character.stage !== stage || eye.character.stage !== stage) return null;
+  try {
+    let ghost = VIS.buildRomGhost(visitor, C);
+    const swap = eyes === body ? null : {
+      id: eyes, sprites: [1, 4].map(part => eye.entries[eye.sprites[part]]),
+    };
+    context.saveEditorPalette ??= C.characterPaletteVariants(context.entries)?.bytes || false;
+    if (color !== 31 && !context.saveEditorPalette) return null;
+    ghost = VIS.editGhostAppearance(ghost, {
+      eyes: swap, color: color === 31 ? undefined : color, palette: context.saveEditorPalette,
+    });
+    return gardenPortrait(ghost);
+  } catch (_) { return null; }
 }
 function saveEditorPreviewChoice(parent, input, context) {
   const thumbnail = document.createElement('span');
@@ -433,8 +461,18 @@ function saveEditorParadiseFields(holder, extensions, session, info, config, con
     });
   }
   const care = saveEditorSection(holder, 'Care', true);
-  saveEditorPreviewRow(care, saveEditorPortrait(context, info.id), info.alive ? saveEditorCharacterName(context, info.id) : t('No current Tama'));
+  const portrait = saveEditorPreviewRow(care, null, t('No current Tama'));
   if (info.alive) {
+    const image = document.createElement('span'), name = portrait.firstElementChild;
+    portrait.prepend(image);
+    const redraw = () => {
+      const looks = saveEditorAppearance(info, Object.fromEntries(session.changes));
+      const picture = saveEditorCarePortrait(context, looks);
+      image.replaceChildren(...(picture ? [imgToCanvas(picture, 2)] : []));
+      image.hidden = !picture;
+      name.textContent = saveEditorCharacterName(context, looks.body);
+    };
+    redraw();
     const condition = saveEditorGroup(care, 'Health and Care');
     for (const [key, label, max] of [['age', 'Age (Days)', 999], ['hunger', 'Hunger', 6], ['happy', 'Happiness', 20],
       ['cleanliness', 'Cleanliness', 3]]) saveEditorControl(condition, session, key, label, info[key], { max });
@@ -451,15 +489,16 @@ function saveEditorParadiseFields(holder, extensions, session, info, config, con
       if (characters.length) {
         const current = [[info.id + ':' + info.stage, saveEditorCharacterName(context, info.id)]];
         saveEditorControl(appearance, session, 'body', 'Body', info.id + ':' + info.stage, {
-          choices: [...new Map([...current, ...characters.map(choice)])],
+          choices: [...new Map([...current, ...characters.map(choice)])], onChange: redraw,
         });
         saveEditorControl(appearance, session, 'eyes', 'Eyes', info.eyeId + ':' + info.stage, {
           choices: [...new Map([[info.eyeId + ':' + info.stage, saveEditorCharacterName(context, info.eyeId)], ...characters.map(choice)])],
+          onChange: redraw,
         });
       }
       const colors = [...paletteNames().slice(0, 16).map((name, index) => [index, name]), [31, t('visOriginalPalette')]];
       if (!colors.some(([id]) => id === info.color)) colors.unshift([info.color, t('Unknown') + ' (' + info.color + ')']);
-      saveEditorControl(appearance, session, 'bodyColor', 'Body Color', info.color, { choices: colors });
+      saveEditorControl(appearance, session, 'bodyColor', 'Body Color', info.color, { choices: colors, onChange: redraw });
     }
     saveEditorAction(saveEditorActions(condition), 'Full Care', () => {
       for (const [key, value] of [['hunger', 6], ['happy', 20], ['cleanliness', 3], ['sick', false]]) {
@@ -472,8 +511,9 @@ function saveEditorParadiseFields(holder, extensions, session, info, config, con
   }
   if (!config?.infiniteFuel) saveEditorControl(care, session, 'fuel', 'Travel Fuel', info.fuel, { max: 60 });
   saveEditorControl(care, session, 'clearPoop', 'Clear All Poop ({v1})', false, { check: true, values: { v1: info.poop } });
-  if (config.autopilot || info.autopilotStored) {
+  if (config.autopilot || info.autopilotStored || config.careNeedsUpdate) {
     const auto = saveEditorSection(extensions, 'Autopilot', true);
+    if (config.careNeedsUpdate) saveEditorPreviewRow(auto, null, t('ParaLab Menu Update Available'));
     for (const [bit, label] of [[1, 'Keep Full'], [2, 'Max Happiness'], [4, 'Prevent Illness'], [8, 'Auto Clean Poop'],
       [16, 'No Poop'], [32, 'Keep Clean']]) saveEditorControl(auto, session, 'auto:' + bit, label, !!(info.autopilot & bit), { check: true, disabled: !config.autopilot });
   }
@@ -559,9 +599,8 @@ function saveEditorParadiseFields(holder, extensions, session, info, config, con
   }
   saveEditorItemFields(holder, session, info, context);
   if (image) {
-    const residents = editorResidents.inspect(image);
-    saveEditorResidentFields(holder, session, context, image, residents, 0);
-    saveEditorResidentFields(extensions, session, context, image, residents, 1);
+    const residents = editorResidents.inspect(image, session.working);
+    saveEditorResidentFields(holder, session, context, residents);
   }
 }
 function saveEditorLabFields(holder, session, info, context) {
@@ -658,21 +697,30 @@ function saveEditorLabFields(holder, session, info, context) {
 
 function saveEditorResidentImage(session, save, context) {
   const rom = session.source.rom || context?.rom;
-  if (!rom) return null;
-  const image = new Uint8Array(rom);
-  for (const [a, b] of SV.paraRanges(rom, save.edition)) image.fill(255, a, b);
+  if (!rom && !(SV.family(save.edition) === 'gen3' && SV.paradiseEditorDefaultConfig(save))) return null;
+  const image = rom ? new Uint8Array(rom) : new Uint8Array(0x1000000).fill(255);
+  if (rom) for (const [a, b] of SV.paraRanges(rom, save.edition)) image.fill(255, a, b);
   for (const [at, page] of save.pages) if (page.length === EDITOR_PAGE && at + EDITOR_PAGE <= image.length) image.set(page, at);
   return image;
 }
-function saveEditorResidentFields(holder, session, context, image, data, bank) {
-  const fields = data.fields.filter(field => field.bank === bank);
+function saveEditorResidentFields(holder, session, context, data) {
+  const { fields, readOnly } = data;
   if (!fields.length) return;
   const residents = saveEditorSection(holder, session.working.edition === 8 ? 'Planet Residents' : 'Field Residents');
   const select = document.createElement('select'), list = document.createElement('div');
   select.setAttribute('aria-label', t('Field'));
-  select.replaceChildren(...fields.map(field => residentOption(field.id, saveEditorFieldName(context, field.name))));
+  const options = fields.map(field => residentOption(field.id, saveEditorFieldName(context, field.name)));
+  if (fields.some(field => field.bank)) {
+    for (const [bank, name] of [[0, 'Game Data'], [1, 'ParaLab Extensions']]) {
+      const group = document.createElement('optgroup');
+      group.label = t(name);
+      group.append(...options.filter((_, i) => fields[i].bank === bank));
+      select.append(group);
+    }
+  } else select.append(...options);
   list.className = 'save-editor-controls save-editor-wide save-editor-records';
   saveEditorLabeled(residents, 'Field', select);
+  if (readOnly) saveEditorAction(saveEditorActions(residents), 'Load Matching ROM…', () => $('editSaveLoadPreview').click());
   residents.append(list);
   const selected = fields.find(field => field.id === session.field) ||
     fields.find(field => field.id === data.currentField && field.slots.some(slot => slot.occupied)) ||
@@ -699,7 +747,7 @@ function saveEditorResidentFields(holder, session, context, image, data, bank) {
       const name = slot.occupied ? saveEditorSnapshotName(context, slot) :
         t(slot.blocked ? 'Used by another field' : 'Empty');
       saveEditorRecordHeading(row, slot.occupied && saveEditorPortrait(context, slot.id, slot.bytes), name);
-      if (slot.occupied && field.available) {
+      if (!readOnly && slot.occupied && field.available) {
         const actions = saveEditorActions(row);
         const destinations = data.fields.flatMap(to => to.slots.filter(target => to.available && !target.occupied &&
           (!target.blocked || target.address === slot.address)).map(target =>
@@ -716,7 +764,7 @@ function saveEditorResidentFields(holder, session, context, image, data, bank) {
         }
         saveEditorAction(actions, 'Remove Resident', () => apply({ type: 'remove', field: field.id, slot: slot.slot }));
       }
-      if (!slot.blocked && field.available && context?.saveEditorVisitors?.size) {
+      if (!readOnly && !slot.blocked && field.available && context?.saveEditorVisitors?.size) {
         const adults = [...context.saveEditorVisitors.values()].filter(visitor => visitor.character.stage === 5);
         if (!adults.length) continue;
         const body = document.createElement('select');
@@ -839,10 +887,10 @@ function saveEditorWorking(session, extras = {}) {
     changes[key] = Number(changes[key]);
   }
   if (!lab && (changes.body || changes.eyes || changes.bodyColor !== undefined)) {
-    const [body, stage] = (changes.body || info.id + ':' + info.stage).split(':').map(Number);
-    const [eyes, eyeStage] = (changes.eyes || (stage === info.stage ? info.eyeId : body) + ':' + stage).split(':').map(Number);
+    const { eyeStage, ...appearance } = saveEditorAppearance(info, changes);
+    const { stage } = appearance;
     if (eyeStage !== stage) throw new Error(t('Choose eyes from the same growth stage.'));
-    changes.appearance = { body, eyes, stage, color: Number(changes.bodyColor ?? info.color) };
+    changes.appearance = appearance;
   }
   if (lab) return ML.editorSet(save, changes, VIS, saveEditorCatalog(saveEditorPreview(session), true));
   if (!changes.cells.length) delete changes.cells;
@@ -964,7 +1012,23 @@ async function openSaveEditorRomSlot(source, slot) {
     { ...save, pages: F.slotExportPages(save.pages, storage.head) } : save, edition);
   openSaveEditorDocument(saveEditorNew(source, slot, save, original, storage));
 }
-async function readSaveEditorDeviceSource(device) {
+function saveEditorDeviceProgress(phase, done = 0, total = 0, slot = '') {
+  const label = t('ph' + phase) + (slot ? ' · ' + slot : '');
+  const size = new Intl.NumberFormat(locale(), { maximumFractionDigits: 1 });
+  $('editSavePhase').textContent = label;
+  $('editSaveAmount').textContent = total ? size.format(done / 1024) + ' / ' + size.format(total / 1024) + ' KiB' : '';
+  transferProgress('editSave', done, total, label);
+}
+async function saveEditorReadRanges(device, ranges, consume, progress) {
+  let previous = 0;
+  const total = ranges.reduce((sum, [a, b]) => sum + b - a, 0);
+  for (const [a, b] of ranges) {
+    const data = await device.readSparse(a, b, (_, done) => progress(previous + done, total), () => dv.cancel);
+    consume(a, b, data);
+    previous += b - a;
+  }
+}
+async function readSaveEditorDeviceSource(device, showProgress = false) {
   if (device !== dv.d) throw new Error(t('Reconnect the device and read its save again.'));
   const edition = device.info.edition, lab = usesMyLabDeviceSave(device);
   if (!lab && !FL.EDITIONS[edition]) throw new Error(t('Unknown'));
@@ -981,18 +1045,24 @@ async function readSaveEditorDeviceSource(device) {
     const rom = new Uint8Array(0x1000000).fill(255);
     const ranges = [[0x90000, 0x110000], [SV.idPage(edition), SV.idPage(edition) + EDITOR_PAGE],
       [SV.SET_A, SV.SET_B + EDITOR_PAGE], [0x11000, 0x12000]];
-    for (const [a, b] of ranges) rom.set(await device.readSparse(a, b, devProg, () => dv.cancel), a);
+    await saveEditorReadRanges(device, ranges, (a, _, data) => rom.set(data, a),
+      (done, total) => showProgress ? saveEditorDeviceProgress('prepare', done, total) : devProg('read', done, total));
+    if (showProgress) saveEditorDeviceProgress('prepare');
     source.extra = await connectedResidentRanges(device);
+    if (source.extra.length) {
+      for (const at of RB.hookPages) if (at < 0x90000) rom.set(await device.read(at, EDITOR_PAGE), at);
+    }
     if (edition === 8) {
       rom.set(await device.read(0x22000, EDITOR_PAGE), 0x22000);
       const [at] = F.neonSlotRange();
       rom.set(await device.read(at, 2 * EDITOR_PAGE), at);
     }
     const menu = F.embedded() && F.feldFind(rom, F.embedded().stub);
-    if (menu && menu.nslots > 0 && menu.nslots <= 6 && menu.slotSize >= EDITOR_PAGE && menu.slotSize <= 0x80000) {
+    if (menu && menu.nslots > 0 && menu.nslots <= 6 && menu.slotSize >= EDITOR_PAGE && menu.slotSize % EDITOR_PAGE === 0) {
       for (let i = 0; i < menu.nslots; i++) {
         const at = F.slotAddr(menu, i);
-        if (at < 0x110000 || at + menu.slotSize > 0xF00000 || at % EDITOR_PAGE) throw new Error(t('slotDevOther'));
+        // Multi-field Menus can store slots directly behind the program, before the asset archive.
+        if (at < 0x90000 || at + menu.slotSize > SV.idPage(edition) || at % EDITOR_PAGE) throw new Error(t('slotDevOther'));
         rom.set(await device.read(at, EDITOR_PAGE), at);
       }
       source.slots = saveEditorParadiseSlots(rom);
@@ -1004,11 +1074,16 @@ async function readSaveEditorDeviceSource(device) {
 async function openSaveEditorDeviceSlot(source, slot) {
   const { device: d, lab, edition } = source;
   if (d !== dv.d) throw new Error(t('Reconnect the device and read its save again.'));
+  const label = saveEditorSlotLabel(source, slot);
+  const report = (done, total) => saveEditorDeviceProgress('read', done, total, label);
+  const progress = (_, done, total) => report(done, total);
+  report(0, 0);
   let save, snapshot;
   if (lab) {
     if (slot === EDITOR_LIVE) {
       await checkMyLabSaveRecovery(d);
-      const region = await d.readSparse(ML.DEVICE_SAVE_FIRST, ML.DEVICE_SAVE_END, devProg, () => dv.cancel);
+      const region = await d.readSparse(ML.DEVICE_SAVE_FIRST, ML.DEVICE_SAVE_END, progress, () => dv.cancel);
+      saveEditorDeviceProgress('check', 0, 0, label);
       const clock = await d.clockRead();
       const data = region.subarray(ML.APPDATA_FIRST - ML.DEVICE_SAVE_FIRST);
       if (ML.activeDeviceSave(data, VIS)) save = saveEditorLabRegion(region, clock?.ctrl & 0x80 ? clock.counter : null);
@@ -1017,21 +1092,31 @@ async function openSaveEditorDeviceSlot(source, slot) {
       const bank = source.slots?.slots[slot];
       if (!bank || bank.cleared) throw new Error(t('slotNone'));
       const at = ML.menuSaveBank(bank.index);
-      save = ML.readMenuSave(bank, await d.readSparse(at + EDITOR_PAGE, at + ML.MENU_BANK_SIZE, devProg, () => dv.cancel), C, VIS);
+      const region = await d.readSparse(at + EDITOR_PAGE, at + ML.MENU_BANK_SIZE, progress, () => dv.cancel);
+      saveEditorDeviceProgress('check', 0, 0, label);
+      save = ML.readMenuSave(bank, region, C, VIS);
     }
   } else if (slot === EDITOR_LIVE) {
     const pages = new Map();
-    for (const [a, b] of [SV.region(edition), ...source.extra]) {
-      const data = await d.readSparse(a, b, devProg, () => dv.cancel);
+    await saveEditorReadRanges(d, [SV.region(edition), ...source.extra], (a, b, data) => {
       for (let at = a; at < b; at += EDITOR_PAGE) pages.set(at, data.subarray(at - a, at - a + EDITOR_PAGE));
-    }
+    }, report);
+    saveEditorDeviceProgress('check', 0, 0, label);
     const clock = await d.clockRead();
     save = SV.paraDecode(SV.paraEncode(pages, edition, clock?.ctrl & 0x80 ? clock : null));
   } else {
     if (!source.slots?.list[slot]?.used || source.slots.live === slot) throw new Error(t('slotNone'));
-    snapshot = await F.slotReadAsync((a, n) => d.read(a, n), source.slots.f, slot);
+    snapshot = await F.slotReadAsync((a, n, tick) => {
+      if (dv.cancel) throw new Error('Cancelled');
+      return d.read(a, n, done => {
+        if (dv.cancel) throw new Error('Cancelled');
+        tick?.(done);
+      });
+    }, source.slots.f, slot, report);
+    saveEditorDeviceProgress('check', 0, 0, label);
     if (snapshot) save = saveEditorStoredPages(snapshot, edition, source.rom);
   }
+  if (dv.cancel) throw new Error('Cancelled');
   if (!save || (!lab && !SV.paradiseEditorInfo(save))) {
     const other = slot === EDITOR_LIVE && saveEditorOccupiedSlots(source)[0];
     if (other !== false && other !== undefined) return openSaveEditorDeviceSlot(source, other);
@@ -1045,6 +1130,8 @@ async function runSaveEditorDevice(fn, write = false) {
   if (saveEditor.running || dv.run || !dv.d) return;
   saveEditor.running = true;
   saveEditorStatus(write ? 'Checking Save Changes…' : 'Reading Device Save');
+  $('editSaveReadProgress').hidden = write;
+  if (!write) saveEditorDeviceProgress('prepare');
   try {
     const operation = write ? devWriteTask : devTask;
     await operation(async () => {
@@ -1057,6 +1144,7 @@ async function runSaveEditorDevice(fn, write = false) {
     });
   } finally {
     saveEditor.running = false;
+    $('editSaveReadProgress').hidden = true;
     saveEditorButtons();
   }
 }
@@ -1248,7 +1336,7 @@ $('editSaveOriginal').onclick = () => saveEditorDownload(true);
 $('editSaveDownload').onclick = () => saveEditorDownload(false);
 $('editSaveApply').onclick = () => runSaveEditor(saveEditorApplyWorkspace);
 $('editSaveWrite').onclick = () => runSaveEditor(saveEditorWrite);
-$('editSaveStop').onclick = () => { dv.cancel = true; };
+$('editSaveStop').onclick = () => { dv.cancel = true; saveEditorButtons(); };
 $('editSaveRestart').onclick = restartDevice;
 $('editSaveRom').onclick = () => runSaveEditor(async () => {
   if (saveEditor.running || dv.run || !await saveEditorSwitchAllowed()) return;
@@ -1258,14 +1346,14 @@ $('editSaveRom').onclick = () => runSaveEditor(async () => {
 $('editSaveDevice').onclick = () => runSaveEditor(async () => {
   const device = dv.d;
   if (!device || saveEditor.running || dv.run || !await saveEditorSwitchAllowed()) return;
-  await runSaveEditorDevice(async () => openSaveEditorDeviceSlot(await readSaveEditorDeviceSource(device), EDITOR_LIVE));
+  await runSaveEditorDevice(async () => openSaveEditorDeviceSlot(await readSaveEditorDeviceSource(device, true), EDITOR_LIVE));
 });
 $('editSaveSlot').onchange = () => runSaveEditor(async () => {
   const { source, session } = saveEditor, input = $('editSaveSlot');
   const slot = input.value === EDITOR_LIVE ? EDITOR_LIVE : Number(input.value);
   input.value = String(session.slot);
   if (slot === session.slot || !await saveEditorSwitchAllowed()) return;
-  if (source.kind === 'device') await runSaveEditorDevice(async () => openSaveEditorDeviceSlot(await readSaveEditorDeviceSource(source.device), slot));
+  if (source.kind === 'device') await runSaveEditorDevice(async () => openSaveEditorDeviceSlot(await readSaveEditorDeviceSource(source.device, true), slot));
   else await openSaveEditorRomSlot(source, slot);
 });
 $('editSaveOpen').onclick = () => $('editSaveFile').click();
@@ -1319,7 +1407,7 @@ savePreviewFile.onchange = () => runSaveEditor(async () => {
   const context = ML.openRom(bytes, C, VIS) || C.openRom(bytes);
   if (session !== saveEditor.session) return;
   if (!matchSaveEditorPreview(session, context)) throw new Error(t('petOther'));
-  saveEditor.preview = context;
+  session.preview = saveEditor.preview = context;
   saveEditorStatus();
   refreshSaveEditor(true);
 });

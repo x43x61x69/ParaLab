@@ -2286,7 +2286,7 @@ static int care_row(u32 i,char *name,char *right,u16 *col){
   if(care_layout()){
     if(patches&CARE_AUTOPILOT_PATCH){
       if(i==0u){
-        u32 mask=care_enabled(g_set);
+        u32 mask=care_menu_enabled();
         care_label(name,"AUTOPILOT"); care_label(right,mask==CARE_AUTOPILOT?"ON":mask?"CUSTOM":"OFF");
         *col=GOLD; return 1;
       }
@@ -2314,7 +2314,7 @@ static int care_row(u32 i,char *name,char *right,u16 *col){
 }
 static int autopilot_row(u32 i,char *name,char *right,u16 *col){
   static const char *const rows[]={"KEEP FULL","MAX HAPPINESS","PREVENT ILLNESS","POOP MODE","KEEP CLEAN"};
-  u32 mask=care_enabled(g_set);
+  u32 mask=care_menu_enabled();
   care_label(name,rows[i]);
   const char *value=i==3u?(mask&CARE_NO_POOP?"NONE":mask&CARE_AUTO_CLEAN?"AUTO":"OFF"):
     mask&(i==4u?CARE_BATHE:1u<<i)?"ON":"OFF";
@@ -2330,7 +2330,7 @@ static void autopilot_write(u32 mask,const char *label){
 }
 static void autopilot_menu(int master){
   if(master){
-    u32 mask=care_enabled(g_set)==CARE_AUTOPILOT?0u:CARE_AUTOPILOT;
+    u32 mask=care_menu_enabled()==CARE_AUTOPILOT?0u:CARE_AUTOPILOT;
     autopilot_write(mask,mask?"ENABLE ALL":"TURN EVERYTHING OFF");
     return;
   }
@@ -2340,7 +2340,7 @@ static void autopilot_menu(int master){
     int row=care_choose("AUTOPILOT OPTIONS",5u,sel,autopilot_row);
     if(row<0) return;
     sel=(u32)row;
-    u32 mask=care_enabled(g_set);
+    u32 mask=care_menu_enabled();
     if(sel==3u){
       u32 mode=mask&CARE_NO_POOP?0u:mask&CARE_AUTO_CLEAN?2u:1u;
       mask=(mask&~(CARE_AUTO_CLEAN|CARE_NO_POOP))|(mode==1u?CARE_AUTO_CLEAN:mode==2u?CARE_NO_POOP:0u);

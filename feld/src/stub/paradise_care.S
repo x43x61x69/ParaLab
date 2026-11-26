@@ -32,7 +32,7 @@ care_version: .word 0         @ save layout index
 native_tick:
   .word 0                     @ original tick prologue
   .word 0                     @ branch to tick + 4
-.word 0x32524143
+.word 0x33524143
 care_options: .word 0        @ installed optional gameplay patches
 .word 0                      @ native fuel updater flash offset (for uninstall)
 fuel_address: .word 0       @ address of the native fuel byte in the save

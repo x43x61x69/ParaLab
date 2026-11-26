@@ -4,7 +4,7 @@ unsigned care_game(unsigned char *save, unsigned version, unsigned before_fuel,u
   const struct CareLayout *layout=&care_layouts[version];
   unsigned pet=layout->pet;
   if(options&CARE_FUEL_PATCH) save[pet+0x1Bu]=CARE_FUEL_MAX;
-  unsigned mask=options&CARE_AUTOPILOT_PATCH?care_enabled(save):0u;
+  unsigned mask=options&CARE_AUTOPILOT_PATCH?care_enabled(save,options&CARE_NO_LEGACY):0u;
   if(!mask) return 1;
   unsigned stage=(save[pet+0x18u]>>2)&7u;
   unsigned id=save[pet+4u]|(unsigned)save[pet+5u]<<8;
