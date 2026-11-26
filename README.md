@@ -117,6 +117,8 @@ The gift and item tabs load their catalogs and thumbnail atlas when opened. Sele
 
 Open **ParaLab Link** next to **Guide** for the H717 materials list, UART wiring table, and touchscreen previews. The H717 can send gifts and Playdate visitors, look up Lab Codes, and act as a USB–UART bridge for Paradise.
 
+The firmware and build instructions are in the [ParaLab Link repository](https://github.com/x43x61x69/ParaLab-Link).
+
 The **H717 USB Firmware Update** panel uses Web Serial in desktop Chrome or Edge. Disconnect the Paradise and use a USB-C data cable to connect the H717. The update option preserves Link settings and favorites. Use first installation or recovery when you intend to erase the H717.
 
 The browser USB updater has been verified on H717 hardware.

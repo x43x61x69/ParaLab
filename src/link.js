@@ -1,8 +1,6 @@
 // ESP32-S3 ROM loader. Use the native USB download port, without installing a RAM stub.
 {
   const release = /*__LINK_RELEASE__*/ {};
-  $('linkSource').href = release.source;
-  $('linkSource').download = release.sourceName;
   const mode = $('linkMode'), connect = $('linkConnect'), progress = $('linkProgress');
   const boot = {usbVendorId:0x303a, usbProductId:0x1001};
   const runtime = {usbVendorId:0x303a, usbProductId:0x0002};

@@ -31,9 +31,5 @@ module.exports = function buildLink(root, webDirectory, output) {
       parts[part.name] = asset(part.name, address, raw, zlib.deflateSync(raw, {level:9}));
   }
   parts.factory = asset('factory', 0, factory, packed);
-  const zip = fs.readFileSync(path.join(dir, 'source.zip'));
-  const sourceName = 'paralab-link-' + release.version + '-source.zip';
-  const source = webDirectory ? webDirectory + '/' + sourceName : 'data:application/zip;base64,' + zip.toString('base64');
-  if (webDirectory) fs.writeFileSync(path.join(output, source), zip);
-  return {version:release.version, sourceName, source, ...parts};
+  return {version:release.version, ...parts};
 };
