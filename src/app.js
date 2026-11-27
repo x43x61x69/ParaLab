@@ -7085,7 +7085,7 @@ $('btnVisBreed').onclick = async () => {
 };
 $('btnLabRelease').onclick = () => visOpen('lab');
 $('btnFoodSend').onclick = () => visOpen('food');
-const foodArchive = Uint8Array.from(atob('__FOOD_ARCHIVE__'), c => c.charCodeAt(0));
+const foodArchives = /*__FOOD_ARCHIVES__*/ {};
 let foodBase = null, importedFood = null, editedFood = null;
 const foodEyeChoices = new Map();
 
@@ -7108,8 +7108,11 @@ function selectFoodBody() {
   visAddChoice(eyes, '', t('Default eyes')); visAddChoice(colors, '', t('Default color'));
   try {
     if (entry) {
-      foodBase = VIS.buildRomGhost(entry.visitor, C);
-      const available = VIS.ghostAppearanceOptions(foodBase, C);
+      const { visitor } = entry;
+      const ghost = VIS.buildRomGhost(visitor, C);
+      const archive = Uint8Array.from(atob(foodArchives[visitor.character.field] ?? foodArchives[8]), c => c.charCodeAt(0));
+      foodBase = { ghost, archive };
+      const available = VIS.ghostAppearanceOptions(ghost, C);
       for (const [key, { visitor }] of VS.romVisitors) {
         if (visitor === entry.visitor) continue;
         const donor = VIS.romEyes(visitor, available.eyes, C);
@@ -7136,10 +7139,10 @@ function renderFoodCombination() {
   try {
     if (foodBase) {
       const color = $('foodColor').value;
-      const bytes = VIS.editGhostAppearance(foodBase, {
+      const bytes = VIS.editGhostAppearance(foodBase.ghost, {
         eyes:foodEyeChoices.get($('foodEyes').value), color:color === '' ? undefined : Number(color), palette:VS.romPalette
       });
-      editedFood = VIS.buildSpecialFood(foodArchive, bytes, C);
+      editedFood = VIS.buildSpecialFood(foodBase.archive, bytes, C);
       const poses = visCharacterPoses(bytes, visSpriteSheets(bytes), true);
       visPicture('foodPreview', poses[0][0] || poses[1][0]);
     }

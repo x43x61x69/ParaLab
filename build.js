@@ -134,12 +134,22 @@ html = html.replaceAll('__LINK_VERSION__', linkRelease.version)
     'data:image/png;base64,' + fs.readFileSync(path.join(__dirname, 'assets/paralab-link', screen + '.png')).toString('base64'));
 const linkScript = fs.readFileSync(path.join(__dirname, 'src/link.js'), 'utf8')
   .replace('/*__LINK_RELEASE__*/ {}', () => JSON.stringify(linkRelease));
+const { arc2Files, arc2Build } = require('./src/core.js');
+const foodDirectory = path.join(__dirname, 'six/special-food');
+const foodTemplate = fs.readFileSync(path.join(foodDirectory, 'food-item.arc2'));
+const [foodData, foodArt] = arc2Files(foodTemplate, 0);
+const foodArchives = { 8: foodTemplate.toString('base64') };
+// Only the name tables vary. Keep the original item data and artwork for every planet.
+for (const [field, planet] of [[7, 'cosmic'], [9, 'tamagotchi']]) {
+  const names = fs.readFileSync(path.join(foodDirectory, `food-names-${planet}.arc2`));
+  foodArchives[field] = Buffer.from(arc2Build([foodData, foodArt, names])).toString('base64');
+}
 const app = fs.readFileSync(__dirname + '/src/app.js', 'utf8')
   .replace('/*__LINK_SCRIPT__*/', () => linkScript)
   .replace('/*__GUIDE_FRAMES__*/ {}', () => JSON.stringify(guideFrames))
   .replace('/*__SAVE_EDITOR__*/', () => fs.readFileSync(path.join(__dirname, 'src/save_editor.js'), 'utf8'))
   .replace('__FLASH_TOOL_REVISION__', String(flashRevision))
-  .replace('__FOOD_ARCHIVE__', fs.readFileSync(__dirname + '/six/special-food/food-item.arc2').toString('base64'))
+  .replace('/*__FOOD_ARCHIVES__*/ {}', () => JSON.stringify(foodArchives))
   .replace('/*__COLLECTION_REFERENCE__*/ {}', () => JSON.stringify(require('./src/collection_reference.json')))
   .replace('/*__CATALOG_CONFIG__*/ {}', () => JSON.stringify(catalogConfig).replaceAll('<', '\\u003c'));
 const zhSources = {
