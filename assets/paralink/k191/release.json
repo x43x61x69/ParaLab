@@ -1,22 +1,23 @@
 {
-  "version": "0.1.11",
-  "chip": "ESP32-S3R8",
-  "flash_bytes": 16777216,
-  "factory_image": "paralab-link-0.1.11-factory.bin",
-  "image_bytes": 16777216,
-  "sha256": "4f5573bb48d264223538eb8ded46afe53e54827c7b0803d2430af35a9dbe924e",
+  "version": "0.1.16",
+  "board": "k191",
+  "chip": "ESP32-S3N8",
+  "flash_bytes": 8388608,
+  "factory_image": "paralink-k191-0.1.16-factory.bin",
+  "image_bytes": 8388608,
+  "sha256": "2210198f0f48e32add2ec3e58635e34b8b71113482e43d1cf4806af43ddb5632",
   "components": [
     {
       "name": "bootloader.bin",
       "offset": "0x0",
       "bytes": 15104,
-      "sha256": "2a71d69b471e20c2bac7fb469f3c6a807b3ebee780e348e5889db0da849ca363"
+      "sha256": "1776e4dd896a69d0a5c2e79957b0e2a88aa4129b1381d6478683515a1f6af343"
     },
     {
       "name": "partitions.bin",
       "offset": "0x8000",
       "bytes": 3072,
-      "sha256": "bf4f92025220c7e2dae5f21ae73a1383ff0a5fbf2d7ce8a4f0c3a799486cd017"
+      "sha256": "9006a2fbb211386e0986f270d387a2339bd428dbc0dfd7293243eeda5abfa54b"
     },
     {
       "name": "boot_app0.bin",
@@ -27,8 +28,8 @@
     {
       "name": "firmware.bin",
       "offset": "0x20000",
-      "bytes": 1502688,
-      "sha256": "1d75bbef127ab1e5b3a96a0725885486b4488e2cfa3c9578dffb8a0f420357ec"
+      "bytes": 1472928,
+      "sha256": "b38ff5e5ae1c7ea059eae9ea72f7180043411d6e574c78611c15656b37713249"
     },
     {
       "name": "assets.bin",
@@ -39,8 +40,8 @@
     {
       "name": "userdata.bin",
       "offset": "0x7a0000",
-      "bytes": 8781824,
-      "sha256": "889b454ddf42ca4cd1d296208621e56138078105e9e524362e8dce2ace78170d"
+      "bytes": 393216,
+      "sha256": "469ecea3a15cd8438186aece1e29b1aa67ca9b6ec1963a7fdfded7da7d9a973c"
     }
   ]
 }

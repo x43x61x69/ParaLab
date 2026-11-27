@@ -129,11 +129,11 @@ const guideFrames = Object.fromEntries(Array.from(taskImages, file => {
 const webDirectory = web ? 'catalog-v' + v : null;
 const { config: catalogConfig, assets: catalogAssets } = require('./tools/build_catalog.js').buildCatalog(__dirname, webDirectory);
 const linkRelease = require('./tools/build_link')(__dirname, webDirectory, path.dirname(output));
-html = html.replaceAll('__LINK_VERSION__', linkRelease.version)
+html = html.replaceAll('__LINK_VERSION__', linkRelease.h717.version)
   .replace(/__LINK_SCREEN_(home|catalog|bridge)__/g, (_, screen) =>
-    'data:image/png;base64,' + fs.readFileSync(path.join(__dirname, 'assets/paralab-link', screen + '.png')).toString('base64'))
+    'data:image/png;base64,' + fs.readFileSync(path.join(__dirname, 'assets/paralink/h717', screen + '.png')).toString('base64'))
   .replace(/__LINK_WIRING_(h717|paradise)__/g, (_, device) =>
-    'data:image/webp;base64,' + fs.readFileSync(path.join(__dirname, 'assets/paralab-link', 'wiring-' + device + '.webp')).toString('base64'));
+    'data:image/webp;base64,' + fs.readFileSync(path.join(__dirname, 'assets/paralink', 'wiring-' + device + '.webp')).toString('base64'));
 const linkScript = fs.readFileSync(path.join(__dirname, 'src/link.js'), 'utf8')
   .replace('/*__LINK_RELEASE__*/ {}', () => JSON.stringify(linkRelease));
 const { arc2Files, arc2Build } = require('./src/core.js');
@@ -147,6 +147,7 @@ for (const [field, planet] of [[7, 'cosmic'], [9, 'tamagotchi']]) {
   foodArchives[field] = Buffer.from(arc2Build([foodData, foodArt, names])).toString('base64');
 }
 const app = fs.readFileSync(__dirname + '/src/app.js', 'utf8')
+  .replace('/*__CHANGELOG__*/ []', () => JSON.stringify(require('./src/changelog.json').releases).replaceAll('<', '\\u003c'))
   .replace('/*__LINK_SCRIPT__*/', () => linkScript)
   .replace('/*__GUIDE_FRAMES__*/ {}', () => JSON.stringify(guideFrames))
   .replace('/*__SAVE_EDITOR__*/', () => fs.readFileSync(path.join(__dirname, 'src/save_editor.js'), 'utf8'))

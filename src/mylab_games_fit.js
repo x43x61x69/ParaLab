@@ -5,7 +5,7 @@ const C = root.ParamixCore || (typeof require === 'function' ? require('./core')
 const cave = 0x1A6000, present = 0x1647A4, assets = 0x211000;
 const stockPresent = [0x39, 0xF0, 0x2C, 0xBC], fittedPresent = [0x41, 0xF0, 0x2C, 0xBC];
 // Compiled from feld/src/mylab_paradise/games_fit.c (build_games_fit.sh).
-const nativeCode = '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';
+const nativeCode = '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';
 const program = Uint8Array.from(atob(nativeCode), c => c.charCodeAt(0));
 const maps = [
   [[0,16],[127,143]],                                      // Standard centre crop.
@@ -41,19 +41,19 @@ function knownV2(image) {
   return version(image) === 2 &&
     [0xBC0F3DD3,0xE1E0AA2E].includes(C.crc32(image.subarray(cave,cave+4096)));
 }
-function oldTitleRows(image) {
-  return version(image) === 3 && C.crc32(image.subarray(cave,cave+4096)) === 0xCA419827;
+function oldPresenter(image) {
+  return version(image) === 3 && [0xCA419827, 0x005E1F28, 0xB03A44FA, 0x386CD815, 0xBA285E84].includes(C.crc32(image.subarray(cave,cave+4096)));
 }
 function upgradePresenter(image) {
-  if (oldTitleRows(image)) {
+  if (oldPresenter(image)) {
     image.set(sector,cave);
-    return false; // Only native code changed; the ARC2 checksums still match.
+    return 'code';
   }
-  if (version(image) !== 2) return false;
+  if (version(image) !== 2) return null;
   apply(image,true);
-  return true;
+  return 'assets';
 }
-function has(image) { return version(image) === 3 && !oldTitleRows(image); }
+function has(image) { return version(image) === 3 && !oldPresenter(image); }
 function enabled(image) { return version(image) > 0; }
 function fail(reason) { throw new Error('Unexpected My Lab game ' + reason); }
 function view(bytes) { return new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength); }
@@ -118,7 +118,7 @@ function fitTerrain(original) {
 function apply(image, on) {
   const previous = version(image), next = on ? 3 : 0;
   if (previous === next) {
-    if (on && oldTitleRows(image)) image.set(sector,cave);
+    if (on && oldPresenter(image)) image.set(sector,cave);
     return image;
   }
   const d = view(image), u16 = at => d.getUint16(at, true), u32 = at => d.getUint32(at, true);
@@ -129,7 +129,7 @@ function apply(image, on) {
     u32(cave + 0xBF4) === C.crc32(slot.subarray(0x900, 0xB40)) &&
     C.crc32(slot.subarray(0xBF8)) === 0xE114C2AA;
   if (!(previous === 0 && slot.length === 4096 && slot.every(b => b === 255) ||
-        validLegacy || knownV2(image) || previous === 3 && (matches(slot,0,sector) || oldTitleRows(image))) ||
+        validLegacy || knownV2(image) || previous === 3 && (matches(slot,0,sector) || oldPresenter(image))) ||
       // Upgrading an active presenter leaves its caller alone; later options
       // can already have wrapped that call (including the puzzle overlay).
       !(previous === 2 && next === 3) && !matches(image, present, previous ? fittedPresent : stockPresent)) fail('display adapter');

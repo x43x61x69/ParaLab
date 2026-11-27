@@ -62,8 +62,6 @@ static int spi_idle(u32 mask) {
 }
 
 static int spi_write(const u8 *bytes, u32 count) {
-  // Use the same pacing and FIFO flush as the Paradise Menu. Its hardware
-  // can lose bytes when the FIFO is fed an entire scan line without a drain.
   for (u32 i = 0; i < count; i++) {
     if (!spi_idle(2u)) return MY_LAB_TRACE_TX_FULL;
     SPI_DATA = bytes[i];
@@ -74,9 +72,25 @@ static int spi_write(const u8 *bytes, u32 count) {
   return 0;
 }
 
+static int spi_write_pixels(const u8 *line) {
+  // Queue two RGB565 pixels at a time. Check TX space before each write,
+  // then let the last byte reach the shifter and drain before flushing.
+  // The panel can lose bytes when the FIFO is fed an entire row at once.
+  for (u32 x = 0; x < 256u; x += 4u) {
+    for (u32 byte = 0; byte < 4u; byte++) {
+      if (!spi_idle(2u)) return MY_LAB_TRACE_TX_FULL;
+      SPI_DATA = line[x + byte];
+    }
+    for (u32 ticks = 0; ticks < 8u; ticks++) __asm__ volatile("nop");
+    if (!spi_idle(0x10u)) return MY_LAB_TRACE_TX_BUSY;
+    SPI_CTRL |= 0xC0u;
+  }
+  return 0;
+}
+
 static void use_paradise_spi(void) {
-  // Match the working Paradise Menu, including its clock divider.
-  REG(PANEL + 8u) = 0;
+  // Use the SPI clock divider written by the factory Paradise firmware.
+  REG(PANEL + 8u) = 1;
   SPI_CTRL &= ~1u;
   REG(PANEL + 4u) &= ~7u;
   REG(PANEL + 0x20u) = 0;
@@ -352,7 +366,13 @@ static int wait_te_level(u32 level) {
 void wait_game_frame_sync(void) {
   use_paradise_te();
   const u32 before = GAME_TE_COUNT;
-  if (wait_te_level(PARADISE_TE)) wait_te_level(0);
+  // A pulse already high when we arrive may have been counted before this
+  // call. Wait for it to finish, but don't count its falling edge a second time.
+  if (REG(GPIO1) & PARADISE_TE) {
+    if (wait_te_level(0)) return;
+  } else if (wait_te_level(PARADISE_TE)) {
+    wait_te_level(0);
+  }
   if (GAME_TE_COUNT == before) {
     // The main loop also requires progress from the native TE IRQ. Count this
     // wait in software when no interrupt arrived, without losing a pending one.
@@ -370,6 +390,8 @@ static void initialize_panel(void) {
   CLK_PERIPH = 0x42u;
   use_paradise_pins();
   use_paradise_buttons();
+  // Match the Paradise board's P1 pads before reset and the first SPI command.
+  REG(GPIO1 + 0x34u) = 0x55540140u;
   if (in_game()) {
     use_paradise_wheel();
     wheel->phase = REG(GPIO2) & 3u;
@@ -399,21 +421,44 @@ void init_game_panel(void) {
   initialize_panel();
 }
 
+static inline int clip_lcd_channel(int value) {
+  __asm__("cmp %0, #0\n\tit mi\n\tmovmi %0, #0\n\t"
+          "cmp %0, #63\n\tit hi\n\tmovhi %0, #63" : "+r"(value) :: "cc");
+  return value;
+}
+
+static __attribute__((noinline, minsize)) u16 calibrated_game_pixel(u16 pixel) {
+  const int r = ((pixel >> 10) & 62) | (pixel >> 15);
+  const int g = (pixel >> 5) & 63;
+  const int b = ((pixel & 31) << 1) | ((pixel >> 4) & 1);
+  const int y = (r + 2 * g + b + 2) >> 2;
+
+  // Sat +8, contrast +6, brightness 0, shadows -12, color protect 0,
+  // highlights 0, midtones +12.
+  int shift = (y - 32) * 6 - 3 * (63 - y);
+  const int weight = y < 38 ? y - 14 : 62 - y;
+  if (weight > 0) shift -= 9 * weight;
+  const int rr = clip_lcd_channel(r + (((r - y) * 32 + 4 * shift + 32) >> 6));
+  const int gg = clip_lcd_channel(g + (((g - y) * 32 + 4 * shift + 32) >> 6));
+  const int bb = clip_lcd_channel(b + (((b - y) * 32 + 4 * shift + 32) >> 6));
+  return (u16)(((rr & 62) << 10) | (gg << 5) | (bb >> 1));
+}
+
 void draw_game_frame(const u16 *source) {
   if (PANEL_STATE == PANEL_LOADER_DEFERRED) initialize_panel();
   trace_stage(MY_LAB_TRACE_BOOT_FRAME, MY_LAB_TRACE_GAME_FRAME);
-  static const u8 direction = 0x08;
-  static const u8 format = 0x05;
   static const u8 columns[] = {0, 2, 0, 129};
   static const u8 rows[] = {0, 1, 0, 128};
   const int game = in_game();
+  u32 previous = 0x10000u;
+  u16 calibrated = 0;
   const u32 peripheral_clock = CLK_PERIPH;
   CLK_PERIPH = 0x42u;
   use_paradise_pins();
   use_paradise_spi();
-  int error = send_lcd_cmd(0x36, &direction, 1);
-  if (!error) error = send_lcd_cmd(0x3A, &format, 1);
-  if (!error) error = send_lcd_cmd(0x2A, columns, sizeof(columns));
+  // Panel initialization sets MADCTL and RGB565. Native Paradise only
+  // restarts the write window for subsequent frames.
+  int error = send_lcd_cmd(0x2A, columns, sizeof(columns));
   if (!error) error = send_lcd_cmd(0x2B, rows, sizeof(rows));
   if (!error) error = send_lcd_cmd(0x2C, 0, 0);
   if (error) trace_tx_error(MY_LAB_TRACE_TX_CMD, error, 0);
@@ -430,14 +475,21 @@ void draw_game_frame(const u16 *source) {
       /* Crop 16 columns on either side. My Lab stores pixels by column
          in reverse horizontal order. */
 #ifdef MY_LAB_GAME_FIT
-      const u16 pixel = source[columns_map[x] * 128u + y];
+      u16 pixel = source[columns_map[x] * 128u + y];
 #else
-      const u16 pixel = source[(143u - x) * 128u + y];
+      u16 pixel = source[(143u - x) * 128u + y];
 #endif
+      if (game) {
+        if (pixel != previous) {
+          previous = pixel;
+          calibrated = calibrated_game_pixel(pixel);
+        }
+        pixel = calibrated;
+      }
       line[2u * x] = (u8)(pixel >> 8);
       line[2u * x + 1u] = (u8)pixel;
     }
-    error = spi_write(line, sizeof(line));
+    error = spi_write_pixels(line);
     if (error) trace_tx_error(MY_LAB_TRACE_TX_ROW, error, y + 1u);
     feed_watchdogs();
     if (game) poll_wheel();

@@ -8,6 +8,7 @@ clang --target=thumbv7m-none-eabi -mcpu=cortex-m3 -mthumb -ffreestanding -fropi 
 echo 'SECTIONS { .text 0x10095000 : { *(.games_entry) *(.text*) *(.rodata*) } }' > "$work/fit.ld"
 ld.lld --gc-sections --entry=present_fitted_games -T "$work/fit.ld" "$work/fit.o" -o "$work/fit.elf"
 llvm-objcopy -O binary -j .text "$work/fit.elf" "$work/fit.bin"
-test "$(wc -c < "$work/fit.bin")" -le 2304
+# The screen-fit metadata starts at 0xBF8 in this sector.
+test "$(wc -c < "$work/fit.bin")" -le 3064
 base64 < "$work/fit.bin" | tr -d '\n'
 printf '\n'

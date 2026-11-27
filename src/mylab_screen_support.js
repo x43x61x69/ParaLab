@@ -48,7 +48,9 @@ const gameChunks = [
 const adapterCrcs = [
   0x378CEC2E, 0xC4579999, 0x240AA59A, 0x238F6826, 0x3105BF25, 0x3559256E,
   0xE0722EA2, 0x8D1A5666, 0x23F0417B, 0x59D8A174, 0x752BE1D5, 0x365F6437,
-  0x33A78456, 0xE7EE2CF1, 0xB5EC9F70, 0x4E6E4393, 0x36E7C760, 0xF04D170E,
+  0x33A78456, 0xE7EE2CF1, 0xB5EC9F70, 0x4E6E4393, 0x36E7C760, 0xF04D170E, 0x3756C98E,
+  0xF1F45280, 0xD716BE79, 0xD0EAC738, 0xEEDB0921, 0x36F205C2, 0x3D7CD023,
+  0xCF6CBD0B, 0xBBB6F193, 0x5F943511, 0x7F72C36B,
 ];
 const profiles = new Map([
   ['1.0.00', [{
@@ -156,6 +158,7 @@ function inspectProfile(rom, profile, version, operations, firmwareOnly) {
         return fail('Unrecognized Paradise display adapter');
       if (legacyPort) operations.upgradeLegacyGameCode(normalized);
       operations.normalizeSceneWheel(normalized);
+      operations.normalizePanelPads(normalized);
     }
     if (!gameChunks.every((allowed, i) => allowed.includes(crc(normalized, xip + i * CHUNK, CHUNK))))
       return fail('Unrecognized My Lab game program');

@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ParaLab</title>
+<meta name="theme-color" content="#211b38">
 <meta name="description" content="Offline Paradise and My Lab ROM tools. Edit, inspect, update, and back up your own device.">
 <link rel="icon" type="image/svg+xml" href="__BRAND_ICON__">
 <style>
@@ -14,7 +15,7 @@ body {
   background: var(--bg); color: var(--ink);
   font: 15px/1.5 "M PLUS Rounded 1c", "Segoe UI", system-ui, sans-serif;
 }
-button, select, input { font: inherit; color: inherit; }
+button, select, input, textarea { font: inherit; color: inherit; }
 img, canvas { image-rendering: pixelated; }
 :focus-visible { outline: 3px solid var(--sky); outline-offset: 2px; }
 
@@ -33,7 +34,7 @@ img, canvas { image-rendering: pixelated; }
   border: 2px solid var(--line); background: var(--panel); border-radius: 999px; padding: 6px 14px; cursor: pointer; font-weight: 700;
 }
 .btn:hover { border-color: var(--sky); }
-.btn.primary { background: var(--pink); border-color: var(--pink); color: var(--pink-ink); }
+.btn.primary { background: var(--lime); border-color: var(--ink); color: var(--ink); }
 .btn.primary:hover { filter: brightness(1.05); }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
 .btn.small { padding: 3px 10px; font-size: 13px; }
@@ -240,13 +241,13 @@ select { border: 2px solid var(--line); border-radius: 10px; padding: 5px 8px; b
   .grid, .dimgrid { grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); }
 }
 /* ParaLab visual system: compact, readable controls and clear hierarchy. */
-body{font:15px/1.55 var(--ui-font);letter-spacing:.002em}
+body{font:1rem/1.55 var(--body-font);letter-spacing:.002em}
 .bar{padding:14px clamp(16px,3vw,42px);gap:10px 14px;border-bottom:1px solid var(--line);box-shadow:0 2px 16px #10232c0a;backdrop-filter:blur(12px)}
 .brand{gap:12px}.brand-name{font-size:21px;font-weight:750;letter-spacing:-.035em}.brand-version{font-size:11px;font-weight:550;letter-spacing:.03em}
 .btn{border:1px solid var(--line);border-radius:10px;padding:7px 13px;font-weight:650;transition:background .16s,border-color .16s,transform .16s}
 .btn:hover:not(:disabled){border-color:var(--sky);background:var(--check-a);transform:translateY(-1px)}
-.btn.primary{background:var(--pink);border-color:var(--pink);color:var(--pink-ink)}
-.btn.primary:hover:not(:disabled){background:var(--sky);border-color:var(--sky)}
+.btn.primary{background:var(--lime);border-color:var(--ink);color:var(--ink)}
+.btn.primary:hover:not(:disabled){background:#f0ffa8;border-color:var(--ink)}
 .btn.small{padding:5px 10px;font-size:13px}.start{max-width:900px;margin:60px auto;padding:0 20px}
 .start h1{font-size:clamp(32px,5vw,52px);font-weight:780;letter-spacing:-.055em;max-width:15ch}
 .start p{font-size:16px;max-width:65ch}.drop{border:2px dashed var(--line);border-radius:18px;padding:36px 20px 0;box-shadow:0 8px 30px #1826330a}
@@ -273,12 +274,13 @@ __STUDIO_LAYOUT__
 <header class="bar">
   <div class="brand"><img class="brand-icon" src="__BRAND_ICON__" width="34" height="34" alt=""><span class="brand-name">ParaLab</span></div>
   <nav class="destinations" aria-label="Main navigation">
-    <button id="btnWorkspace" aria-current="page">Workspace</button>
+    <button class="rom-action" id="btnWorkspace" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10l9-7 9 7M5 9v11h14V9M10 20v-6h4v6"/></svg><span></span></button>
     <button id="btnDevice" data-t="device"></button>
     <button id="btnSaveEditor" data-t="Save Editor">Save Editor</button>
     <button id="btnLabCodes" data-t="Lab & Shop Codes">Lab &amp; Shop Codes</button>
     <button id="btnHelp">Guide</button>
-    <button id="btnLink">ParaLab Link</button>
+    <button id="btnLink">ParaLink</button>
+    <button id="btnChangelog" data-t="Change Log">Change Log</button>
   </nav>
   <div class="interface-language">
     <span class="interface-language-icon" aria-hidden="true"></span>
@@ -287,9 +289,9 @@ __STUDIO_LAYOUT__
   <div class="file-actions">
     <div class="header-rom"><span class="romname" id="romname"><span></span></span><span class="rom-source-edition" id="headerRomEdition" hidden></span></div>
     <div class="file-buttons">
-      <button class="btn" id="btnOpen" data-t="open"></button>
-      <button class="btn" id="reviewDevice">Review Device Write…</button>
-      <button class="btn primary" id="btnSave" data-t="save" disabled></button>
+      <button class="btn rom-action" id="btnCloseRom" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg><span data-t="Close ROM">Close ROM</span></button>
+      <button class="btn rom-action" id="reviewDevice" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h5v16h-5M3 12h13m-4-4 4 4-4 4"/></svg><span data-t="Write">Write</span></button>
+      <button class="btn primary rom-action" id="btnSave" type="button" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M4 16v4h16v-4"/></svg><span data-t="save">Save As</span></button>
     </div>
   </div>
 </header>
@@ -340,10 +342,24 @@ __STUDIO_LAYOUT__
       <strong>Write at Your Own Risk</strong>
       <p>A failed write can erase saves or leave the device unable to start. Check your backup before continuing. Keep the device powered on and connected until the write finishes.</p>
     </aside>
+    <div class="write-auto-confirm" id="writeAutoConfirmOption" hidden>
+      <label class="check"><input type="checkbox" id="writeAutoConfirm"> <span data-t="devAutoConfirm"></span></label>
+      <p id="writeAutoCountdown" role="status" hidden></p>
+    </div>
     <div class="device-dialog-actions">
       <button type="submit" class="btn" value="cancel" id="deviceDialogCancel">Cancel</button>
       <button type="submit" class="btn" value="alternate" id="deviceDialogAlternate" hidden></button>
       <button type="submit" class="btn primary" value="accept" id="deviceDialogAccept"></button>
+    </div>
+  </form>
+</dialog>
+<dialog id="writeAutoWarning" aria-labelledby="writeAutoWarningTitle" aria-describedby="writeAutoWarningHelp">
+  <form method="dialog">
+    <h2 id="writeAutoWarningTitle" data-t="devAutoConfirmTitle"></h2>
+    <p id="writeAutoWarningHelp" data-t="devAutoConfirmHelp"></p>
+    <div class="device-dialog-actions">
+      <button type="submit" class="btn" value="cancel" data-t="devStop" autofocus></button>
+      <button type="submit" class="btn primary" value="enable" data-t="devAutoConfirmEnable"></button>
     </div>
   </form>
 </dialog>
@@ -359,32 +375,40 @@ __STUDIO_LAYOUT__
 </dialog>
 __ANALYTICS_CARD__
 <main data-view="workspace">
+  <section id="changelogPage" hidden aria-labelledby="changelogTitle">
+    <h1 id="changelogTitle" data-t="Change Log">Change Log</h1>
+    <div id="changelogEntries" role="region" aria-labelledby="changelogTitle" tabindex="0"></div>
+  </section>
   <section id="linkPage" hidden aria-labelledby="linkTitle">
-    <h1 id="linkTitle">ParaLab Link</h1>
-    <p data-t="Send gifts, invite Playdate visitors and look up Lab Codes on the H717 touchscreen. Connect it to a computer to use it as a USB–UART bridge for Paradise."></p>
+    <h1 id="linkTitle">ParaLink</h1>
+    <p data-t="Send gifts, invite Playdate visitors and look up Lab Codes on ParaLink. Connect it to a computer to use it as a USB–UART bridge for Paradise."></p>
     <div class="link-controls">
       <section class="guide-card" aria-labelledby="linkPreviewTitle">
         <h2 id="linkPreviewTitle" data-t="Screen Preview"></h2>
         <div id="linkScreens">
-          <img src="__LINK_SCREEN_home__" alt="ParaLab Link · Home" width="536" height="240">
-          <img src="__LINK_SCREEN_catalog__" alt="ParaLab Link · Catalog" width="536" height="240" hidden>
-          <img src="__LINK_SCREEN_bridge__" alt="ParaLab Link · USB Bridge" width="536" height="240" hidden>
+          <img src="__LINK_SCREEN_home__" alt="ParaLink H717 preview · Home" width="536" height="240">
+          <img src="__LINK_SCREEN_catalog__" alt="ParaLink H717 preview · Catalog" width="536" height="240" hidden>
+          <img src="__LINK_SCREEN_bridge__" alt="ParaLink H717 preview · USB Bridge" width="536" height="240" hidden>
         </div>
         <div id="linkScreenButtons"><button type="button" class="btn small" aria-pressed="true" data-t="Home"></button>
           <button type="button" class="btn small" aria-pressed="false" data-t="Item Catalog"></button>
           <button type="button" class="btn small" aria-pressed="false" data-t="USB Bridge">USB Bridge</button></div>
       </section>
       <section class="guide-card" aria-labelledby="linkUpdateTitle">
-        <h2 id="linkUpdateTitle"><span data-t="H717 USB Firmware Update"></span> <small>v__LINK_VERSION__</small></h2>
+        <h2 id="linkUpdateTitle"><span data-t="USB Firmware Update"></span> <small>v__LINK_VERSION__</small></h2>
         <div class="link-update-copy">
-          <p class="hint" data-t="The browser USB updater has been verified on H717 hardware."></p>
-          <p data-t="Disconnect Paradise and close other serial connections. Connect only your H717 by USB. To enter download mode manually, hold BOOT, tap RESET, then release BOOT."></p>
+          <p data-t="USB OTA shows progress on both the device and this page. Use ROM mode to install or recover firmware, or to update the catalog assets."></p>
+          <p data-t="Disconnect Paradise and close other serial connections. Choose the board model and use the MAC suffix in the title bar to identify its USB port. To enter download mode manually, hold BOOT, tap RESET, then release BOOT."></p>
         </div>
         <div class="link-update-actions">
-          <select id="linkMode" aria-labelledby="linkUpdateTitle"><option value="update" data-t="Update firmware and assets · keep settings and favorites"></option><option value="factory" data-t="First installation or recovery · erase all H717 data"></option></select>
-          <button id="linkConnect" class="btn primary" type="button" data-t="Connect H717 via USB"></button>
+          <label for="linkBoard" data-t="Hardware"></label>
+          <select id="linkBoard"><option value="h717">H717 · AMOLED Touch</option><option value="k191">K191 · T-QT Pro</option></select>
+          <label for="linkMode" data-t="Update method"></label>
+          <select id="linkMode"><option value="ota" data-t="USB OTA · keep settings and favorites"></option><option value="update" data-t="ROM update firmware and assets · keep settings and favorites"></option><option value="factory" data-t="First installation or recovery · erase all device data"></option></select>
+          <button id="linkConnect" class="btn primary" type="button" data-t="Connect ParaLink via USB"></button>
+          <p id="linkVersions" aria-live="polite"></p>
           <div class="transfer-progress" id="linkProgress" hidden>
-            <div class="flash" id="linkMeter" role="progressbar" aria-label="H717 USB" aria-valuemin="0" aria-valuemax="100"><span class="seg emu" id="linkBar"></span></div>
+            <div class="flash" id="linkMeter" role="progressbar" aria-label="ParaLink USB" aria-valuemin="0" aria-valuemax="100"><span class="seg emu" id="linkBar"></span></div>
             <span id="linkPercent" aria-hidden="true"></span>
           </div>
           <p role="status" id="linkStatus"></p>
@@ -395,7 +419,8 @@ __ANALYTICS_CARD__
     <section class="guide-card link-wiring" aria-labelledby="linkWiringTitle">
       <h2 id="linkWiringTitle" data-t="Materials and Wiring"></h2>
       <ul class="link-materials">
-        <li>LILYGO H717 · T-Display-S3 AMOLED Touch 1.91″ · 16 MiB</li>
+        <li>H717 · LILYGO T-Display-S3 AMOLED Touch 1.91″ · 16 MiB</li>
+        <li>K191 · LILYGO T-QT Pro · 8 MiB</li>
         <li data-t="USB-C data cable"></li>
         <li data-t="JST-SH 1.0 mm 4-pin plug with bare leads"></li>
         <li data-t="Paradise 3-contact UART adapter"></li>
@@ -416,6 +441,8 @@ __ANALYTICS_CARD__
           </figcaption>
         </figure>
       </div>
+      <p data-t="On K191, use the four-pin JH socket. The signals are GND, 3V3, IO43 (TX), and IO44 (RX). Leave 3V3 disconnected."></p>
+      <p data-t="K191 buttons: tap A to move and B to choose. Hold A to go back. Hold B to scroll lists or favorite an item."></p>
       <table aria-labelledby="linkWiringTitle">
         <thead><tr><th scope="col">H717 UART</th><th scope="col" data-edition-label="paradise">Tamagotchi Paradise</th></tr></thead>
         <tbody>
@@ -426,7 +453,7 @@ __ANALYTICS_CARD__
         </tbody>
       </table>
       <p class="hint" data-t="Count from the board view shown. The cable plug looks reversed from its mating face. Check pin labels or continuity instead of wire colors."></p>
-      <p class="hint" data-t="Power the H717 by USB and Paradise with its own batteries. Connect the signal wires after the H717 starts and insulate the unused 3V3 lead."></p>
+      <p class="hint" data-t="Power ParaLink by USB and Paradise with its own batteries. Connect the signal wires after ParaLink starts and insulate the unused 3V3 lead."></p>
     </section>
   </section>
   <section class="plan help" id="helpBox" hidden>
@@ -514,7 +541,7 @@ __ANALYTICS_CARD__
       <h2>Edit a ROM</h2>
       <ol class="guide-steps">
         <li><h3>Load the Source</h3><p data-sentence="sentenceGuideSource"><button data-sentence-part="open" type="button" id="guideOpenRom" class="text-action" data-t="open">Open ROM</button> loads a <span data-sentence-part="paradise" data-edition-label="paradise">Tamagotchi Paradise</span> or <span data-sentence-part="myLab" data-edition-label="my-lab">My Lab Tamagotchi</span> ROM. To read a ROM from your device, use <a data-sentence-part="read" href="#romTransfer" data-view-link="uart">Read ROM</a> and keep the downloaded backup.</p></li>
-        <li><h3>Edit and Export</h3><p data-sentence="sentenceGuideEdit">Make changes in <a data-sentence-part="workspace" href="#btnWorkspace" data-view-link="workspace">Workspace</a>. Choose Save New ROM to download the edited copy.</p></li>
+        <li><h3>Edit and Export</h3><p data-sentence="sentenceGuideEdit">Make changes in <a data-sentence-part="workspace" href="#btnWorkspace" data-view-link="workspace">Workspace</a>. Choose Save As to download the edited copy.</p></li>
         <li><h3>Write to a Device</h3><p data-sentence="sentenceGuideWrite">After translating, choose Use Translated ROM to continue in Workspace. In <a data-sentence-part="write" href="#writeReview" data-view-link="uart">Write to Device</a>, review the source file, target device and save settings before confirming.</p></li>
       </ol>
     </section>
@@ -922,6 +949,7 @@ __ANALYTICS_CARD__
                 <div class="tools">
                   <label class="check"><input type="checkbox" id="devOnly" checked> <span data-t="devOnly"></span></label>
                   <label class="check"><input type="checkbox" id="devKeep" checked> <span data-t="devKeep"></span></label>
+                  <label class="check"><input type="checkbox" id="devAutoConfirm"> <span data-t="devAutoConfirm"></span></label>
                   <label class="check" id="devFastOption" hidden><input type="checkbox" id="devFast"> <span data-t="devFast"></span></label>
                   <button type="button" class="btn small" id="devFlashUpgrade" data-t="flashUpgradeTitle" hidden></button>
                 </div>
@@ -1224,6 +1252,10 @@ __ANALYTICS_CARD__
           <section class="session-card" id="itemEditor" hidden>
             <h2>Lab Item Editor</h2>
             <p id="itemSource" class="file-selection"></p>
+            <details class="localized-section" id="itemAcquisition" hidden>
+              <summary>Official Acquisition</summary>
+              <div class="lab-acquisition" id="itemAcquisitionContent"></div>
+            </details>
             <details class="localized-section">
               <summary>Localized Names</summary>
               <fieldset id="itemNameFields" aria-label="Localized Names">
@@ -1285,20 +1317,20 @@ __ANALYTICS_CARD__
 
   <section class="start" id="start">
     <div class="launch" id="romDropZone">
-      <div class="instrument"><img src="__DEVICE_ART_paradise-blueprint__" width="1080" height="720" alt="Three-quarter view of a virtual pet device with a side dial, drafting guides and a castle marked Paradise."></div>
       <div class="launch-copy">
         <h1>ROM Lab</h1>
         <p data-t="Explore characters, edit saves and build a custom ROM for your {editionParadise} or {editionMyLab}.">Explore characters, edit saves and build a custom ROM for your Tamagotchi Paradise or My Lab.</p>
         <div class="launch-actions">
-          <button class="drop" id="drop" type="button">Open ROM <span aria-hidden="true">↗</span></button>
+          <button class="drop rom-action" id="drop" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 18V6h7l2 2h9v3M3 18l4-7h14l-4 7z"/></svg><span data-t="open">Open ROM</span></button>
           <button class="btn" id="launchOpenSave" type="button">Open Save File…</button>
         </div>
         <small>Drop a ROM (.bin) or save (.sav) here.</small>
       </div>
+      <div class="instrument"><img src="__DEVICE_ART_lab-terminal__" width="1200" height="800" alt=""></div>
     </div>
     <div class="launch-links">
-      <button id="launchDevice"><span class="launch-symbol" aria-hidden="true">⇄</span><span><strong>Device Console</strong><small>Connect via UART for backups, transfers and visits.</small></span><b aria-hidden="true">↗</b></button>
-      <button id="launchGuide"><span class="launch-symbol" aria-hidden="true">≡</span><span><strong>Guide</strong><small>Find ROM editing steps, save tools and device transfers.</small></span><b aria-hidden="true">↗</b></button>
+      <button id="launchDevice"><span class="launch-symbol" aria-hidden="true">⇄</span><span><strong>Device Console</strong><small>Connect via UART for backups, transfers and visits.</small></span></button>
+      <button id="launchGuide"><span class="launch-symbol" aria-hidden="true">≡</span><span><strong>Guide</strong><small>Find ROM editing steps, save tools and device transfers.</small></span></button>
     </div>
   </section>
 
@@ -1846,7 +1878,7 @@ __ANALYTICS_CARD__
       <p class="hint"><a href="#license">License</a></p>
     </div>
     <div class="pane" id="pane-feld" hidden>
-      <header class="menu-intro"><h2 data-t="Paradise Menu">{editionParadise} Menu</h2><p data-sentence="sentenceMenuExport">Choose the tools to include on your <span data-sentence-part="device" data-edition-label="paradise">Tamagotchi Paradise</span>. Use <a data-sentence-part="save" href="#btnSave" data-t="save">Save New ROM</a> to export your choices.</p></header>
+      <header class="menu-intro"><h2 data-t="Paradise Menu">{editionParadise} Menu</h2><p data-sentence="sentenceMenuExport">Choose the tools to include on your <span data-sentence-part="device" data-edition-label="paradise">Tamagotchi Paradise</span>. Use <a data-sentence-part="save" href="#btnSave" data-t="save">Save As</a> to export your choices.</p></header>
       <section class="menu-status" aria-label="ROM status"><h3>ROM Status</h3><ul id="feldStat"></ul></section>
       <section class="menu-group">
         <h3 class="menu-heading">Gameplay Tools</h3>

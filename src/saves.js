@@ -350,10 +350,16 @@ function gameClock(page, rtc, myLab = false) {
   const base = CLOCK_EPOCH + days * DAY_SECONDS + seconds;
   const now = base + rtc.counter;
   const calendar = savedCalendar(page);
-  const saved = myLab ? base + u32(page, 0x28) : calendar;
+  const savedCounter = myLab ? u32(page, 0x28) : 0;
+  const saved = myLab ? base + savedCounter : calendar;
   if (!Number.isFinite(calendar) || seconds >= DAY_SECONDS || base >= CLOCK_LIMIT || now >= CLOCK_LIMIT ||
-      saved < CLOCK_EPOCH || saved > now + 5 || now - saved > 366 * DAY_SECONDS ||
-      (myLab && (saved > now || Math.floor(saved / DAY_SECONDS) !== Math.floor(calendar / DAY_SECONDS)))) return null;
+      saved < CLOCK_EPOCH || saved >= CLOCK_LIMIT ||
+      (myLab && Math.floor(saved / DAY_SECONDS) !== Math.floor(calendar / DAY_SECONDS))) return null;
+  // The save can outlive the RTC counter. The last save is the only known
+  // time in that case, so show it until the user explicitly sets a new time.
+  if (myLab && saved > now)
+    return { now: saved, saved, offset, counter: rtc.counter, counterReset: true };
+  if (saved > now + 5 || now - saved > 366 * DAY_SECONDS) return null;
   return { now, saved, offset, counter: rtc.counter };
 }
 
@@ -365,6 +371,8 @@ function changeGameClock(page, clock, target) {
   const out = Uint8Array.from(page);
   w32(out, clock.offset, Math.floor(base / DAY_SECONDS));
   w32(out, clock.offset + 4, base % DAY_SECONDS);
+  // After a reset, anchor My Lab's saved calendar to the live RTC counter.
+  if (clock.counterReset) w32(out, 0x28, clock.counter);
   calendarFields(new Date(saved * 1000)).forEach((value, i) => {
     const offset = 0x1C + i * 2;
     out[offset] = value & 255;

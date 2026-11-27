@@ -62,6 +62,7 @@ function fitRomName() {
 function setRomName(name) {
   romName.title = name;
   romName.setAttribute('aria-label', name);
+  if (!name) romName.firstElementChild.textContent = '';
   fitRomName();
   renderSourceEdition('headerRomEdition', sourceEdition());
 }
@@ -214,7 +215,7 @@ const T = {
     neonTamaOn: 'Edit your Tamagotchi from the Programs menu',
     neonTamaOnHelp: 'Adjust your Tamagotchi’s care, appearance and age in {editionNeon}.',
     petPoints: 'Tamapoints', petMission: 'Mission', petMissionAction: 'Completion', petMissionComplete: 'Mark complete', petMissionReset: 'Reset completion',
-    open: 'Open ROM', save: 'Save New ROM',
+    open: 'Open ROM', save: 'Save As',
     startTitle: 'Make your ROM your own',
     startText: 'Open a {editionParadise} or {editionMyLab} ROM to inspect, customize, back up, and prepare device updates. Everything runs locally in your browser.',
     featHead: 'Tools for your device',
@@ -319,6 +320,11 @@ const T = {
     phkeepSaves: 'Checking saves to keep', phcopySaves: 'Copying save blocks',
     phcheckRescue: 'Checking recovery blocks', phplan: 'Planning the flash write',
     phconfirmWrite: 'Waiting for write confirmation',
+    devAutoConfirm: 'Confirm ROM writes automatically',
+    devAutoConfirmTitle: 'Enable automatic write confirmation?',
+    devAutoConfirmHelp: 'ROM writes will start automatically 3 seconds after the final confirmation opens. You can cancel or start immediately during the countdown. Writing the wrong ROM or interrupting a write can erase saves or leave the device unable to start. ParaLab remembers this setting.',
+    devAutoConfirmEnable: 'Enable automatic confirmation',
+    devAutoConfirmCountdown: 'Writing starts in {seconds} s.',
     devRestartNow: 'Restart Device', devRestarting: 'Sending restart command…',
     devAutoRestarting: 'Restarting in 3 seconds. Press C on the device to stay in Flash Tool.',
     devRestartKept: 'Automatic restart cancelled. The device is still in Flash Tool.',
@@ -469,6 +475,7 @@ function renderGameLabels() {
 
 function applyLang() {
   document.querySelectorAll('[data-t]').forEach(el => { el.textContent = t(el.dataset.t); });
+  renderWorkspaceButton();
   renderSourceEdition('headerRomEdition', sourceEdition());
   renderGameLabels();
   I18n.applyMarkup();
@@ -529,7 +536,8 @@ function applyLang() {
 }
 
 // ------------------------------------------------------------------ state
-const state = { ctx: null, name: '', changed: new Map(), dim: null, open: null, zoom: 2, eyeOffsets: new Map(), eyeRects: new Map(), eyeLayer: false, fields: [], charNames: new Map(), paramixShortcut: false };
+const emptyRomState = () => ({ ctx: null, name: '', changed: new Map(), dim: null, open: null, zoom: 2, eyeOffsets: new Map(), eyeRects: new Map(), eyeLayer: false, fields: [], charNames: new Map(), paramixShortcut: false });
+let state = emptyRomState();
 const decodedSprites = new Map();
 const DECODED_SPRITE_BUDGET = 16 * 1024 * 1024;
 let decodedSpriteBytes = 0;
@@ -1836,6 +1844,7 @@ function showMyLabRom(ctx, name) {
   $('myLabRom').hidden = false;
   $('btnSave').disabled = false;
   setRomName(name);
+  renderWorkspaceButton();
   for (const id of ['myLabSavePage', 'myLabCharacterField']) $(id).replaceChildren();
   $('myLabCharacterSearch').value = '';
   $('myLabCharacterZoom').value = '0';
@@ -1927,6 +1936,7 @@ async function openRomWorkspace(buf, filename, stayOnDevice) {
   $('namesFind').value = '';
   $('start').hidden = true; $('work').classList.add('on'); $('btnSave').disabled = false;
   setRomName(filename);
+  renderWorkspaceButton();
   state.pmBios = undefined; state.pmKeys = null; state.abKeys = null;
   state.neonDonor = null;
   state.paraCleared = false;
@@ -3947,11 +3957,53 @@ $('btnAbKeysDef').onclick = () => { state.abKeys = E.AB_KEYS_DEFAULT.slice(); st
 function renderDoom() {}
 
 // ------------------------------------------------------------- actions
-$('btnOpen').onclick = () => { if (!warnDeviceWrite()) $('fileRom').click(); };
+function renderWorkspaceButton() {
+  $('btnWorkspace').lastElementChild.textContent = t(activeRom() ? 'Workspace' : 'Start');
+}
+
+$('btnCloseRom').onclick = async () => {
+  if (!activeRom() || warnDeviceWrite() || dv.run || dv.opening || saveEditor.running) return;
+  const context = myLabRom || state.ctx;
+  const editorUsesRom = saveEditor.source?.context === context;
+  const edited = myLabRom
+    ? myLabRom.portDraft || myLabRom.menuDraft || myLabRom.saveDraft || myLabRom.editorSlotWrites?.size ||
+      myLabRom.spriteChanges.some(changes => changes.size) || myLabScreenFitChanged()
+    : state.changed.size !== (state.saved || 0) || state.eyeShift?.size || state.mouthShift?.size ||
+      state.poseAdj?.size || paradiseExportFeatures().some(feature => feature !== 'sprites');
+  if ((edited || (editorUsesRom && saveEditorDirty(saveEditor.session))) &&
+      !await deviceDialog(t('leave'), t('Close ROM'), t('Close ROM'))) return;
+  if ((myLabRom || state.ctx) !== context || warnDeviceWrite() || dv.run || dv.opening || saveEditor.running) return;
+
+  closeDrawer();
+  clearMyLabPreviews();
+  observer?.disconnect();
+  clearDecodedSprites();
+  for (const id of ['gridFigs', 'gridAll', 'romLabItems']) $(id).replaceChildren();
+  $('btnPetClose').onclick();
+  myLabRom = writeMenuSource = null;
+  residentBackup = residentView = residentCharacters = null;
+  state = emptyRomState();
+  if (editorUsesRom) Object.assign(saveEditor, { source: null, session: null, status: null });
+  else if (saveEditor.session?.preview === context) saveEditor.session.preview = null;
+  $('work').classList.remove('on');
+  $('myLabRom').hidden = true;
+  $('btnSave').disabled = true;
+  $('start').hidden = false;
+  setRomName('');
+  renderWorkspaceButton();
+  rememberNavigation({ file: null, paradise: null, lab: null });
+  renderGameLabels();
+  renderGiftChoices();
+  visRefreshRomVisitors();
+  devRender();
+  showDestination('workspace', true);
+  $('drop').focus({ preventScroll: true });
+};
 async function myLabPrepareMenu(ctx, key) {
   if (ctx !== myLabRom || ctx.menuDraft || ctx.menuBusy) return;
   ctx.menuBusy = true;
   renderMyLabMenu();
+  devRender();
   try {
     const image = await busy(t("Preparing My Lab Menu"), () => MLM.apply(ctx.rom, key));
     if (myLabRom !== ctx) return;
@@ -3965,7 +4017,6 @@ async function myLabPrepareMenu(ctx, key) {
     ctx.menuDraft = { menu, text, flashImage, usedFlash: myLabUsedFlash(image), screenFitSupport: MLM.screenFitSupport(image) };
     measure('edit', 'menu');
     renderMyLabChangeStatus();
-    devRender();
   } catch (error) {
     if (myLabRom === ctx) toast(ctx.menu.mode === 'paradise' ? myLabPortError(error) : em(error), true);
   } finally {
@@ -3973,6 +4024,7 @@ async function myLabPrepareMenu(ctx, key) {
     if (myLabRom === ctx) {
       renderMyLabMenu();
       renderMyLabPort();
+      devRender();
     }
   }
 }
@@ -5116,7 +5168,7 @@ const hasFlashApp = !!FL.embedded();
 let saveReadAfterConnect = false;
 let writeMenuSource = null;
 const dv = { io: null, d: null, writing: false, writeOperation: null, loaded: false, opening: false, connecting: null, reconnecting: false, run: false, cancel: false };
-let clockDevice = null, clockTime = null;
+let clockDevice = null, clockReading = null;
 const canReadLabItems = device => !!device && device.info.editionIdentified !== false &&
   Number.isInteger(device.info.edition) && device.info.edition >= 1 && device.info.edition <= 8;
 const deviceTabs = Array.from($('deviceTabs').querySelectorAll('[role="tab"]'));
@@ -5190,6 +5242,33 @@ function rememberFastUart(enabled) {
   deviceFastPreferred = enabled;
   try { localStorage.setItem(FAST_UART_PREFERENCE_KEY, enabled ? '1' : '0'); } catch (_) {}
 }
+const AUTO_WRITE_PREFERENCE_KEY = 'paralab.autoConfirmRomWrite';
+let autoConfirmRomWrite = false;
+try { autoConfirmRomWrite = localStorage.getItem(AUTO_WRITE_PREFERENCE_KEY) === '1'; } catch (_) {}
+const autoWriteChecks = [$('devAutoConfirm'), $('writeAutoConfirm')];
+function syncAutoWriteChecks() {
+  for (const checkbox of autoWriteChecks) checkbox.checked = autoConfirmRomWrite;
+}
+syncAutoWriteChecks();
+
+async function changeAutoWritePreference(checkbox) {
+  const enable = checkbox.checked;
+  syncAutoWriteChecks();
+  if (enable) {
+    const warning = $('writeAutoWarning');
+    warning.returnValue = '';
+    const accepted = await new Promise(resolve => {
+      warning.addEventListener('close', () => resolve(warning.returnValue === 'enable'), { once: true });
+      warning.showModal();
+    });
+    if (!accepted) return;
+  }
+  autoConfirmRomWrite = enable;
+  syncAutoWriteChecks();
+  try { localStorage.setItem(AUTO_WRITE_PREFERENCE_KEY, enable ? '1' : '0'); } catch (_) {}
+}
+$('devAutoConfirm').onchange = event => changeAutoWritePreference(event.currentTarget);
+
 const deviceCanFastWrite = device => !!device?.info.fastWrite && !device.info.readOnly;
 function deviceWritePlan() {
   const device = dv.d;
@@ -5287,6 +5366,10 @@ function deviceDialog(message, title = t("Confirm Device Operation"), action = t
   const dialog = $('deviceDialog');
   if (dialog.open) return Promise.resolve(false);
   const review = writeMode === 'review';
+  const timedWrite = writeMode === 'timedWrite';
+  $('writeAutoConfirmOption').hidden = !timedWrite;
+  const countdown = $('writeAutoCountdown');
+  countdown.hidden = true;
   $('writeRisk').hidden = !writeMode;
   $('deviceDialogTitle').textContent = title;
   $('deviceDialogMessage').replaceChildren(message);
@@ -5318,17 +5401,56 @@ function deviceDialog(message, title = t("Confirm Device Operation"), action = t
   }
   accept.disabled = checks.length > 0;
   const targetDevice = dv.d;
+  const writeOperation = dv.writeOperation;
+  const autoWriteCheck = $('writeAutoConfirm');
+  let timer;
+  const stopCountdown = () => {
+    clearTimeout(timer);
+    countdown.hidden = true;
+  };
+  const startCountdown = () => {
+    if (!autoConfirmRomWrite || !dialog.open) return;
+    let seconds = 3;
+    countdown.hidden = false;
+    const tick = () => {
+      if (!dialog.open) return;
+      if (dv.d !== targetDevice || dv.cancel || dv.writeOperation !== writeOperation) {
+        dialog.close('cancel');
+        return;
+      }
+      if (seconds === 0) {
+        dialog.close('accept');
+        return;
+      }
+      countdown.textContent = t('devAutoConfirmCountdown', { seconds: new Intl.NumberFormat(locale()).format(seconds) });
+      seconds--;
+      timer = setTimeout(tick, 1000);
+    };
+    tick();
+  };
   dialog.returnValue = '';
   return new Promise(resolve => {
     dialog.addEventListener('close', () => {
       const choice = dialog.returnValue;
       const confirmed = checks.every(check => check.checked);
+      if (timedWrite) {
+        stopCountdown();
+        autoWriteCheck.onchange = null;
+      }
       accept.disabled = false;
       resolve(confirmed && dv.d === targetDevice && (choice === 'accept' || (alternate && choice === 'alternate'))
         ? (alternate ? choice : true) : false);
     }, { once: true });
     dialog.showModal();
     $(focusAccept ? 'deviceDialogAccept' : 'deviceDialogCancel').focus();
+    if (timedWrite) {
+      autoWriteCheck.onchange = async () => {
+        stopCountdown();
+        await changeAutoWritePreference(autoWriteCheck);
+        startCountdown();
+      };
+      startCountdown();
+    }
   });
 }
 
@@ -5336,14 +5458,16 @@ function confirmFlashOperation(message, title = t("Confirm Device Write"), actio
   return deviceDialog(message, title, action, false, 'write');
 }
 
-function confirmFlashWriteCount(count, plan) {
+function confirmFlashWriteCount(count, plan, autoConfirm = true) {
   const format = new Intl.NumberFormat(locale());
-  if (plan?.large) {
-    return confirmFlashOperation(t('devMixedWriteCount', {
+  const message = plan?.large
+    ? t('devMixedWriteCount', {
       small: format.format(plan.small), large: format.format(plan.large), total: format.format(count),
-    }));
-  }
-  return confirmFlashOperation(t('Write {count} flash blocks of 4 KiB each?', { count: format.format(count) }));
+    })
+    : t('Write {count} flash blocks of 4 KiB each?', { count: format.format(count) });
+  return autoConfirm
+    ? deviceDialog(message, t('Confirm Device Write'), t('Write to Device'), false, 'timedWrite')
+    : confirmFlashOperation(message);
 }
 
 function warnDeviceWrite() {
@@ -5447,7 +5571,7 @@ function devRender(msg) {
   $('btnQuickDump').disabled = dv.run || dv.opening || !canQuickDump;
   $('quickDumpHint').textContent = canQuickDump ?
     t('devQuickDumpHint', { n: myLabRom?.name || state.name }) : t('fl_quickReadSource');
-  $('btnWrite').disabled = !dv.d || dv.run || !canWrite || readOnly;
+  $('btnWrite').disabled = !dv.d || dv.run || myLabRom?.menuBusy || !canWrite || readOnly;
   $('btnSaveRead').disabled = !dv.d || dv.run;
   $('btnSaveWrite').disabled = !dv.d || dv.run || readOnly;
   renderUartClock();
@@ -5458,6 +5582,7 @@ function devRender(msg) {
   $('devSaveHint').dataset.t = saveHint;
   $('devSaveHint').textContent = t(saveHint);
   $('devOnly').disabled = $('devKeep').disabled = dv.run || plan.fixedOptions;
+  $('devAutoConfirm').disabled = dv.run || dv.opening;
   $('devOnly').checked = plan.onlyChanged;
   $('devKeep').checked = plan.keep;
   $('devFastOption').hidden = !deviceCanFastWrite(dv.d);
@@ -5601,6 +5726,45 @@ async function restartDevice() {
 }
 $('btnDevRestart').onclick = restartDevice;
 const viewScroll = new Map();
+const releases = /*__CHANGELOG__*/ [];
+const changelogKinds = { feature: 'Feature', improvement: 'Improvement', bug: 'Bug' };
+const changelogKindOrder = Object.keys(changelogKinds);
+
+function renderChangelog() {
+  const entries = $('changelogEntries');
+  const openVersion = entries.firstElementChild
+    ? entries.querySelector('details[open]')?.dataset.version : releases[0]?.version;
+  entries.replaceChildren(...releases.map(({ version, changes }) => {
+    const entry = document.createElement('details');
+    entry.name = 'changelog-release';
+    entry.dataset.version = version;
+    entry.open = version === openVersion;
+    const summary = document.createElement('summary');
+    const title = document.createElement('h2');
+    title.textContent = 'v' + version;
+    summary.append(title);
+    const list = document.createElement('ul');
+    list.setAttribute('role', 'list');
+    const orderedChanges = changes.map(change => ({
+      ...change, kind: Object.hasOwn(changelogKinds, change.kind) ? change.kind : 'improvement',
+    })).sort((a, b) =>
+      changelogKindOrder.indexOf(a.kind) - changelogKindOrder.indexOf(b.kind));
+    for (const { kind, text } of orderedChanges) {
+      const item = document.createElement('li');
+      const pill = document.createElement('span');
+      pill.className = 'changelog-pill';
+      pill.dataset.kind = kind;
+      pill.textContent = t(changelogKinds[kind]);
+      const note = document.createElement('span');
+      note.textContent = text[locale()] || text.en;
+      item.append(pill, note);
+      list.append(item);
+    }
+    entry.append(summary, list);
+    return entry;
+  }));
+}
+
 function showDestination(view, newRom = false) {
   const main = document.querySelector('main');
   if (main.dataset.view !== view && warnDeviceWrite()) return;
@@ -5608,8 +5772,13 @@ function showDestination(view, newRom = false) {
   if (main.dataset.view !== view && !newRom) measure('feature_view', view);
   viewScroll.set(main.dataset.view, window.scrollY);
   main.dataset.view = view;
+  if (view !== 'changelog' && location.hash === '#changelog')
+    history.replaceState(history.state, '', location.pathname + location.search);
+  if (view !== 'device' && location.hash === '#device')
+    history.replaceState(history.state, '', location.pathname + location.search);
   rememberNavigation({ view });
   $('linkPage').hidden = view !== 'link';
+  $('changelogPage').hidden = view !== 'changelog';
   $('helpBox').hidden = view !== 'guide';
   if (view !== 'guide') {
     stopGuidePlayer();
@@ -5618,12 +5787,13 @@ function showDestination(view, newRom = false) {
   $('device').hidden = view !== 'device';
   $('labCodesPage').hidden = view !== 'codes';
   $('saveEditor').hidden = view !== 'save-editor';
-  for (const [key, id] of Object.entries({workspace:'btnWorkspace', guide:'btnHelp', link:'btnLink', device:'btnDevice', 'save-editor':'btnSaveEditor', codes:'btnLabCodes'})) {
+  for (const [key, id] of Object.entries({workspace:'btnWorkspace', guide:'btnHelp', link:'btnLink', changelog:'btnChangelog', device:'btnDevice', 'save-editor':'btnSaveEditor', codes:'btnLabCodes'})) {
     if (key === view) $(id).setAttribute('aria-current', 'page');
     else $(id).removeAttribute('aria-current');
   }
   if (view === 'device') devRender();
   if (view === 'codes') renderLabCodeReference();
+  if (view === 'changelog') renderChangelog();
   if (view === 'save-editor') refreshSaveEditor();
   window.scrollTo(0, newRom ? 0 : viewScroll.get(view) || 0);
 }
@@ -5771,6 +5941,11 @@ $('btnDevice').onclick = $('launchDevice').onclick = () => showDestination('devi
 $('btnHelp').onclick = $('launchGuide').onclick = () => showDestination('guide');
 /*__LINK_SCRIPT__*/
 $('btnLink').onclick = () => showDestination('link');
+$('btnChangelog').onclick = () => showDestination('changelog');
+window.addEventListener('hashchange', () => {
+  if (location.hash === '#changelog') showDestination('changelog');
+  else if (location.hash === '#device') showDestination('device');
+});
 $('btnLabCodes').onclick = () => showDestination('codes');
 $('btnSaveEditor').onclick = () => showDestination('save-editor');
 $('btnUartRelease').onclick = devFree;
@@ -7372,7 +7547,7 @@ function labCatalogMatches(item, query) {
 
 function renderLabItemCatalog() {
   const catalog = $('itemCatalog'), query = $('itemSearch').value.trim().toLowerCase();
-  const items = [...(deviceCatalogs.lab.data?.items || []), ...itemTransfer.files];
+  const items = [...(deviceCatalogs.lab.data?.items || []), ...itemTransfer.files].sort((a, b) => b.id - a.id);
   const visible = query ? items.filter(item => labCatalogMatches(item, query)) : items;
   $('itemCount').textContent = query ? visible.length + ' / ' + items.length : items.length;
   catalog.replaceChildren(...visible.map(item => {
@@ -7573,6 +7748,77 @@ function renderTransferItemName(item) {
   const labels = [itemDisplayName(item), '#' + item.id];
   if (item.source === 'import') labels.push(item.filename);
   $('itemSource').textContent = labels.filter(Boolean).join(' · ');
+  renderLabAcquisition(item);
+}
+
+function renderLabAcquisition(item) {
+  const panel = $('itemAcquisition');
+  panel.hidden = item.source !== 'catalog';
+  if (panel.hidden) return;
+  const content = $('itemAcquisitionContent');
+  const { byItem, events, sources } = deviceCatalogs.lab.data?.acquisition || {};
+  const record = byItem?.[item.id];
+  if (!record?.events.length) {
+    const hint = document.createElement('p');
+    hint.className = 'hint';
+    hint.textContent = t('No official acquisition details are available for this item.');
+    content.replaceChildren(hint);
+    return;
+  }
+
+  const language = locale();
+  const dates = new Intl.DateTimeFormat(language, { dateStyle: 'medium', timeZone: 'UTC' });
+  const languages = new Intl.DisplayNames(language, { type: 'language' });
+  const regions = new Intl.DisplayNames(language, { type: 'region' });
+  const list = new Intl.ListFormat(language);
+  const period = ({ start, end }) => {
+    if (start && end) return dates.formatRange(new Date(start), new Date(end));
+    if (start) return t('From {date}', { date: dates.format(new Date(start)) });
+    if (end) return t('Until {date}', { date: dates.format(new Date(end)) });
+    return '';
+  };
+  content.replaceChildren(...record.events.map(id => {
+    const event = events[id];
+    const section = document.createElement('section');
+    const title = document.createElement('h3');
+    title.textContent = t(event.name);
+    section.append(title);
+    if (record.context) {
+      const hint = document.createElement('p');
+      hint.className = 'hint';
+      hint.textContent = t('Official event context. The individual item is not identified in the announcement.');
+      section.append(hint);
+    }
+    const method = record.method || event.method;
+    const venues = event.venues?.map(venue => [t(venue.name), period(venue)].filter(Boolean).join(' · '));
+    const rows = [
+      ['How to Obtain', method && t(method)],
+      ['Lab Tama Area', event.area && t(event.area)],
+      ['Distribution Region', event.region && regions.of(event.region)],
+      ['Location', venues?.length && list.format(venues)],
+      ['Distribution Period', period(event)],
+    ];
+    const facts = document.createElement('dl');
+    facts.className = 'write-facts';
+    for (const [label, value] of rows) {
+      if (!value) continue;
+      const term = document.createElement('dt'), detail = document.createElement('dd');
+      term.textContent = t(label);
+      detail.textContent = value;
+      facts.append(term, detail);
+    }
+    section.append(facts);
+    const links = sources[event.source];
+    const articleLanguage = [language, 'ja', 'en', ...Object.keys(links)].find(code => links[code]);
+    const article = document.createElement('a');
+    article.href = 'https://tamagotchi-official.com' + links[articleLanguage];
+    article.hreflang = articleLanguage;
+    article.target = '_blank';
+    article.rel = 'noopener noreferrer';
+    article.textContent = t('Official article ({language})', { language: languages.of(articleLanguage) });
+    section.append(article);
+    return section;
+  }));
 }
 async function replaceTransferItemPicture(item, index, frame, image, file) {
   try {
@@ -8058,7 +8304,7 @@ $('devFast').onchange = () => {
 };
 $('btnWrite').onclick = async () => {
   let plan = deviceWritePlan();
-  if (!plan.device || dv.run || dv.opening || plan.device.info.readOnly || !plan.canWrite) return;
+  if (!plan.device || dv.run || dv.opening || myLabRom?.menuBusy || plan.device.info.readOnly || !plan.canWrite) return;
   if (!plan.device.info.fastWrite && dv.io && !dv.rescue && !dv.stash) {
     const choice = await deviceDialog(t('flashUpgradeAsk'), t('flashUpgradeTitle'),
       t('flashUpgradeFirst'), false, null, t('flashUpgradeStandard'));
@@ -8118,6 +8364,7 @@ $('btnWrite').onclick = async () => {
         onlyChanged, fastWrite, keepMyLabSaves, confirmParadiseBackupReplacement,
         chooseParadiseBackup, saveParadiseBackup, confirmWrite: confirmFlashWriteCount,
         stockMyLabRescueApp: plan.stockMyLabWrite ? MLM.flashToolBinary(false) : null,
+        portFlashTool: plan.paradiseImage ? MLM.flashToolBinary(true) : null,
       }, devProg, () => dv.cancel);
       if (result.cancelled) { devRender(t('devCancelled')); return; }
       const kept = result.kept ? t('devKept', { k: result.kept }) : '';
@@ -8270,7 +8517,8 @@ async function rescueCheck(signal) {
 }
 $('btnResume').onclick = () => devWriteTask(async () => {
   if (!dv.stash) return;
-  const r = await dv.d.write(dv.stash, { onlyChanged: true, keep: null, rescueApp: FL.embedded(), confirmWrite: confirmFlashWriteCount }, devProg, () => dv.cancel);
+  const r = await dv.d.write(dv.stash, { onlyChanged: true, keep: null, rescueApp: FL.embedded(),
+    confirmWrite: (count, plan) => confirmFlashWriteCount(count, plan, false) }, devProg, () => dv.cancel);
   if (r.cancelled) { devRender(t('devCancelled')); return; }
   await stashDel(); dv.rescue = false; dv.stash = null; $('rescueResume').hidden = true;
   dv.restartReason = 'rom';
@@ -9046,15 +9294,16 @@ function formatDeviceTime(seconds) {
 function renderUartClock() {
   const device = dv.d;
   if (clockDevice !== device) {
-    clockTime = null;
+    clockReading = null;
     $('deviceClockInput').value = '';
   }
   const readable = canReadUartClock(device) && !dv.run && !dv.opening;
-  const writable = readable && !device.info.readOnly && clockTime !== null;
+  const writable = readable && !device.info.readOnly && clockReading !== null;
   $('btnClockRead').disabled = !readable;
   $('btnClockSync').disabled = $('btnClockSet').disabled = $('deviceClockInput').disabled = !writable;
-  $('deviceClockStatus').textContent = clockTime !== null
-    ? t('Device time when read: {time}', { time: formatDeviceTime(clockTime) })
+  $('deviceClockStatus').textContent = clockReading
+    ? t(clockReading.counterReset ? 'Last saved device time: {time}. Sync or set the time to restore the clock.'
+      : 'Device time when read: {time}', { time: formatDeviceTime(clockReading.now) })
     : t(device ? 'Read the clock from the connected device.' : 'Connect Flash Tool to read or set the device clock.');
   if (readable && clockDevice !== device && !$('uartClockTools').hidden) {
     queueMicrotask(() => {
@@ -9085,23 +9334,23 @@ function refreshUartClock() {
   const device = dv.d;
   if (!canReadUartClock(device) || dv.run || dv.opening) return;
   clockDevice = device;
-  clockTime = null;
+  clockReading = null;
   return devTask(async () => {
     const result = await readUartClock(device);
-    clockTime = result?.clock.now ?? null;
+    clockReading = result?.clock ?? null;
     if (!result) devRender(() => t('The device clock could not be read. Check that the game has a saved clock and Flash Tool supports clock commands.'));
   });
 }
 
 async function setUartClock(manualTime) {
   const device = dv.d;
-  if (!canReadUartClock(device) || device.info.readOnly || clockTime === null || dv.run || dv.opening) return;
+  if (!canReadUartClock(device) || device.info.readOnly || !clockReading || dv.run || dv.opening) return;
   const message = manualTime === undefined
     ? t('Set the device clock to the current local time on this computer?')
     : t('Set the device clock to {time}?', { time: formatDeviceTime(manualTime) });
   if (!await confirmFlashOperation(message, t('Device Clock'), t('Set Device Time')) || dv.d !== device) return;
   await devWriteTask(async () => {
-    clockTime = null;
+    clockReading = null;
     const myLab = usesMyLabDeviceSave(device), edition = device.info.edition;
     if (myLab) await checkMyLabSaveRecovery(device);
     const live = await readUartClock(device);
@@ -9109,7 +9358,7 @@ async function setUartClock(manualTime) {
       devRender(() => t('The device clock could not be read. Check that the game has a saved clock and Flash Tool supports clock commands.'));
       return;
     }
-    clockTime = live.clock.now;
+    clockReading = live.clock;
     const now = new Date();
     const target = manualTime ?? Math.floor(now.valueOf() / 1000) - now.getTimezoneOffset() * 60;
     const changed = SV.changeGameClock(live.page, live.clock, target);
@@ -9117,7 +9366,7 @@ async function setUartClock(manualTime) {
       devRender(() => t('This date and time are outside the range supported by the current device clock.'));
       return;
     }
-    if (target === live.clock.now) {
+    if (!live.clock.counterReset && target === live.clock.now) {
       devRender(() => t('The device is already set to this time.'));
       return;
     }
@@ -9128,13 +9377,17 @@ async function setUartClock(manualTime) {
       return;
     }
     const publishLast = !myLab && edition !== 8 && live.page === live.pages.get(SV.SET_A) ? new Set([SV.SET_A]) : undefined;
-    clockTime = null;
+    clockReading = null;
     const expectedBase = target - live.clock.counter;
     await device.writeSectors(sectors, devProg, () => dv.cancel, null, async () => {
       const verified = await readUartClock(device);
-      if (!verified || verified.clock.now - verified.clock.counter !== expectedBase)
-        throw new Error(t('The new device time could not be verified.'));
-      clockTime = verified.clock.now;
+      if (!verified || verified.clock.counterReset || verified.clock.now - verified.clock.counter !== expectedBase) {
+        console.warn('Device clock save verification failed', {
+          edition, expectedSaveSector: plan?.off, readCounter: verified?.clock.counter,
+        });
+        throw new Error(t('The new device time could not be verified.') + ' (SAVE)');
+      }
+      clockReading = verified.clock;
     }, publishLast);
     dv.restartReason = 'clock';
     devRender(() => t(canRestartDevice() ? 'Device time set.' : 'Device time set. Exit Flash Tool and return to the game.'));
@@ -9481,13 +9734,18 @@ populateFoodBodies();
 applyLang();
 setupToolNavigation('paradise', paradiseTabs);
 setupToolNavigation('lab', myLabTabs);
-I18n.onChange(applyLang);
+I18n.onChange(() => {
+  applyLang();
+  if (!$('changelogPage').hidden) renderChangelog();
+});
 devRender();
 async function restoreNavigation() {
   try {
     const guideDemoLink = location.hash === '#guide-demos';
     if (guideDemoLink) showDestination('guide');
-    else if (['workspace', 'guide', 'link', 'device', 'codes', 'save-editor'].includes(navigation.view)) showDestination(navigation.view);
+    else if (location.hash === '#changelog') showDestination('changelog');
+    else if (location.hash === '#device') showDestination('device');
+    else if (['workspace', 'guide', 'link', 'changelog', 'device', 'codes', 'save-editor'].includes(navigation.view)) showDestination(navigation.view);
     restoreTab(uartToolTabs, navigation.uart);
     restoreTab(deviceTabs, navigation.device);
     if (navigation.file instanceof File && await loadRom(navigation.file, true)) {
@@ -9500,5 +9758,5 @@ async function restoreNavigation() {
   }
 }
 void restoreNavigation();
-window.__paramix = state; // for tests
+Object.defineProperty(window, '__paramix', { get: () => state }); // for tests
 })();

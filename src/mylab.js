@@ -88,6 +88,11 @@ function isParadiseFlashImage(rom, core) {
 
 const PARADISE_BACKUP_OFFSET = 0xFFF000;
 const PARADISE_BACKUP_LENGTH = 52;
+const LCD_COLOR_OFFSET = 0x47000;
+function hasLcdColorRecord(bytes) {
+  return bytes.length >= 12 && tag(bytes, 0, 4) === 'COL1' &&
+    u32(bytes, 8) === (~u32(bytes, 4) >>> 0);
+}
 function paradiseBackupRecord(bytes) {
   return bytes.length >= PARADISE_BACKUP_LENGTH && tag(bytes, 0, 8) === 'PXMLPB01' ?
     { bootCrc: u32(bytes, 8), sha256: bytes.subarray(12, 44), editionOffset: u32(bytes, 44), editionCrc: u32(bytes, 48) } : null;
@@ -593,7 +598,7 @@ function editorSetGarden(save, slot, bytes, visit) {
 
 root.ParamixMyLab = { sheetChanges, encodeSpriteSlot, applySpriteChanges, isMyLab, isFlashImage, isParadiseFlashImage, hasParadisePortMarker,
   hasParadisePortBoot, PARADISE_PORT_MARKER_OFFSET,
-  paradiseBackupRecord, PARADISE_BACKUP_OFFSET, PARADISE_BACKUP_LENGTH, openRom, inspectUpdate, UPDATE_NAME, UPDATE_MAX,
+  paradiseBackupRecord, PARADISE_BACKUP_OFFSET, PARADISE_BACKUP_LENGTH, LCD_COLOR_OFFSET, hasLcdColorRecord, openRom, inspectUpdate, UPDATE_NAME, UPDATE_MAX,
   saveInfo, saveBackup, readBackup, collectCharacters, gardenAppearance, editGardenSlot, editRomSave, saveRecoveryPending,
   DEVICE_SAVE_FIRST, DEVICE_SAVE_END, APPDATA_FIRST: SAVE, GARDEN_FIRST: GARDEN,
   GARDEN_END: GARDEN + SLOTS * RECORD_SIZE, deviceSaveBackup, readDeviceSaveBackup, activeDeviceSave, planDeviceSavePage,

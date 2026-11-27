@@ -398,6 +398,24 @@ function validFlashTool(block, base) {
   return hasFlashToolTable(block, base) && u32(block, RESCUE_CODE + 0x24) === crc32(block, 0, RESCUE_CODE) &&
     sp >= 0x18000000 && sp <= 0x18020000 && !(sp & 7) && (pc & 1) && pc < RESCUE_CODE;
 }
+function hasMyLabToolMarker(block) {
+  return String.fromCharCode(...block.subarray(TOOL_MARKER_OFF, TOOL_MARKER_OFF + 8)) === 'PXMLFT01';
+}
+function validMyLabToolSlot(block) {
+  return hasMyLabToolMarker(block) && u32(block, RESCUE_CODE + 8) === 0x12 &&
+    String.fromCharCode(...block.subarray(8, 16)) === 'PXMLSD01' &&
+    validFlashTool(block, MY_LAB_TOOL_OFF);
+}
+function flashToolRevision(app) {
+  if (app.length > RESCUE_CODE) return 0;
+  const tag = ascii('PXMLVER1');
+  for (let off = app.indexOf(tag[0]); off >= 0 && off + 12 <= app.length; off = app.indexOf(tag[0], off + 1)) {
+    if (!tag.every((byte, i) => app[off + i] === byte)) continue;
+    const revision = u32(app, off + 8);
+    if (revision && revision <= 0xFFFFFF) return revision;
+  }
+  return 0;
+}
 function bootTableSum(table) {
   let sum = 0;
   for (let off = 0; off < 0x1fc; off += 4) sum = (sum + u32(table, off)) >>> 0;
@@ -635,13 +653,19 @@ class Paradise {
   }
   /** Seconds counter of the Paradise (1.3.0 flash app). null if the app is older. */
   async clockRead() {
-    try { const r = await this.link.request(CLOCK_READ, 0, undefined, 2500); if (r.payload.length === 8) return { counter: u32(r.payload, 0), ctrl: u32(r.payload, 4) }; }
+    try { const r = await this.link.request(CLOCK_READ, 0, undefined, 2500); if (!r.status && r.payload.length === 8) return { counter: u32(r.payload, 0), ctrl: u32(r.payload, 4) }; }
     catch (e) { if (!(e instanceof TimeoutError)) throw e; }
     return null;
   }
   /** Set the seconds counter. Returns true if the device took it. */
   async clockSet(v) {
-    try { const r = await this.link.request(CLOCK_SET, 0, u32le(v >>> 0), 2500); return r.payload.length === 4 && !r.status && u32(r.payload, 0) - v < 5; }
+    if (!Number.isInteger(v) || v < 0 || v > 0xFFFFFFFF) return false;
+    try {
+      const reply = await this.link.request(CLOCK_SET, 0, u32le(v), 2500);
+      if (reply.status || reply.payload.length !== 4) return false;
+      // An unchanged counter below the requested value is not a successful write.
+      return ((u32(reply.payload, 0) - v) >>> 0) < 5;
+    }
     catch (e) { if (!(e instanceof TimeoutError)) throw e; }
     return false;
   }
@@ -914,7 +938,7 @@ class Paradise {
     const before = native ? await readStage('flashReadUpdateSlot', base, BLOCK64) : rescue;
     progress?.('flashCompareTool');
     const updateMarker = ascii('PXMLFT01');
-    const nativeSlotMarked = native && updateMarker.every((byte, i) => before[TOOL_MARKER_OFF + i] === byte);
+    const nativeSlotMarked = native && hasMyLabToolMarker(before);
     const boot = crc32(header);
     if (native && allFF(before, 0, BLOCK64) && crc32(rescue, 0, app.length) === crc32(app) &&
         allFF(rescue, app.length, RESCUE_CODE - app.length)) {
@@ -1118,7 +1142,8 @@ class Paradise {
     const keepMyLabSaves = (myLab || portUpdate) && opts.keepMyLabSaves;
     const canBlockWrite = opts.fastWrite && this.info.fastWrite && this.info.blockWrite &&
       !myLab && !installBridge && !restoreParadise;
-    let keepPortSlotMarker = false;
+    let keepPortSlotMarker = false, keepLcdColor = false;
+    let keepInstalledPortTool = false, keepInstalledMyLabTool = false;
     if (myLab) {
       const menuInstalled = ML?.isFlashImage(img, { crc32 }) && !bridgeImage;
       const stockWrite = !menuInstalled && opts.stockMyLabRescueApp && ML?.isMyLab(img) && u32(img, 8) === 0x13;
@@ -1148,6 +1173,20 @@ class Paradise {
       } else if (await this.crc(RESCUE_OFF, BLOCK64) !== crc32(img, RESCUE_OFF, BLOCK64)) {
         if (!this.info.rescueBootstrap) throw new Error('The image must retain the My Lab rescue region installed on the device');
         bootstrapRescue = true;
+      }
+      if (menuInstalled) {
+        const installed = await this.read(MY_LAB_TOOL_OFF, BLOCK64);
+        if (validMyLabToolSlot(installed)) {
+          const incoming = img.subarray(MY_LAB_TOOL_OFF, MY_LAB_TOOL_OFF + BLOCK64);
+          if (!hasMyLabToolMarker(incoming) && !allFF(incoming, 0, BLOCK64))
+            throw new Error('The My Lab Flash Tool update would overwrite occupied flash');
+          if (!validMyLabToolSlot(incoming) ||
+              flashToolRevision(installed.subarray(0, RESCUE_CODE)) >= flashToolRevision(incoming.subarray(0, RESCUE_CODE))) {
+            image = new Uint8Array(img);
+            image.set(installed, MY_LAB_TOOL_OFF);
+            keepInstalledMyLabTool = true;
+          }
+        }
       }
       opts = { ...opts, onlyChanged: opts.onlyChanged !== false, keep: null, rescueFirst: true };
       rescue = true;
@@ -1217,6 +1256,32 @@ class Paradise {
         if (!ML.hasParadisePortBoot(header, marker)) throw new Error('portSaveWrongRom');
         const slotMarker = await this.read(0xC64000, 8);
         keepPortSlotMarker = String.fromCharCode(...slotMarker) === 'PXMLSV01';
+        keepLcdColor = ML.hasLcdColorRecord(await this.read(ML.LCD_COLOR_OFFSET, 12));
+      }
+      if (installBridge) {
+        const incoming = image.subarray(RESCUE_OFF, RESCUE_TAB);
+        const incomingRevision = flashToolRevision(incoming);
+        let tool = opts.portFlashTool;
+        let revision = tool ? flashToolRevision(tool) : 0;
+        if (portUpdate) {
+          const installed = await this.read(RESCUE_OFF, BLOCK64);
+          const code = installed.subarray(0, RESCUE_CODE);
+          const installedRevision = validFlashTool(installed, RESCUE_OFF) ? flashToolRevision(code) : 0;
+          if (installedRevision > incomingRevision && installedRevision >= revision) {
+            tool = code;
+            revision = installedRevision;
+            keepInstalledPortTool = true;
+          }
+        }
+        if (revision > incomingRevision) {
+          // Keep the ROM's table fields, battery picture and backup pairing.
+          if (image === img) image = new Uint8Array(img);
+          image.fill(0xFF, RESCUE_OFF, RESCUE_TAB);
+          image.set(tool, RESCUE_OFF);
+          const table = image.subarray(RESCUE_TAB, RESCUE_TAB + SECTOR);
+          w32(table, 0x24, crc32(image, RESCUE_OFF, RESCUE_CODE));
+          w32(table, 0x1FC, bootTableSum(table));
+        }
       }
       opts = { ...opts, onlyChanged: !portUpdate || opts.onlyChanged !== false, keep: null, rescueFirst: true };
       rescue = true;
@@ -1236,7 +1301,8 @@ class Paradise {
     const compareForStandardWrite = opts.onlyChanged || opts.keep || rescue;
     if (compareForStandardWrite || canBlockWrite)
       changed = await this.changed(image, progress, cancel, 0, FLASH_SIZE, 'compare', opts.fastWrite);
-    const keepSaveSector = s => keepMyLabSaves && (myLabSaveSector(s) || (keepPortSlotMarker && s === 0xC64000));
+    const keepSaveSector = s => keepMyLabSaves && (myLabSaveSector(s) ||
+      (keepPortSlotMarker && s === 0xC64000) || (keepLcdColor && s === ML.LCD_COLOR_OFFSET));
     if (keepMyLabSaves) {
       const saves = [...changed].filter(keepSaveSector);
       if (saves.length) progress?.('copySaves', 0, saves.length);
@@ -1283,7 +1349,9 @@ class Paradise {
         if (changed.has(off)) throw new Error('My Lab rescue changed during preflight');
       }
     }
-    let order = sectorOrder().filter(s => !keepSaveSector(s));
+    let order = sectorOrder().filter(s => !keepSaveSector(s) &&
+      !(keepInstalledMyLabTool && s >= MY_LAB_TOOL_OFF && s < MY_LAB_TOOL_OFF + BLOCK64) &&
+      !(keepInstalledPortTool && s >= RESCUE_OFF && s <= RESCUE_TAB && !changed.has(s)));
     if (restoreParadise) {
       // Keep the working rescue until the primary ROM and its boot table have
       // been restored. Erase the rescue table after all other tail sectors.

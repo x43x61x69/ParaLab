@@ -939,6 +939,7 @@ const screenFitOperations = {
     status, state: screenFitState, prepareWheel: installParadiseWheel,
     upgradeLegacyGameCode: upgradeLegacyParadiseGameCode,
     normalizeSceneWheel: image => setSceneWheel(image, false),
+    normalizePanelPads: image => setParadisePanelPads(image, false),
     edit: (copy, on) => editScreenFit(copy, on, legacyCode),
   }),
 };
@@ -1104,6 +1105,7 @@ async function installParadiseGame(image, gamePort, subtle) {
   // The stock startup writes the P0 pad register again after LCD init.
   // Install the Paradise value there too, before the first key sample.
   patchBytes(image, GAME_XIP + 0x44F12, 'c1f21050', 'c1f25550');
+  setParadisePanelPads(image, true);
   // Stock game startup selects SPI0 pin group 0, which owns A/B on
   // Paradise. Select the alternate Paradise group before any transfer.
   patchBytes(image, GAME_XIP + 0x536D4, '0021', '0121');
@@ -1130,6 +1132,17 @@ async function installParadiseGame(image, gamePort, subtle) {
     [0x67DB4, '1d20', '0a20'], [0x67DC0, '1e20', '0b20'], [0x67DC8, '1f20', '0920'],
   ]) patchBytes(image, GAME_XIP + offset, stock, paradise);
   installParadiseSleep(image);
+}
+
+function setParadisePanelPads(image, enabled) {
+  // Loader and game both write P1's pad configuration during startup.
+  // MOVW/MOVT r0 loads 0x55555400 on My Lab and 0x55540140 on Paradise.
+  const native = '45f20040c5f25550', paradise = '40f24010c5f25450';
+  const expected = enabled ? native : paradise;
+  const target = enabled ? paradise : native;
+  for (const at of [0x2214E, GAME_XIP + 0x44F20]) {
+    if (!same(image.subarray(at, at + 8), hex(target))) patchBytes(image, at, expected, target);
+  }
 }
 
 // Native Paradise board init configures P2.3 as an input in mode 1.
@@ -1204,6 +1217,7 @@ function upgradeLegacyParadiseGame(rom, gamePort) {
     throw new Error('The Paradise game adapter does not fit in the available flash region');
   const image = Uint8Array.from(rom);
   upgradeLegacyParadiseGameCode(image);
+  setParadisePanelPads(image, true);
   setSceneWheel(image);
   for (const offset of [BOOT_PORT, GAME_PORT]) {
     image.fill(0xFF, offset, offset + 0x1000);
@@ -1234,7 +1248,7 @@ function updateParadiseImage(rom, { feld, gamePort, stub, flashApp }) {
   const current = same(gameAdapter, adapter);
   if (!same(bootAdapter, gameAdapter) ||
       (!current && oldCrc !== PARADISE_GAME_CRC_062 && oldCrc !== PARADISE_GAME_CRC_063 &&
-       ![0x240AA59A, 0x238F6826, 0x3105BF25, 0x3559256E, 0xE0722EA2, 0x8D1A5666, 0x23F0417B, 0x59D8A174, 0x752BE1D5, 0x365F6437, 0x33A78456, 0xE7EE2CF1, 0xB5EC9F70, 0x4E6E4393, 0x36E7C760].includes(oldCrc)))
+       ![0x240AA59A, 0x238F6826, 0x3105BF25, 0x3559256E, 0xE0722EA2, 0x8D1A5666, 0x23F0417B, 0x59D8A174, 0x752BE1D5, 0x365F6437, 0x33A78456, 0xE7EE2CF1, 0xB5EC9F70, 0x4E6E4393, 0x36E7C760, 0xF04D170E, 0x3756C98E, 0xF1F45280, 0xD716BE79, 0xD0EAC738, 0xEEDB0921, 0x36F205C2, 0x3D7CD023, 0xCF6CBD0B, 0xBBB6F193, 0x5F943511, 0x7F72C36B].includes(oldCrc)))
     throw new Error('Unexpected My Lab firmware code at 0x' + GAME_PORT.toString(16));
 
   const oldSize = u32(rom, 0x14);
@@ -1254,9 +1268,11 @@ function updateParadiseImage(rom, { feld, gamePort, stub, flashApp }) {
   }
   if (C.crc32(image.subarray(0x110000, 0x111000)) !== 0xFFC5881E)
     throw new Error('Unexpected deep power-down handler');
-  if (compatibility.supported && gamesFit.upgradePresenter(image)) updateLayoutChecksum(image);
+  const presenterUpdate = compatibility.supported ? gamesFit.upgradePresenter(image) : null;
+  if (presenterUpdate === 'assets') updateLayoutChecksum(image);
   image.fill(0, NATIVE_HOOK + 0x108, NATIVE_HOOK + 0x110);
   setSceneWheel(image);
+  setParadisePanelPads(image, true);
   installParadiseP23(image);
   installParadiseMutedNotes(image);
   installParadiseSleep(image, oldCrc !== PARADISE_GAME_CRC_062, oldCrc !== PARADISE_GAME_CRC_062 && oldCrc !== PARADISE_GAME_CRC_063);
@@ -1268,7 +1284,7 @@ function updateParadiseImage(rom, { feld, gamePort, stub, flashApp }) {
   image.set(template.subarray(MENU, MENU + size), MENU);
   w32(image, STUB, MENU + 0x160);
   w32(image, F.F_LAUNCH | F.F_APPS, MENU + 0x164);
-  if (oldSize === size) F.preserveMenuVersion(rom, image, MENU, size);
+  if (current && !presenterUpdate && oldSize === size) F.preserveMenuVersion(rom, image, MENU, size);
   w32(image, size, 0x14);
   w32(image, C.crc32(image.subarray(MENU, MENU + size)), 0x24);
   tableSum(image, 0);

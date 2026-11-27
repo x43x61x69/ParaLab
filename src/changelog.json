@@ -1,0 +1,1260 @@
+{
+  "releases": [
+    {
+      "version": "0.2.136",
+      "changes": [
+        {
+          "kind": "bug",
+          "text": {
+            "en": "My Lab ROM writes preserve a newer Flash Tool already installed on the device.",
+            "zh-Hant": "寫入 My Lab ROM 時會保留裝置上已安裝的較新版 Flash Tool。",
+            "zh-Hans": "写入 My Lab ROM 时会保留设备上已安装的较新版 Flash Tool。",
+            "ja": "My Lab の ROM 書き込み時に、本体にインストール済みの新しい Flash Tool を保持します。",
+            "ko": "My Lab ROM을 쓸 때 기기에 설치된 최신 Flash Tool을 유지합니다.",
+            "fr": "L’écriture d’une ROM My Lab conserve la version plus récente de Flash Tool déjà installée sur l’appareil.",
+            "de": "Beim Schreiben eines My-Lab-ROMs bleibt eine neuere, bereits installierte Version von Flash Tool erhalten.",
+            "es": "Al escribir una ROM de My Lab se conserva la versión más reciente de Flash Tool instalada en el dispositivo.",
+            "it": "La scrittura di una ROM My Lab conserva la versione più recente di Flash Tool già installata sul dispositivo.",
+            "pt": "A gravação de uma ROM do My Lab preserva a versão mais recente do Flash Tool instalada no dispositivo."
+          }
+        },
+        {
+          "kind": "bug",
+          "text": {
+            "en": "The original My Lab can read the last saved time and set the device clock after the RTC counter resets.",
+            "zh-Hant": "原版 My Lab 的 RTC 計數器重置後，可讀取上次存檔時間並重新設定裝置時鐘。",
+            "zh-Hans": "原版 My Lab 的 RTC 计数器重置后，可读取上次保存时间并重新设置设备时钟。",
+            "ja": "初代 My Lab で RTC カウンターがリセットされた後に、最後に保存した時刻を読み出して本体時計を再設定できます。",
+            "ko": "오리지널 My Lab의 RTC 카운터가 초기화된 뒤 마지막 저장 시각을 읽고 기기 시계를 다시 설정할 수 있습니다.",
+            "fr": "Après la réinitialisation du compteur RTC, le My Lab d’origine peut lire la dernière heure enregistrée et régler l’horloge de l’appareil.",
+            "de": "Nach dem Zurücksetzen des RTC-Zählers kann das ursprüngliche My Lab die zuletzt gespeicherte Zeit anzeigen und die Geräteuhr neu einstellen.",
+            "es": "Tras reiniciarse el contador RTC, el My Lab original puede leer la última hora guardada y ajustar de nuevo el reloj del dispositivo.",
+            "it": "Dopo un azzeramento del contatore RTC, il My Lab originale può leggere l’ultima ora salvata e reimpostare l’orologio del dispositivo.",
+            "pt": "Depois que o contador RTC é reiniciado, o My Lab original pode ler a última hora salva e ajustar o relógio do dispositivo."
+          }
+        },
+        {
+          "kind": "improvement",
+          "text": {
+            "en": "Lab Items show official acquisition details and link to announcements in the selected language when available.",
+            "zh-Hant": "研究所物品新增官方取得資訊，並依介面語系連到可用的官方文章。",
+            "zh-Hans": "研究所物品新增官方获取信息，并按界面语言链接至可用的官方文章。",
+            "ja": "ラボアイテムに公式入手情報を追加し、利用できる場合は表示言語の公式記事にリンクします。",
+            "ko": "연구소 아이템에 공식 획득 정보를 추가하고, 해당 언어의 공식 기사가 있으면 연결합니다.",
+            "fr": "Les objets du labo affichent leur mode d’obtention et renvoient aux annonces officielles dans la langue choisie, si disponibles.",
+            "de": "Laborartikel zeigen offizielle Angaben zum Erhalt und verlinken nach Möglichkeit auf Artikel in der gewählten Sprache.",
+            "es": "Los objetos del laboratorio muestran cómo obtenerlos y enlazan a los anuncios oficiales en el idioma elegido cuando están disponibles.",
+            "it": "Gli oggetti del laboratorio mostrano come ottenerli e rimandano agli annunci ufficiali nella lingua selezionata, se disponibili.",
+            "pt": "Os itens do laboratório mostram como obtê-los e vinculam aos anúncios oficiais no idioma selecionado, quando disponíveis."
+          }
+        },
+        {
+          "kind": "feature",
+          "text": {
+            "en": "Added an automatic ROM write confirmation setting with a three-second countdown in the final confirmation dialog.",
+            "zh-Hant": "新增可記住的 ROM 自動寫入確認。啟用後，最後的確認視窗會倒數 3 秒，期間可取消或立即寫入。",
+            "zh-Hans": "新增可记住的 ROM 自动写入确认。启用后，最后的确认窗口会倒计时 3 秒，期间可取消或立即写入。",
+            "ja": "ROM 書き込みの自動確定設定を追加しました。最終確認画面で 3 秒のカウントダウンが始まり、キャンセルや即時開始ができます。",
+            "ko": "ROM 쓰기 자동 확인 설정을 추가했습니다. 최종 확인 창에서 3초 동안 취소하거나 즉시 쓸 수 있습니다.",
+            "fr": "Ajout d’un réglage de confirmation automatique de l’écriture de la ROM avec un compte à rebours de 3 secondes dans la confirmation finale.",
+            "de": "Neue Einstellung zur automatischen Bestätigung von ROM-Schreibvorgängen mit einem 3-Sekunden-Countdown im letzten Dialog.",
+            "es": "Nueva opción para confirmar automáticamente la escritura de la ROM con una cuenta atrás de 3 segundos en la confirmación final.",
+            "it": "Nuova opzione per confermare automaticamente la scrittura della ROM con un conto alla rovescia di 3 secondi nella conferma finale.",
+            "pt": "Nova opção para confirmar automaticamente a gravação da ROM com uma contagem regressiva de 3 segundos na confirmação final."
+          }
+        },
+        {
+          "kind": "improvement",
+          "text": {
+            "en": "Added three items to the Lab Items catalog: Clay Figure, Display Case, and Homemade Waterfall.",
+            "zh-Hant": "研究所物品目錄新增泥偶、展示台和手工瀑布。",
+            "zh-Hans": "研究所物品目录新增泥偶、展示台和手工瀑布。",
+            "ja": "ラボアイテムのカタログに、めめどぐう、てんじだい、てづくりのたきを追加。",
+            "ko": "연구소 아이템 목록에 점토 인형, 전시대, 수제 폭포를 추가했어요.",
+            "fr": "Ajout de la figurine en argile, du présentoir et de la cascade faite maison au catalogue du labo.",
+            "de": "Tonfigur, Display-Sockel und selbstgebauten Wasserfall zum Laborartikel-Katalog hinzugefügt.",
+            "es": "Añade la figura, el expositor y la cascada casera al catálogo del laboratorio.",
+            "it": "Aggiunte la statuetta in argilla, la base espositiva e la cascata fatta a mano al catalogo del laboratorio.",
+            "pt": "Adiciona a argila, a base de exibição e a cascata artesanal ao catálogo do laboratório."
+          }
+        },
+        {
+          "kind": "bug",
+          "text": {
+            "en": "Set the My Lab on Paradise brightness correction to 0 and removed the LCD test menu.",
+            "zh-Hant": "My Lab on Paradise 的亮度校正基準改為 0，並移除 LCD 測試選單。",
+            "zh-Hans": "My Lab on Paradise 的亮度校正基准改为 0，并移除 LCD 测试菜单。",
+            "ja": "My Lab on Paradise の明るさ補正を 0 に設定し、LCD テストメニューを削除しました。",
+            "ko": "My Lab on Paradise의 밝기 보정 기준을 0으로 설정하고 LCD 테스트 메뉴를 제거했습니다.",
+            "fr": "La correction de luminosité de My Lab on Paradise passe à 0 et le menu de test LCD a été retiré.",
+            "de": "Die Helligkeitskorrektur für My Lab on Paradise wurde auf 0 gesetzt und das LCD-Testmenü entfernt.",
+            "es": "Se ajustó a 0 la corrección de brillo de My Lab on Paradise y se retiró el menú de prueba LCD.",
+            "it": "La correzione della luminosità di My Lab on Paradise è ora 0 e il menu di prova LCD è stato rimosso.",
+            "pt": "A correção de brilho do My Lab on Paradise foi definida como 0 e o menu de teste do LCD foi removido."
+          }
+        },
+        {
+          "kind": "bug",
+          "text": {
+            "en": "Improved animation pacing in My Lab on Paradise by speeding up LCD transfers and correcting frame synchronization.",
+            "zh-Hant": "加快 LCD 畫面傳輸並修正同步計數，改善 My Lab on Paradise 的動畫播放速度。",
+            "zh-Hans": "加快 LCD 画面传输并修正同步计数，改善 My Lab on Paradise 的动画播放速度。",
+            "ja": "LCD への画面転送を高速化し、フレーム同期を修正して、My Lab on Paradise のアニメーション速度を改善しました。",
+            "ko": "LCD 전송 속도를 높이고 프레임 동기화를 수정해 My Lab on Paradise의 애니메이션 재생 속도를 개선했습니다.",
+            "fr": "La cadence des animations de My Lab on Paradise a été améliorée en accélérant les transferts LCD et en corrigeant la synchronisation des images.",
+            "de": "Schnellere LCD-Übertragungen und eine korrigierte Bildsynchronisation verbessern die Animationsgeschwindigkeit in My Lab on Paradise.",
+            "es": "Se mejoró el ritmo de las animaciones en My Lab on Paradise al acelerar las transferencias a la pantalla LCD y corregir la sincronización de fotogramas.",
+            "it": "La velocità delle animazioni in My Lab on Paradise è migliorata grazie a trasferimenti LCD più rapidi e alla correzione della sincronizzazione dei fotogrammi.",
+            "pt": "O ritmo das animações em My Lab on Paradise foi aprimorado com transferências mais rápidas para o LCD e a correção da sincronização de quadros."
+          }
+        },
+        {
+          "kind": "feature",
+          "text": {
+            "en": "The USB notification from ParaLink v0.1.16 opens the Device page in ParaLab.",
+            "zh-Hant": "點選 ParaLink v0.1.16 插入 USB 時顯示的通知，可直接開啟 ParaLab 的「裝置」頁。",
+            "zh-Hans": "点击 ParaLink v0.1.16 插入 USB 时显示的通知，可直接打开 ParaLab 的“设备”页。",
+            "ja": "ParaLink v0.1.16 を USB で接続したときの通知から、ParaLab のデバイスページを直接開けます。",
+            "ko": "ParaLink v0.1.16을 USB로 연결할 때 표시되는 알림을 누르면 ParaLab의 기기 페이지가 열려요.",
+            "fr": "La notification USB de ParaLink v0.1.16 ouvre directement la page Appareil de ParaLab.",
+            "de": "Die USB-Benachrichtigung von ParaLink v0.1.16 öffnet direkt die Geräteseite in ParaLab.",
+            "es": "La notificación USB de ParaLink v0.1.16 abre directamente la página Dispositivo de ParaLab.",
+            "it": "La notifica USB di ParaLink v0.1.16 apre direttamente la pagina Dispositivo di ParaLab.",
+            "pt": "A notificação USB do ParaLink v0.1.16 abre diretamente a página Dispositivo do ParaLab."
+          }
+        },
+        {
+          "kind": "improvement",
+          "text": {
+            "en": "Added a Close ROM action to return to Start.",
+            "zh-Hant": "新增「關閉 ROM」，可直接返回開始頁。",
+            "zh-Hans": "新增“关闭 ROM”，可直接返回开始页。",
+            "ja": "「ROMを閉じる」操作でホームに戻れるようになりました。",
+            "ko": "ROM을 닫고 시작 화면으로 돌아가는 기능을 추가했어요.",
+            "fr": "La commande « Fermer la ROM » permet de revenir à l’accueil.",
+            "de": "Mit „ROM schließen“ gelangst du zurück zur Startseite.",
+            "es": "La opción «Cerrar ROM» permite volver a Inicio.",
+            "it": "Con «Chiudi ROM» puoi tornare alla pagina iniziale.",
+            "pt": "A opção «Fechar ROM» permite voltar à página inicial."
+          }
+        },
+        {
+          "kind": "bug",
+          "text": {
+            "en": "Kept Flash Tool from downgrading when writing a My Lab on Paradise ROM.",
+            "zh-Hant": "修正重寫 My Lab 移植 ROM 時 Flash Tool 被降版。",
+            "zh-Hans": "修正重写 My Lab 移植 ROM 时 Flash Tool 被降级。",
+            "ja": "Paradise 版 My Lab の ROM 書き込み時に Flash Tool が旧版へ戻る問題を修正。",
+            "ko": "Paradise 이식판 My Lab ROM을 쓸 때 Flash Tool이 이전 버전으로 돌아가는 문제를 수정했어요.",
+            "de": "Downgrade des Flash Tools beim Schreiben einer My Lab-ROM für Paradise behoben.",
+            "es": "Corregido el descenso de versión de Flash Tool al escribir ROM de My Lab en Paradise.",
+            "fr": "Correction du retour à une ancienne version de Flash Tool lors de l’écriture de My Lab sur Paradise.",
+            "it": "Corretto il ritorno a una versione precedente di Flash Tool scrivendo una ROM My Lab su Paradise.",
+            "pt": "Corrigida a volta a uma versão anterior do Flash Tool ao gravar uma ROM My Lab no Paradise."
+          }
+        },
+        {
+          "kind": "bug",
+          "text": {
+            "en": "Restored clock reading and setting after an RTC reset on My Lab on Paradise.",
+            "zh-Hant": "修正 My Lab 移植版在時鐘重置後無法讀取或設定時間。",
+            "zh-Hans": "修正 My Lab 移植版在时钟重置后无法读取或设置时间。",
+            "ja": "Paradise 版 My Lab で時計のリセット後に時刻を読み取り・設定できるように修正。",
+            "ko": "Paradise 이식판 My Lab의 시계가 초기화된 뒤 시간을 읽고 설정할 수 있도록 수정했어요.",
+            "de": "Lesen und Einstellen der Uhr nach einem Reset bei My Lab auf Paradise korrigiert.",
+            "es": "Restaurada la lectura y el ajuste del reloj tras reiniciarlo en My Lab en Paradise.",
+            "fr": "Lecture et réglage de l’heure rétablis après une réinitialisation sur My Lab sur Paradise.",
+            "it": "Ripristinate la lettura e la regolazione dell’ora dopo un reset in My Lab su Paradise.",
+            "pt": "Restauradas a leitura e a configuração da hora após reiniciar o relógio no My Lab no Paradise."
+          }
+        },
+        {
+          "kind": "improvement",
+          "text": {
+            "en": "Adjusted display timing for My Lab on Paradise.",
+            "zh-Hant": "調整 My Lab 移植版的畫面傳輸時序。",
+            "zh-Hans": "调整 My Lab 移植版的画面传输时序。",
+            "ja": "Paradise 版 My Lab の画面転送タイミングを調整。",
+            "ko": "Paradise 이식판 My Lab의 화면 전송 타이밍을 조정했어요.",
+            "fr": "Ajustement de la transmission d’affichage de My Lab sur Paradise.",
+            "de": "Bildübertragung für My Lab auf Paradise angepasst.",
+            "es": "Ajustados los tiempos de pantalla de My Lab en Paradise.",
+            "it": "Regolati i tempi di trasmissione dello schermo di My Lab su Paradise.",
+            "pt": "Ajustados os tempos de transmissão da tela de My Lab no Paradise."
+          }
+        },
+        {
+          "kind": "feature",
+          "text": {
+            "en": "Added the Change Log page.",
+            "zh-Hant": "新增更新紀錄頁。",
+            "zh-Hans": "新增更新日志页。",
+            "ja": "変更履歴ページを追加。",
+            "ko": "변경 내역 페이지를 추가했어요.",
+            "fr": "Ajout de l’historique des versions.",
+            "de": "Änderungsprotokoll ergänzt.",
+            "es": "Nuevo historial de cambios.",
+            "it": "Aggiunto il registro delle modifiche.",
+            "pt": "Adicionado o histórico de alterações."
+          }
+        },
+        {
+          "kind": "bug",
+          "text": {
+            "en": "Corrected display settings for My Lab on Paradise.",
+            "zh-Hant": "修正 My Lab 移植版的顯示設定。",
+            "zh-Hans": "修正 My Lab 移植版的显示设置。",
+            "ja": "Paradise 版 My Lab の表示設定を修正。",
+            "ko": "Paradise 이식판 My Lab의 화면 설정을 수정했어요.",
+            "fr": "Réglages d’affichage de My Lab sur Paradise corrigés.",
+            "de": "Anzeigeeinstellungen für My Lab auf Paradise korrigiert.",
+            "es": "Corregidos los ajustes de pantalla de My Lab en Paradise.",
+            "it": "Corrette le impostazioni dello schermo di My Lab su Paradise.",
+            "pt": "Corrigidas as configurações de tela de My Lab no Paradise."
+          }
+        },
+        {
+          "kind": "improvement",
+          "text": {
+            "en": "Renamed the companion tool to ParaLink.",
+            "zh-Hant": "將連線工具更名為 ParaLink。",
+            "zh-Hans": "将连接工具更名为 ParaLink。",
+            "ja": "連携ツールの名前を ParaLink に変更。",
+            "ko": "연결 도구 이름을 ParaLink로 바꿨어요.",
+            "fr": "L’outil de connexion s’appelle désormais ParaLink.",
+            "de": "Das Verbindungswerkzeug in ParaLink umbenannt.",
+            "es": "La herramienta de conexión pasa a llamarse ParaLink.",
+            "it": "Lo strumento di collegamento è stato rinominato ParaLink.",
+            "pt": "A ferramenta de conexão passou a se chamar ParaLink."
+          }
+        },
+        {
+          "kind": "feature",
+          "text": {
+            "en": "Added K191 support and a new USB update option.",
+            "zh-Hant": "新增 K191 支援與 USB 更新選項。",
+            "zh-Hans": "新增 K191 支持与 USB 更新选项。",
+            "ja": "K191 への対応と USB 更新オプションを追加。",
+            "ko": "K191 지원과 새 USB 업데이트 옵션을 추가했어요.",
+            "fr": "Prise en charge du K191 et nouvelle option de mise à jour USB.",
+            "de": "K191-Unterstützung und neue USB-Updateoption ergänzt.",
+            "es": "Compatibilidad con K191 y nueva opción de actualización por USB.",
+            "it": "Aggiunti il supporto per K191 e una nuova opzione di aggiornamento USB.",
+            "pt": "Adicionados suporte ao K191 e uma nova opção de atualização por USB."
+          }
+        }
+      ]
+    },
+    {
+      "version": "0.2.107",
+      "changes": [
+        {
+          "kind": "improvement",
+          "text": {
+            "en": "Bundled ParaLink v0.1.11.",
+            "zh-Hant": "內附 ParaLink v0.1.11。",
+            "zh-Hans": "内置 ParaLink v0.1.11。",
+            "ja": "ParaLink v0.1.11 を同梱。",
+            "ko": "ParaLink v0.1.11을 포함했어요.",
+            "fr": "Intégration de ParaLink v0.1.11.",
+            "de": "ParaLink v0.1.11 integriert.",
+            "es": "Incluye ParaLink v0.1.11.",
+            "it": "Incluso ParaLink v0.1.11.",
+            "pt": "Inclui ParaLink v0.1.11."
+          }
+        },
+        {
+          "kind": "improvement",
+          "text": {
+            "en": "Added numbered UART wiring diagrams.",
+            "zh-Hant": "新增標示孔位的 UART 接線圖。",
+            "zh-Hans": "新增标有孔位的 UART 接线图。",
+            "ja": "端子番号付きの UART 配線図を追加。",
+            "ko": "번호가 표시된 UART 배선도를 추가했어요.",
+            "fr": "Ajout de schémas UART numérotés.",
+            "de": "Nummerierte UART-Schaltbilder ergänzt.",
+            "es": "Añadidos diagramas UART numerados.",
+            "it": "Aggiunti schemi UART numerati.",
+            "pt": "Adicionados diagramas UART numerados."
+          }
+        }
+      ]
+    },
+    {
+      "version": "0.2.106",
+      "changes": [
+        {
+          "kind": "bug",
+          "text": {
+            "en": "Corrected planet-specific Special Food names in Neon Planets.",
+            "zh-Hant": "修正 Neon Planets 各星球的特殊食物名稱。",
+            "zh-Hans": "修正 Neon Planets 各星球的特殊食物名称。",
+            "ja": "Neon Planets の星ごとの特別な食べ物の名前を修正。",
+            "ko": "Neon Planets의 행성별 특별 음식 이름을 수정했어요.",
+            "fr": "Correction des noms des aliments spéciaux propres à chaque planète dans Neon Planets.",
+            "de": "Planetenspezifische Spezialfutter-Namen in Neon Planets korrigiert.",
+            "es": "Corregidos los nombres de la comida especial de cada planeta en Neon Planets.",
+            "it": "Corretti i nomi dei cibi speciali di ogni pianeta in Neon Planets.",
+            "pt": "Corrigidos os nomes das comidas especiais de cada planeta em Neon Planets."
+          }
+        }
+      ]
+    },
+    {
+      "version": "0.2.105",
+      "changes": [
+        {
+          "kind": "bug",
+          "text": {
+            "en": "Fixed Neon Planets growth.",
+            "zh-Hant": "修正 Neon Planets 的成長問題。",
+            "zh-Hans": "修正 Neon Planets 的成长问题。",
+            "ja": "Neon Planets の成長を修正。",
+            "ko": "Neon Planets 성장 문제를 수정했어요.",
+            "fr": "Correction de la croissance dans Neon Planets.",
+            "de": "Wachstum in Neon Planets korrigiert.",
+            "es": "Corregido el crecimiento en Neon Planets.",
+            "it": "Corretta la crescita in Neon Planets.",
+            "pt": "Corrigido o crescimento em Neon Planets."
+          }
+        },
+        {
+          "kind": "bug",
+          "text": {
+            "en": "Fixed Neon Planets field graphics.",
+            "zh-Hant": "修正 Neon Planets 的場地圖像。",
+            "zh-Hans": "修正 Neon Planets 的场地图像。",
+            "ja": "Neon Planets のフィールド画像を修正。",
+            "ko": "Neon Planets 필드 그래픽을 수정했어요.",
+            "fr": "Correction des graphismes de terrain dans Neon Planets.",
+            "de": "Gebietsgrafik in Neon Planets korrigiert.",
+            "es": "Corregidos los gráficos de las zonas en Neon Planets.",
+            "it": "Corretta la grafica delle aree in Neon Planets.",
+            "pt": "Corrigidos os gráficos das áreas em Neon Planets."
+          }
+        },
+        {
+          "kind": "bug",
+          "text": {
+            "en": "Fixed six-field gameplay.",
+            "zh-Hant": "修正六場地玩法。",
+            "zh-Hans": "修正六场地玩法。",
+            "ja": "6 フィールドでの動作を修正。",
+            "ko": "6개 필드 플레이를 수정했어요.",
+            "fr": "Correction du jeu à six terrains.",
+            "de": "Spiel mit sechs Gebieten korrigiert.",
+            "es": "Corregido el juego de seis zonas.",
+            "it": "Corretto il gioco con sei aree.",
+            "pt": "Corrigido o jogo com seis áreas."
+          }
+        }
+      ]
+    },
+    {
+      "version": "0.2.104",
+      "changes": [
+        {
+          "kind": "improvement",
+          "text": {
+            "en": "Localized character names in ParaLab Menu.",
+            "zh-Hant": "補齊 ParaLab Menu 的多語言角色名稱。",
+            "zh-Hans": "补齐 ParaLab Menu 的多语言角色名称。",
+            "ja": "ParaLab メニューのキャラクター名を各言語に対応。",
+            "ko": "ParaLab 메뉴의 캐릭터 이름을 각 언어에 맞게 표시해요.",
+            "fr": "Traduction des noms des personnages dans le menu ParaLab.",
+            "de": "Figurennamen im ParaLab-Menü lokalisiert.",
+            "es": "Nombres de personajes traducidos en el menú de ParaLab.",
+            "it": "Nomi dei personaggi tradotti nel menu ParaLab.",
+            "pt": "Nomes dos personagens traduzidos no menu do ParaLab."
+          }
+        }
+      ]
+    },
+    {
+      "version": "0.2.103",
+      "changes": [
+        {
+          "kind": "feature",
+          "text": {
+            "en": "Added an option for toys to occupy one slot.",
+            "zh-Hant": "新增玩具單格佔位選項。",
+            "zh-Hans": "新增玩具单格占位选项。",
+            "ja": "おもちゃを 1 マスにする設定を追加。",
+            "ko": "장난감 한 칸 배치 옵션을 추가했어요.",
+            "fr": "Option de jouets à une case.",
+            "de": "Einzelfeld-Option für Spielzeug ergänzt.",
+            "es": "Opción para juguetes de una casilla.",
+            "it": "Opzione per giocattoli da una casella.",
+            "pt": "Opção para brinquedos de uma casa."
+          }
+        },
+        {
+          "kind": "improvement",
+          "text": {
+            "en": "Remembered the fast UART preference.",
+            "zh-Hant": "記住快速 UART 偏好。",
+            "zh-Hans": "记住快速 UART 偏好。",
+            "ja": "高速 UART の選択を保存。",
+            "ko": "고속 UART 설정을 저장해요.",
+            "fr": "Mémorisation du choix UART rapide.",
+            "de": "Einstellung für schnelles UART gespeichert.",
+            "es": "Se guarda la preferencia de UART rápido.",
+            "it": "Memorizzata la preferenza per UART veloce.",
+            "pt": "Preferência de UART rápido salva."
+          }
+        },
+        {
+          "kind": "bug",
+          "text": {
+            "en": "Fixed text rendering in the on-device Menu.",
+            "zh-Hant": "修正裝置選單文字顯示。",
+            "zh-Hans": "修正设备菜单文字显示。",
+            "ja": "本体メニューの文字表示を修正。",
+            "ko": "기기 메뉴의 글자 표시를 수정했어요.",
+            "fr": "Correction de l’affichage du texte dans le menu de l’appareil.",
+            "de": "Textdarstellung im Gerätemenü korrigiert.",
+            "es": "Corregida la visualización del texto en el menú del dispositivo.",
+            "it": "Corretta la visualizzazione del testo nel menu del dispositivo.",
+            "pt": "Corrigida a exibição do texto no menu do dispositivo."
+          }
+        },
+        {
+          "kind": "improvement",
+          "text": {
+            "en": "Localized the outdoor toy interaction warning.",
+            "zh-Hant": "將戶外玩具互動提示翻譯為各語言。",
+            "zh-Hans": "将户外玩具互动提示翻译为各语言。",
+            "ja": "屋外のおもちゃの注意書きを翻訳。",
+            "ko": "야외 장난감 상호작용 안내를 번역했어요.",
+            "fr": "Traduction de l’avertissement sur les jouets d’extérieur.",
+            "de": "Warnhinweis zu Spielzeug im Freien übersetzt.",
+            "es": "Traducido el aviso sobre los juguetes de exterior.",
+            "it": "Tradotto l’avviso sui giocattoli da esterno.",
+            "pt": "Traduzido o aviso sobre brinquedos externos."
+          }
+        }
+      ]
+    },
+    {
+      "version": "0.2.99",
+      "changes": [
+        {
+          "kind": "improvement",
+          "text": {
+            "en": "Linked the ParaLink page to its standalone source repository.",
+            "zh-Hant": "ParaLink 頁面改連至獨立的原始碼儲存庫。",
+            "zh-Hans": "ParaLink 页面改为链接到独立的源代码仓库。",
+            "ja": "ParaLink ページに専用ソースリポジトリへのリンクを追加。",
+            "ko": "ParaLink 페이지를 독립 소스 저장소에 연결했어요.",
+            "fr": "La page ParaLink renvoie à son propre dépôt de code source.",
+            "de": "Die ParaLink-Seite mit dem eigenständigen Quellcode-Repository verknüpft.",
+            "es": "La página de ParaLink enlaza a su repositorio de código independiente.",
+            "it": "La pagina ParaLink rimanda al repository sorgente dedicato.",
+            "pt": "A página do ParaLink aponta para seu repositório de código independente."
+          }
+        }
+      ]
+    },
+    {
+      "version": "0.2.98",
+      "changes": [
+        {
+          "kind": "feature",
+          "text": {
+            "en": "Added the ParaLink page.",
+            "zh-Hant": "新增 ParaLink 頁面。",
+            "zh-Hans": "新增 ParaLink 页面。",
+            "ja": "ParaLink ページを追加。",
+            "ko": "ParaLink 페이지를 추가했어요.",
+            "fr": "Ajout de la page ParaLink.",
+            "de": "ParaLink-Seite ergänzt.",
+            "es": "Nueva página de ParaLink.",
+            "it": "Nuova pagina ParaLink.",
+            "pt": "Nova página do ParaLink."
+          }
+        },
+        {
+          "kind": "feature",
+          "text": {
+            "en": "Added USB firmware updates for H717.",
+            "zh-Hant": "新增 H717 USB 韌體更新。",
+            "zh-Hans": "新增 H717 USB 固件更新。",
+            "ja": "H717 の USB ファームウェア更新に対応。",
+            "ko": "H717 USB 펌웨어 업데이트를 추가했어요.",
+            "fr": "Mises à jour du H717 par USB.",
+            "de": "USB-Firmware-Updates für H717 ergänzt.",
+            "es": "Actualización de firmware del H717 por USB.",
+            "it": "Aggiornamenti firmware USB per H717.",
+            "pt": "Atualizações de firmware do H717 por USB."
+          }
+        },
+        {
+          "kind": "improvement",
+          "text": {
+            "en": "Added percentage progress to H717 USB firmware updates.",
+            "zh-Hant": "H717 USB 韌體更新新增百分比進度。",
+            "zh-Hans": "H717 USB 固件更新新增百分比进度。",
+            "ja": "H717 の USB ファームウェア更新に進捗率を表示。",
+            "ko": "H717 USB 펌웨어 업데이트 진행률을 퍼센트로 표시해요.",
+            "fr": "Affichage de la progression en pourcentage lors des mises à jour USB du H717.",
+            "de": "Prozentanzeige für USB-Firmware-Updates des H717 ergänzt.",
+            "es": "La actualización USB del H717 muestra el porcentaje de progreso.",
+            "it": "Aggiunta la percentuale di avanzamento agli aggiornamenti USB di H717.",
+            "pt": "As atualizações USB do H717 passaram a exibir o percentual de progresso."
+          }
+        },
+        {
+          "kind": "improvement",
+          "text": {
+            "en": "Improved the Save Editor.",
+            "zh-Hant": "改善存檔編輯器。",
+            "zh-Hans": "改进存档编辑器。",
+            "ja": "セーブエディターを改善。",
+            "ko": "저장 파일 편집기를 개선했어요.",
+            "fr": "Éditeur de sauvegardes amélioré.",
+            "de": "Spielstandeditor verbessert.",
+            "es": "Mejorado el editor de partidas.",
+            "it": "Migliorato l’editor dei salvataggi.",
+            "pt": "Melhorado o editor de saves."
+          }
+        },
+        {
+          "kind": "improvement",
+          "text": {
+            "en": "Improved My Lab workflows.",
+            "zh-Hant": "改善 My Lab 操作流程。",
+            "zh-Hans": "改进 My Lab 操作流程。",
+            "ja": "My Lab の操作手順を改善。",
+            "ko": "My Lab 작업 흐름을 개선했어요.",
+            "fr": "Procédures My Lab améliorées.",
+            "de": "My Lab-Abläufe verbessert.",
+            "es": "Mejorados los flujos de My Lab.",
+            "it": "Migliorate le procedure di My Lab.",
+            "pt": "Melhorados os fluxos do My Lab."
+          }
+        },
+        {
+          "kind": "improvement",
+          "text": {
+            "en": "Expanded the multilingual guides.",
+            "zh-Hant": "擴充多語言使用指南。",
+            "zh-Hans": "扩充多语言使用指南。",
+            "ja": "各言語のガイドを拡充。",
+            "ko": "다국어 가이드를 확장했어요.",
+            "fr": "Guides multilingues enrichis.",
+            "de": "Mehrsprachige Anleitungen erweitert.",
+            "es": "Guías multilingües ampliadas.",
+            "it": "Guide multilingue ampliate.",
+            "pt": "Guias multilíngues ampliados."
+          }
+        }
+      ]
+    },
+    {
+      "version": "0.2.96",
+      "changes": [
+        {
+          "kind": "improvement",
+          "text": {
+            "en": "Standardized emulator terminology in the interface and guides.",
+            "zh-Hant": "統一介面與指南的模擬器用語。",
+            "zh-Hans": "统一界面与指南的模拟器用语。",
+            "ja": "画面とガイドのエミュレーター表記を統一。",
+            "ko": "인터페이스와 가이드의 에뮬레이터 용어를 통일했어요.",
+            "fr": "Terminologie de l’émulateur harmonisée dans l’interface et les guides.",
+            "de": "Bezeichnung für den Emulator in Oberfläche und Anleitungen vereinheitlicht.",
+            "es": "Terminología del emulador unificada en la interfaz y las guías.",
+            "it": "Terminologia dell’emulatore uniformata nell’interfaccia e nelle guide.",
+            "pt": "Terminologia do emulador padronizada na interface e nos guias."
+          }
+        }
+      ]
+    },
+    {
+      "version": "0.2.95",
+      "changes": [
+        {
+          "kind": "bug",
+          "text": {
+            "en": "Fixed Paradise backup pairing on the first My Lab port installation.",
+            "zh-Hant": "修正首次安裝 My Lab 移植版時的 Paradise 備份配對。",
+            "zh-Hans": "修正首次安装 My Lab 移植版时的 Paradise 备份配对。",
+            "ja": "My Lab 移植版の初回導入時に Paradise のバックアップを関連付ける処理を修正。",
+            "ko": "My Lab 이식판 최초 설치 시 Paradise 백업 연결을 수정했어요.",
+            "fr": "Correction de l’association de la sauvegarde Paradise lors de la première installation du portage de My Lab.",
+            "de": "Zuordnung der Paradise-Sicherung bei der Erstinstallation von My Lab korrigiert.",
+            "es": "Corregida la vinculación de la copia de Paradise al instalar por primera vez la adaptación de My Lab.",
+            "it": "Corretta l’associazione del backup di Paradise alla prima installazione del porting My Lab.",
+            "pt": "Corrigida a associação do backup do Paradise na primeira instalação da versão adaptada de My Lab."
+          }
+        }
+      ]
+    },
+    {
+      "version": "0.2.89",
+      "changes": [
+        {
+          "kind": "improvement",
+          "text": {
+            "en": "Improved compatibility with previously modified My Lab ROMs.",
+            "zh-Hant": "改善已修改過的 My Lab ROM 相容性。",
+            "zh-Hans": "改进已修改过的 My Lab ROM 兼容性。",
+            "ja": "変更済みの My Lab ROM との互換性を改善。",
+            "ko": "수정된 My Lab ROM의 호환성을 개선했어요.",
+            "fr": "Compatibilité accrue avec les ROM My Lab déjà modifiées.",
+            "de": "Kompatibilität mit bereits veränderten My Lab-ROMs verbessert.",
+            "es": "Mejorada la compatibilidad con ROM de My Lab ya modificadas.",
+            "it": "Migliorata la compatibilità con le ROM My Lab già modificate.",
+            "pt": "Melhorada a compatibilidade com ROMs My Lab já modificadas."
+          }
+        }
+      ]
+    },
+    {
+      "version": "0.2.88",
+      "changes": [
+        {
+          "kind": "improvement",
+          "text": {
+            "en": "Unified save exports under .sav.",
+            "zh-Hant": "統一使用 .sav 匯出存檔。",
+            "zh-Hans": "统一使用 .sav 导出存档。",
+            "ja": "セーブの出力を .sav に統一。",
+            "ko": "저장 파일 내보내기를 .sav로 통일했어요.",
+            "fr": "Export des sauvegardes unifié en .sav.",
+            "de": "Spielstandexport auf .sav vereinheitlicht.",
+            "es": "Exportación de partidas unificada en .sav.",
+            "it": "Esportazioni dei salvataggi unificate in .sav.",
+            "pt": "Exportações de saves unificadas em .sav."
+          }
+        },
+        {
+          "kind": "improvement",
+          "text": {
+            "en": "Added section navigation to the mobile Save Editor.",
+            "zh-Hant": "存檔編輯器新增手機版區段導覽。",
+            "zh-Hans": "存档编辑器新增手机版区段导航。",
+            "ja": "モバイルのセーブエディターに項目移動を追加。",
+            "ko": "모바일 저장 파일 편집기에 섹션 이동을 추가했어요.",
+            "fr": "Navigation par section sur mobile.",
+            "de": "Abschnittsnavigation für den mobilen Spielstandeditor ergänzt.",
+            "es": "Navegación por secciones en el editor móvil.",
+            "it": "Navigazione per sezioni nell’editor su mobile.",
+            "pt": "Navegação por seções no editor para celular."
+          }
+        }
+      ]
+    },
+    {
+      "version": "0.2.85",
+      "changes": [
+        {
+          "kind": "bug",
+          "text": {
+            "en": "Fixed Save Editor entries.",
+            "zh-Hant": "修正存檔編輯器項目。",
+            "zh-Hans": "修正存档编辑器项目。",
+            "ja": "セーブエディターの項目を修正。",
+            "ko": "저장 파일 편집기 항목을 수정했어요.",
+            "fr": "Entrées de l’éditeur de sauvegardes corrigées.",
+            "de": "Einträge im Spielstandeditor korrigiert.",
+            "es": "Corregidas entradas del editor de partidas.",
+            "it": "Corrette le voci dell’editor dei salvataggi.",
+            "pt": "Corrigidas entradas do editor de saves."
+          }
+        },
+        {
+          "kind": "bug",
+          "text": {
+            "en": "Fixed Tama File entries.",
+            "zh-Hant": "修正塔麻圖鑑項目。",
+            "zh-Hans": "修正塔麻图鉴项目。",
+            "ja": "たまファイルの項目を修正。",
+            "ko": "타마 도감 항목을 수정했어요.",
+            "fr": "Entrées du Tama File corrigées.",
+            "de": "Einträge im Tama File korrigiert.",
+            "es": "Corregidas entradas del Tama File.",
+            "it": "Corrette le voci del Tama File.",
+            "pt": "Corrigidas entradas do Tama File."
+          }
+        }
+      ]
+    },
+    {
+      "version": "0.2.82",
+      "changes": [
+        {
+          "kind": "improvement",
+          "text": {
+            "en": "Shared the My Lab key across tools.",
+            "zh-Hant": "讓 My Lab 工具共用金鑰。",
+            "zh-Hans": "让 My Lab 工具共用密钥。",
+            "ja": "My Lab のキーを共用。",
+            "ko": "My Lab 도구 간에 키를 공유해요.",
+            "fr": "Clé My Lab partagée entre les outils.",
+            "de": "My Lab-Schlüssel zwischen Werkzeugen geteilt.",
+            "es": "Clave de My Lab compartida entre herramientas.",
+            "it": "Chiave My Lab condivisa tra gli strumenti.",
+            "pt": "Chave do My Lab compartilhada entre ferramentas."
+          }
+        },
+        {
+          "kind": "improvement",
+          "text": {
+            "en": "Added a My Lab warning before writing.",
+            "zh-Hant": "新增 My Lab 寫入前警示。",
+            "zh-Hans": "新增 My Lab 写入前警告。",
+            "ja": "My Lab の書き込み前に警告を追加。",
+            "ko": "My Lab 쓰기 전 경고를 추가했어요.",
+            "fr": "Avertissement ajouté avant l’écriture de My Lab.",
+            "de": "Warnung vor dem Schreiben von My Lab ergänzt.",
+            "es": "Nuevo aviso antes de escribir My Lab.",
+            "it": "Avviso prima della scrittura di My Lab.",
+            "pt": "Novo aviso antes da gravação do My Lab."
+          }
+        }
+      ]
+    },
+    {
+      "version": "0.2.79",
+      "changes": [
+        {
+          "kind": "feature",
+          "text": {
+            "en": "Added the Save Editor.",
+            "zh-Hant": "新增存檔編輯器。",
+            "zh-Hans": "新增存档编辑器。",
+            "ja": "セーブエディターを追加。",
+            "ko": "저장 파일 편집기를 추가했어요.",
+            "fr": "Ajout de l’éditeur de sauvegardes.",
+            "de": "Spielstandeditor ergänzt.",
+            "es": "Nuevo editor de partidas.",
+            "it": "Aggiunto l’editor dei salvataggi.",
+            "pt": "Adicionado o editor de saves."
+          }
+        },
+        {
+          "kind": "feature",
+          "text": {
+            "en": "Added a planet-travel option for Neon Planets.",
+            "zh-Hant": "新增 Neon Planets 星球移動選項。",
+            "zh-Hans": "新增 Neon Planets 星球移动选项。",
+            "ja": "Neon Planets の惑星移動オプションを追加。",
+            "ko": "Neon Planets 행성 이동 옵션을 추가했어요.",
+            "fr": "Option de voyage planétaire pour Neon Planets.",
+            "de": "Option für Planetenreisen in Neon Planets ergänzt.",
+            "es": "Opción de viaje entre planetas en Neon Planets.",
+            "it": "Opzione di viaggio tra pianeti in Neon Planets.",
+            "pt": "Opção de viagem entre planetas em Neon Planets."
+          }
+        }
+      ]
+    },
+    {
+      "version": "0.2.72",
+      "changes": [
+        {
+          "kind": "feature",
+          "text": {
+            "en": "Added automatic My Lab key search.",
+            "zh-Hant": "新增 My Lab 自動尋找金鑰。",
+            "zh-Hans": "新增 My Lab 自动查找密钥。",
+            "ja": "My Lab キーの自動検索に対応。",
+            "ko": "My Lab 키 자동 검색을 추가했어요.",
+            "fr": "Recherche automatique de la clé My Lab.",
+            "de": "Automatische My Lab-Schlüsselsuche ergänzt.",
+            "es": "Búsqueda automática de la clave de My Lab.",
+            "it": "Ricerca automatica della chiave My Lab.",
+            "pt": "Busca automática da chave My Lab."
+          }
+        },
+        {
+          "kind": "feature",
+          "text": {
+            "en": "Added patching for existing My Lab update files.",
+            "zh-Hant": "可修補既有 My Lab 更新檔。",
+            "zh-Hans": "可修补现有 My Lab 更新文件。",
+            "ja": "既存の My Lab 更新ファイルを修正できるように変更。",
+            "ko": "기존 My Lab 업데이트 파일을 패치할 수 있어요.",
+            "fr": "Correction des fichiers de mise à jour My Lab existants.",
+            "de": "Patchen bestehender My Lab-Update-Dateien ergänzt.",
+            "es": "Parcheo de archivos de actualización de My Lab existentes.",
+            "it": "Modifica dei file di aggiornamento My Lab esistenti.",
+            "pt": "Correção de arquivos de atualização existentes do My Lab."
+          }
+        }
+      ]
+    },
+    {
+      "version": "0.2.64",
+      "changes": [
+        {
+          "kind": "improvement",
+          "text": {
+            "en": "Separated Jade Forest and Sky resident data.",
+            "zh-Hant": "將 Jade Forest 與天空場地的居民資料分開儲存。",
+            "zh-Hans": "将 Jade Forest 与天空场地的居民数据分开存储。",
+            "ja": "Jade Forest と空フィールドの住民データを分離。",
+            "ko": "Jade Forest와 하늘 필드의 주민 데이터를 분리했어요.",
+            "fr": "Séparation des données des résidents de Jade Forest et du ciel.",
+            "de": "Bewohnerdaten von Jade Forest und Himmelsgebiet getrennt.",
+            "es": "Separados los datos de residentes de Jade Forest y del cielo.",
+            "it": "Separati i dati degli abitanti di Jade Forest e del cielo.",
+            "pt": "Separados os dados dos moradores de Jade Forest e do céu."
+          }
+        }
+      ]
+    },
+    {
+      "version": "0.2.60",
+      "changes": [
+        {
+          "kind": "bug",
+          "text": {
+            "en": "Fixed updates for older My Lab port images.",
+            "zh-Hant": "修正舊版 My Lab 移植 ROM 的更新流程。",
+            "zh-Hans": "修正旧版 My Lab 移植 ROM 的更新流程。",
+            "ja": "旧 My Lab 移植 ROM の更新処理を修正。",
+            "ko": "이전 My Lab 이식 ROM의 업데이트를 수정했어요.",
+            "fr": "Correction de la mise à jour des anciennes ROM du portage My Lab.",
+            "de": "Updates für ältere ROMs der My Lab-Portierung korrigiert.",
+            "es": "Corregida la actualización de ROM antiguas de la adaptación de My Lab.",
+            "it": "Corretti gli aggiornamenti per le vecchie ROM del porting My Lab.",
+            "pt": "Corrigidas as atualizações de ROMs antigas da versão adaptada de My Lab."
+          }
+        }
+      ]
+    },
+    {
+      "version": "0.2.58",
+      "changes": [
+        {
+          "kind": "improvement",
+          "text": {
+            "en": "Improved on-device Menu typography.",
+            "zh-Hant": "改善裝置選單字型。",
+            "zh-Hans": "改进设备菜单字体。",
+            "ja": "本体メニューの文字表示を改善。",
+            "ko": "기기 메뉴 글꼴을 개선했어요.",
+            "fr": "Typographie du menu de l’appareil améliorée.",
+            "de": "Schrift im Gerätemenü verbessert.",
+            "es": "Mejorada la tipografía del menú del dispositivo.",
+            "it": "Migliorata la tipografia del menu del dispositivo.",
+            "pt": "Melhorada a tipografia do menu do dispositivo."
+          }
+        },
+        {
+          "kind": "improvement",
+          "text": {
+            "en": "Improved Flash Tool updates.",
+            "zh-Hant": "改善 Flash Tool 更新流程。",
+            "zh-Hans": "改进 Flash Tool 更新流程。",
+            "ja": "Flash Tool の更新処理を改善。",
+            "ko": "Flash Tool 업데이트를 개선했어요.",
+            "fr": "Mises à jour de Flash Tool améliorées.",
+            "de": "Flash-Tool-Updates verbessert.",
+            "es": "Mejoradas las actualizaciones de Flash Tool.",
+            "it": "Migliorati gli aggiornamenti di Flash Tool.",
+            "pt": "Melhoradas as atualizações do Flash Tool."
+          }
+        }
+      ]
+    },
+    {
+      "version": "0.2.39",
+      "changes": [
+        {
+          "kind": "bug",
+          "text": {
+            "en": "Fixed issues when using all six fields.",
+            "zh-Hant": "修正使用六個場地時的問題。",
+            "zh-Hans": "修正使用六个场地时的问题。",
+            "ja": "6 フィールド利用時の不具合を修正。",
+            "ko": "6개 필드를 사용할 때 생기는 문제를 수정했어요.",
+            "fr": "Correction de problèmes avec les six terrains.",
+            "de": "Fehler bei sechs Gebieten korrigiert.",
+            "es": "Corregidos problemas al usar seis zonas.",
+            "it": "Corretti problemi con le sei aree.",
+            "pt": "Corrigidos problemas ao usar as seis áreas."
+          }
+        },
+        {
+          "kind": "improvement",
+          "text": {
+            "en": "Updated translated labels.",
+            "zh-Hant": "更新多語言標籤。",
+            "zh-Hans": "更新多语言标签。",
+            "ja": "各言語のラベルを更新。",
+            "ko": "번역된 레이블을 업데이트했어요.",
+            "fr": "Mise à jour des libellés traduits.",
+            "de": "Übersetzte Beschriftungen aktualisiert.",
+            "es": "Actualizados los textos traducidos.",
+            "it": "Aggiornate le etichette tradotte.",
+            "pt": "Rótulos traduzidos atualizados."
+          }
+        }
+      ]
+    },
+    {
+      "version": "0.2.35",
+      "changes": [
+        {
+          "kind": "feature",
+          "text": {
+            "en": "Extended toy placement to all six fields.",
+            "zh-Hant": "將玩具擺放擴充至全部六個場地。",
+            "zh-Hans": "将玩具摆放扩展至全部六个场地。",
+            "ja": "全 6 フィールドへのおもちゃ配置に対応。",
+            "ko": "6개 필드 모두에서 장난감을 배치할 수 있어요.",
+            "fr": "Placement des jouets étendu aux six terrains.",
+            "de": "Spielzeug kann in allen sechs Gebieten platziert werden.",
+            "es": "Los juguetes se pueden colocar en las seis zonas.",
+            "it": "I giocattoli si possono collocare in tutte e sei le aree.",
+            "pt": "Brinquedos podem ser colocados nas seis áreas."
+          }
+        }
+      ]
+    },
+    {
+      "version": "0.2.33",
+      "changes": [
+        {
+          "kind": "feature",
+          "text": {
+            "en": "Added a single conflict choice for a batch of Lab Items.",
+            "zh-Hant": "新增批次套用同一種研究所物品衝突處理方式。",
+            "zh-Hans": "新增批量应用同一种研究所物品冲突处理方式。",
+            "ja": "研究所アイテムの重複時に処理方法を一括指定できるように変更。",
+            "ko": "여러 연구소 아이템이 겹칠 때 같은 처리 방식을 한꺼번에 적용할 수 있어요.",
+            "fr": "Choix unique pour résoudre les conflits d’un lot d’objets du labo.",
+            "de": "Eine Konfliktoption für einen ganzen Stapel Laborobjekte ergänzt.",
+            "es": "Una sola opción para resolver los conflictos de un lote de objetos del laboratorio.",
+            "it": "Un’unica scelta per risolvere i conflitti di un gruppo di oggetti del laboratorio.",
+            "pt": "Uma opção para resolver conflitos de todo um lote de itens do laboratório."
+          }
+        }
+      ]
+    },
+    {
+      "version": "0.2.24",
+      "changes": [
+        {
+          "kind": "feature",
+          "text": {
+            "en": "Added Paradise save editing.",
+            "zh-Hant": "新增 Paradise 存檔編輯。",
+            "zh-Hans": "新增 Paradise 存档编辑。",
+            "ja": "Paradise のセーブ編集を追加。",
+            "ko": "Paradise 저장 파일 편집을 추가했어요.",
+            "fr": "Édition des sauvegardes Paradise.",
+            "de": "Bearbeitung von Paradise-Spielständen ergänzt.",
+            "es": "Edición de partidas de Paradise.",
+            "it": "Modifica dei salvataggi di Paradise.",
+            "pt": "Edição de saves do Paradise."
+          }
+        },
+        {
+          "kind": "feature",
+          "text": {
+            "en": "Added Paradise care editing.",
+            "zh-Hant": "新增 Paradise 照護編輯。",
+            "zh-Hans": "新增 Paradise 照护编辑。",
+            "ja": "Paradise のお世話の編集を追加。",
+            "ko": "Paradise 돌봄 편집을 추가했어요.",
+            "fr": "Édition des soins dans Paradise.",
+            "de": "Bearbeitung der Pflege in Paradise ergänzt.",
+            "es": "Edición de cuidados en Paradise.",
+            "it": "Modifica delle cure in Paradise.",
+            "pt": "Edição de cuidados no Paradise."
+          }
+        }
+      ]
+    },
+    {
+      "version": "0.2.15",
+      "changes": [
+        {
+          "kind": "feature",
+          "text": {
+            "en": "Added Lab Item installation.",
+            "zh-Hant": "新增研究所物品安裝。",
+            "zh-Hans": "新增研究所物品安装。",
+            "ja": "研究所アイテムの導入に対応。",
+            "ko": "연구소 아이템 설치를 추가했어요.",
+            "fr": "Installation des objets du labo.",
+            "de": "Installation von Laborobjekten ergänzt.",
+            "es": "Instalación de objetos del laboratorio.",
+            "it": "Installazione degli oggetti del laboratorio.",
+            "pt": "Instalação de itens do laboratório."
+          }
+        },
+        {
+          "kind": "feature",
+          "text": {
+            "en": "Added a review before writing to a device.",
+            "zh-Hant": "新增裝置寫入前檢視。",
+            "zh-Hans": "新增设备写入前审查。",
+            "ja": "本体への書き込み前に確認画面を表示。",
+            "ko": "기기에 쓰기 전 검토 화면을 추가했어요.",
+            "fr": "Récapitulatif avant écriture sur un appareil.",
+            "de": "Schreibvorschau für Geräte ergänzt.",
+            "es": "Revisión antes de escribir en el dispositivo.",
+            "it": "Riepilogo prima della scrittura sul dispositivo.",
+            "pt": "Revisão antes da gravação no dispositivo."
+          }
+        }
+      ]
+    },
+    {
+      "version": "0.2.11",
+      "changes": [
+        {
+          "kind": "improvement",
+          "text": {
+            "en": "Localized the analytics consent prompt.",
+            "zh-Hant": "將使用情況統計的同意提示多語言化。",
+            "zh-Hans": "将使用情况统计的同意提示多语言化。",
+            "ja": "利用状況の計測に関する同意画面を各言語に対応。",
+            "ko": "사용 통계 수집 동의 안내를 번역했어요.",
+            "fr": "Traduction de l’invite de consentement aux statistiques d’utilisation.",
+            "de": "Einwilligungsdialog für Nutzungsstatistiken übersetzt.",
+            "es": "Traducido el aviso de consentimiento para estadísticas de uso.",
+            "it": "Tradotta la richiesta di consenso per le statistiche d’uso.",
+            "pt": "Traduzido o aviso de consentimento para estatísticas de uso."
+          }
+        }
+      ]
+    },
+    {
+      "version": "0.2.7",
+      "changes": [
+        {
+          "kind": "improvement",
+          "text": {
+            "en": "Published the web build and its source code.",
+            "zh-Hant": "發佈網頁版和原始碼。",
+            "zh-Hans": "发布网页版和源代码。",
+            "ja": "ウェブ版とソースコードを公開。",
+            "ko": "웹 버전과 소스 코드를 공개했어요.",
+            "fr": "Publication de la version web et de son code source.",
+            "de": "Webversion und Quellcode veröffentlicht.",
+            "es": "Publicación de la versión web y su código fuente.",
+            "it": "Pubblicata la versione web con il codice sorgente.",
+            "pt": "Publicação da versão web e do código-fonte."
+          }
+        },
+        {
+          "kind": "improvement",
+          "text": {
+            "en": "Published license notices separately.",
+            "zh-Hant": "將授權聲明單獨公開。",
+            "zh-Hans": "将授权声明单独公开。",
+            "ja": "ライセンス通知を別途公開。",
+            "ko": "라이선스 고지를 별도로 공개했어요.",
+            "fr": "Publication séparée des notices de licence.",
+            "de": "Lizenzhinweise separat veröffentlicht.",
+            "es": "Avisos de licencia publicados por separado.",
+            "it": "Avvisi di licenza pubblicati separatamente.",
+            "pt": "Avisos de licenças publicados separadamente."
+          }
+        },
+        {
+          "kind": "feature",
+          "text": {
+            "en": "Added directional wheel navigation to My Lab scenes on Paradise.",
+            "zh-Hant": "讓 Paradise 移植版的 My Lab 場景支援轉輪雙向操作。",
+            "zh-Hans": "让 Paradise 移植版的 My Lab 场景支持转轮双向操作。",
+            "ja": "Paradise 版 My Lab のシーンでダイヤルの両方向操作に対応。",
+            "ko": "Paradise 이식판 My Lab 장면에서 휠을 양방향으로 사용할 수 있어요.",
+            "fr": "Navigation à la molette dans les deux sens dans les scènes de My Lab sur Paradise.",
+            "de": "Navigation in beide Richtungen mit dem Rad in My Lab-Szenen auf Paradise ergänzt.",
+            "es": "Navegación con la rueda en ambas direcciones en escenas de My Lab en Paradise.",
+            "it": "Navigazione con la rotella in entrambe le direzioni nelle scene di My Lab su Paradise.",
+            "pt": "Navegação com a roda nos dois sentidos nas cenas de My Lab no Paradise."
+          }
+        },
+        {
+          "kind": "improvement",
+          "text": {
+            "en": "Improved text wrapping, scene framing, and save transfer for My Lab on Paradise.",
+            "zh-Hant": "改善 Paradise 移植版的文字換行、畫面取景與存檔傳輸。",
+            "zh-Hans": "改进 Paradise 移植版的文字换行、画面取景与存档传输。",
+            "ja": "Paradise 版 My Lab の改行、画面の収まり、セーブ転送を改善。",
+            "ko": "Paradise 이식판 My Lab의 줄바꿈, 화면 배치, 저장 파일 전송을 개선했어요.",
+            "fr": "Amélioration des retours à la ligne, du cadrage et du transfert de sauvegardes de My Lab sur Paradise.",
+            "de": "Zeilenumbrüche, Bildausschnitt und Spielstandtransfer für My Lab auf Paradise verbessert.",
+            "es": "Mejorados los saltos de línea, el encuadre y la transferencia de partidas de My Lab en Paradise.",
+            "it": "Migliorati il testo a capo, l’inquadratura e il trasferimento dei salvataggi di My Lab su Paradise.",
+            "pt": "Melhorados a quebra de texto, o enquadramento e a transferência de saves de My Lab no Paradise."
+          }
+        },
+        {
+          "kind": "improvement",
+          "text": {
+            "en": "Removed the Display Test option from the port’s Menu.",
+            "zh-Hant": "移除移植版選單的顯示測試選項。",
+            "zh-Hans": "移除移植版菜单的显示测试选项。",
+            "ja": "移植版メニューから表示テストを削除。",
+            "ko": "이식판 메뉴에서 화면 테스트 옵션을 제거했어요.",
+            "fr": "Suppression du test d’affichage du menu du portage.",
+            "de": "Anzeigetest aus dem Menü der Portierung entfernt.",
+            "es": "Eliminada la prueba de pantalla del menú de la adaptación.",
+            "it": "Rimosso il test dello schermo dal menu del porting.",
+            "pt": "Removido o teste de tela do menu da versão adaptada."
+          }
+        },
+        {
+          "kind": "improvement",
+          "text": {
+            "en": "Reduced clicking sounds during screen transitions on Paradise.",
+            "zh-Hant": "改善 Paradise 切換畫面時的喀聲。",
+            "zh-Hans": "改善 Paradise 切换画面时的咔声。",
+            "ja": "Paradise で画面切替時のクリック音を低減。",
+            "ko": "Paradise 화면 전환 시 잡음을 줄였어요.",
+            "fr": "Réduction des clics lors des changements d’écran sur Paradise.",
+            "de": "Knackgeräusche bei Bildschirmwechseln auf Paradise reduziert.",
+            "es": "Reducidos los chasquidos al cambiar de pantalla en Paradise.",
+            "it": "Ridotti gli scatti audio durante i cambi di schermata su Paradise.",
+            "pt": "Reduzidos os estalos nas transições de tela no Paradise."
+          }
+        },
+        {
+          "kind": "improvement",
+          "text": {
+            "en": "Integrated screen-fit corrections for the smaller Paradise display.",
+            "zh-Hant": "整合適用於 Paradise 較小螢幕的畫面修正。",
+            "zh-Hans": "整合适用于 Paradise 较小屏幕的画面修正。",
+            "ja": "小さい Paradise 画面に合わせる表示補正を統合。",
+            "ko": "더 작은 Paradise 화면에 맞춘 보정을 통합했어요.",
+            "fr": "Intégration des corrections d’affichage pour le petit écran de Paradise.",
+            "de": "Bildanpassungen für das kleinere Paradise-Display integriert.",
+            "es": "Integrados los ajustes para la pantalla más pequeña de Paradise.",
+            "it": "Integrate le correzioni per lo schermo più piccolo di Paradise.",
+            "pt": "Integrados os ajustes para a tela menor do Paradise."
+          }
+        },
+        {
+          "kind": "bug",
+          "text": {
+            "en": "Fixed audible clicks on muted notes in the Paradise port.",
+            "zh-Hant": "修正 Paradise 移植版播放靜音音符時的喀聲。",
+            "zh-Hans": "修正 Paradise 移植版播放静音音符时的咔声。",
+            "ja": "Paradise 移植版で無音の音符がクリック音を出す問題を修正。",
+            "ko": "Paradise 이식판에서 무음 음표에 잡음이 나던 문제를 수정했어요.",
+            "fr": "Correction des clics audibles sur les notes muettes dans le portage Paradise.",
+            "de": "Knackgeräusche bei stummen Noten in der Paradise-Portierung behoben.",
+            "es": "Corregidos los chasquidos de notas silenciadas en la adaptación a Paradise.",
+            "it": "Corretti gli scatti audio delle note mute nel porting Paradise.",
+            "pt": "Corrigidos os estalos de notas silenciadas na versão adaptada para Paradise."
+          }
+        },
+        {
+          "kind": "bug",
+          "text": {
+            "en": "Fixed the brief screen flash when the Paradise port wakes.",
+            "zh-Hant": "修正 Paradise 移植版喚醒時的短暫閃屏。",
+            "zh-Hans": "修正 Paradise 移植版唤醒时的短暂闪屏。",
+            "ja": "Paradise 移植版が復帰時に一瞬光る問題を修正。",
+            "ko": "Paradise 이식판에서 절전 해제 시 화면이 잠깐 번쩍이던 문제를 수정했어요.",
+            "fr": "Correction du bref flash de l’écran au réveil du portage Paradise.",
+            "de": "Kurzes Aufblitzen beim Aufwachen der Paradise-Portierung behoben.",
+            "es": "Corregido el destello breve al despertar la adaptación a Paradise.",
+            "it": "Corretto il breve lampo dello schermo al risveglio del porting Paradise.",
+            "pt": "Corrigido o breve clarão ao despertar a versão adaptada para Paradise."
+          }
+        },
+        {
+          "kind": "improvement",
+          "text": {
+            "en": "Improved screen sleep for My Lab on Paradise.",
+            "zh-Hant": "改善 My Lab 移植版的螢幕休眠。",
+            "zh-Hans": "改善 My Lab 移植版的屏幕休眠。",
+            "ja": "Paradise 版 My Lab の画面スリープを改善。",
+            "ko": "Paradise 이식판 My Lab의 화면 절전 동작을 개선했어요.",
+            "fr": "Mise en veille de l’écran améliorée pour My Lab sur Paradise.",
+            "de": "Display-Ruhemodus für My Lab auf Paradise verbessert.",
+            "es": "Mejorada la suspensión de pantalla de My Lab en Paradise.",
+            "it": "Migliorata la sospensione dello schermo di My Lab su Paradise.",
+            "pt": "Melhorada a suspensão da tela de My Lab no Paradise."
+          }
+        },
+        {
+          "kind": "feature",
+          "text": {
+            "en": "Added My Lab firmware porting to Paradise.",
+            "zh-Hant": "新增將 My Lab 韌體移植至 Paradise 的功能。",
+            "zh-Hans": "新增将 My Lab 固件移植到 Paradise 的功能。",
+            "ja": "My Lab ファームウェアの Paradise への移植機能を追加。",
+            "ko": "My Lab 펌웨어를 Paradise에 이식하는 기능을 추가했어요.",
+            "fr": "Ajout du portage du micrologiciel My Lab vers Paradise.",
+            "de": "Portierung der My Lab-Firmware auf Paradise ergänzt.",
+            "es": "Añadida la adaptación del firmware de My Lab a Paradise.",
+            "it": "Aggiunto il porting del firmware My Lab su Paradise.",
+            "pt": "Adicionada a adaptação do firmware My Lab para Paradise."
+          }
+        },
+        {
+          "kind": "improvement",
+          "text": {
+            "en": "Localized the Workspace and extended My Lab update tools.",
+            "zh-Hant": "將工作區多語言化，並擴充 My Lab 更新工具。",
+            "zh-Hans": "将工作区多语言化，并扩充 My Lab 更新工具。",
+            "ja": "ワークスペースの翻訳と My Lab 更新ツールの拡充。",
+            "ko": "작업 공간을 번역하고 My Lab 업데이트 도구를 확장했어요.",
+            "fr": "Traduction de l’espace de travail et extension des outils de mise à jour de My Lab.",
+            "de": "Arbeitsbereich lokalisiert und My Lab-Update-Werkzeuge erweitert.",
+            "es": "Espacio de trabajo traducido y herramientas de actualización de My Lab ampliadas.",
+            "it": "Area di lavoro tradotta e strumenti di aggiornamento My Lab ampliati.",
+            "pt": "Área de trabalho traduzida e ferramentas de atualização do My Lab ampliadas."
+          }
+        },
+        {
+          "kind": "improvement",
+          "text": {
+            "en": "Bundled the item catalog and improved localized item editing.",
+            "zh-Hant": "內附道具目錄，並改善多語言道具編輯。",
+            "zh-Hans": "内置道具目录，并改进多语言道具编辑。",
+            "ja": "アイテム一覧を同梱し、各言語のアイテム編集を改善。",
+            "ko": "아이템 목록을 포함하고 다국어 아이템 편집을 개선했어요.",
+            "fr": "Catalogue d’objets intégré et édition multilingue améliorée.",
+            "de": "Objektkatalog integriert und Bearbeitung in mehreren Sprachen verbessert.",
+            "es": "Catálogo de objetos integrado y edición multilingüe mejorada.",
+            "it": "Catalogo degli oggetti incluso e modifica multilingue migliorata.",
+            "pt": "Catálogo de itens incluído e edição multilíngue aprimorada."
+          }
+        },
+        {
+          "kind": "improvement",
+          "text": {
+            "en": "Redesigned the workspace and expanded device transfers and My Lab flashing tools.",
+            "zh-Hant": "重新設計工作區，擴充裝置傳輸與 My Lab 刷寫工具。",
+            "zh-Hans": "重新设计工作区，扩充设备传输与 My Lab 刷写工具。",
+            "ja": "ワークスペースを刷新し、本体への転送と My Lab 書き込みツールを拡充。",
+            "ko": "작업 공간을 개편하고 기기 전송과 My Lab 플래시 도구를 확장했어요.",
+            "fr": "Espace de travail remanié et outils de transfert et de flashage My Lab enrichis.",
+            "de": "Arbeitsbereich überarbeitet und Gerätetransfers sowie My Lab-Flash-Werkzeuge erweitert.",
+            "es": "Espacio de trabajo rediseñado y herramientas de transferencia y flasheo de My Lab ampliadas.",
+            "it": "Area di lavoro ridisegnata e strumenti di trasferimento e scrittura My Lab ampliati.",
+            "pt": "Área de trabalho reformulada e ferramentas de transferência e gravação My Lab ampliadas."
+          }
+        },
+        {
+          "kind": "feature",
+          "text": {
+            "en": "First ParaLab release with a fix for My Lab’s SD card support.",
+            "zh-Hant": "ParaLab 首版，修正 My Lab 的記憶卡支援。",
+            "zh-Hans": "ParaLab 首版，修正 My Lab 的存储卡支持。",
+            "ja": "ParaLab の初版。My Lab の SD カード対応を修正。",
+            "ko": "ParaLab 첫 버전에서 My Lab의 SD 카드 지원을 수정했어요.",
+            "fr": "Première version de ParaLab avec une correction de la prise en charge des cartes SD de My Lab.",
+            "de": "Erste ParaLab-Version mit korrigierter SD-Karten-Unterstützung für My Lab.",
+            "es": "Primera versión de ParaLab con una corrección de tarjetas SD de My Lab.",
+            "it": "Prima versione di ParaLab con una correzione per le schede SD di My Lab.",
+            "pt": "Primeira versão do ParaLab com uma correção para cartões SD do My Lab."
+          }
+        }
+      ]
+    }
+  ],
+  "pending": []
+}

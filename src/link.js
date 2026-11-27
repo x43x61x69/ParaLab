@@ -1,15 +1,17 @@
 // ESP32-S3 ROM loader. Use the native USB download port, without installing a RAM stub.
 {
-  const release = /*__LINK_RELEASE__*/ {};
+  const releases = /*__LINK_RELEASE__*/ {};
+  const board = $('linkBoard'), versions = $('linkVersions');
   const mode = $('linkMode'), connect = $('linkConnect'), progress = $('linkProgress');
   const boot = {usbVendorId:0x303a, usbProductId:0x1001};
   const runtime = {usbVendorId:0x303a, usbProductId:0x0002};
-  const incompatible = 'This device does not match the selected H717 update.';
+  const incompatible = 'This device does not match the selected ParaLink hardware.';
+  const otaVerified = 'Write verified. ParaLink will restart into the new version.';
   const failed = 'Update interrupted. Check the cable, enter download mode and retry.';
   const nextPort = 'Download mode requested. Click Connect again and select the USB download port.';
-  const checking = 'Checking H717 and firmware…';
+  const checking = 'Checking hardware and firmware…';
   const writing = 'Writing and verifying. Keep USB connected.';
-  const verified = 'Write verified. Press RESET on the H717 and check the version on its screen.';
+  const verified = 'Write verified. Press RESET on ParaLink and check its title bar.';
   function status(message) {
     const output = $('linkStatus');
     output.dataset.t = message;
@@ -19,6 +21,14 @@
     connect.disabled = true;
     status('Open ParaLab in desktop Chrome or Edge with Web Serial enabled.');
   }
+  function showVersions(previous) {
+    const release = releases[board.value];
+    versions.textContent = previous
+      ? release.board + ' · v' + previous + ' → v' + release.version
+      : release.board + ' · ' + t('Target version') + ' v' + release.version;
+  }
+  board.onchange = () => showVersions();
+  if (releases[board.value]) showVersions();
   const buttons = [...$('linkScreenButtons').children];
   buttons.forEach((button, selected) => button.onclick = () => {
     buttons.forEach((entry, index) => {
@@ -61,7 +71,7 @@
 
   function romCommands(reader, writer) {
     const stream = responses(reader);
-    return async (op, payload, checksum = 0, timeout = 8000) => {
+    return async (op, payload, checksum = 0, timeout = 8000, returnValue = false) => {
       const header = [0, op, payload.length & 255, payload.length >> 8, checksum, 0, 0, 0];
       const slip = [0xc0];
       for (const byte of [...header, ...payload]) {
@@ -79,7 +89,7 @@
           if (frame[0] !== 1 || frame[1] !== op) continue;
           if (frame.length < 12 || frame.length !== 8 + frame[2] + 256 * frame[3] ||
               frame[frame.length - 4] !== 0) throw new Error(failed);
-          return frame.slice(8, -4);
+          return returnValue ? new DataView(frame.buffer, frame.byteOffset).getUint32(4, true) : frame.slice(8, -4);
         }
       } finally { clearTimeout(timer); }
     };
@@ -113,24 +123,147 @@
     if (await digestOnChip(command, part) !== part.md5) throw new Error(failed);
   }
 
+  // Follow the ESP32-S3 ROM loader's SPI RDID sequence. The high JEDEC byte is the capacity exponent.
+  async function flashBytes(command) {
+    const base = 0x60002000;
+    const read = offset => command(0x0a, words(base + offset), 0, 8000, true);
+    const write = (offset, value) => command(0x09, words(base + offset, value, 0xffffffff, 0));
+    const usr = await read(0x18), usr2 = await read(0x20), miso = await read(0x28);
+    try {
+      await write(0x28, 23);
+      await write(0x18, 0x90000000);
+      await write(0x20, 0x7000009f);
+      await write(0x58, 0);
+      await write(0, 1 << 18);
+      for (let retry = 0; retry < 10; retry++) {
+        if (!(await read(0) & (1 << 18))) return 2 ** ((await read(0x58) >>> 16) & 0xff);
+      }
+      throw new Error(incompatible);
+    } finally {
+      await write(0x18, usr);
+      await write(0x20, usr2);
+      await write(0x28, miso);
+    }
+  }
+
+  function otaFrame(offset, chunk) {
+    const header = words(offset, window.ParamixCore.crc32(chunk));
+    const frame = [0xc0];
+    for (const data of [header, chunk]) for (const byte of data) {
+      if (byte === 0xc0 || byte === 0xdb) frame.push(0xdb, byte === 0xc0 ? 0xdc : 0xdd);
+      else frame.push(byte);
+    }
+    frame.push(0xc0);
+    return new Uint8Array(frame);
+  }
+
+  async function runOta(reader, writer, release, payload) {
+    let pending = '', reading;
+    async function readLine() {
+      while (!pending.includes('\n')) {
+        const {value, done} = await reader.read();
+        if (done) throw new Error('No USB OTA response. Install the latest firmware in ROM mode first.');
+        pending += new TextDecoder().decode(value);
+        if (pending.length > 512) throw new Error(failed);
+      }
+      const split = pending.indexOf('\n');
+      const line = pending.slice(0, split).trim();
+      pending = pending.slice(split + 1);
+      return line;
+    }
+    async function nextLine(timeout) {
+      let timer;
+      try {
+        reading ||= readLine();
+        const line = await Promise.race([reading, new Promise(resolve => {timer=setTimeout(resolve,timeout,null);})]);
+        if (line !== null) reading = null;
+        if (line?.startsWith('ERROR')) throw new Error(line.slice(5).trim() || failed);
+        return line;
+      } finally { clearTimeout(timer); }
+    }
+    const hello = /^PARALINK (OTA2?) (\w+) (\d+\.\d+\.\d+)$/.exec((await nextLine(6000)) || '');
+    if (!hello) throw new Error('No USB OTA response. Install the latest firmware in ROM mode first.');
+    if (hello[2] !== release.board) throw new Error(incompatible);
+    const framed = hello[1] === 'OTA2';
+    showVersions(hello[3]);
+    const firmware = release['firmware.bin'];
+    const assets = release['assets.bin'];
+    const header = 'UPDATE ' + release.board + ' ' + release.version + ' ' + payload.length + ' ' +
+      assets.size + ' ' + release.assetCrc + ' ' + firmware.rawSha256 + '\n';
+    await writer.write(new TextEncoder().encode(header));
+    if (await nextLine(20000) !== (framed ? 'OK 0' : 'OK')) throw new Error(failed);
+    status(writing);
+    transferProgress('link', 0, payload.length, t(writing));
+    let verifiedByLastBlock = false;
+    for (let offset = 0; offset < payload.length; offset += 1024) {
+      const chunk = payload.subarray(offset, offset + 1024);
+      const end = offset + chunk.length;
+      if (framed) {
+        const frame = otaFrame(offset, chunk);
+        let received = false;
+        for (let attempt = 0; attempt < 7 && !received; attempt++) {
+          await writer.write(frame);
+          const deadline = Date.now() + 1200;
+          while (Date.now() < deadline) {
+            const line = await nextLine(deadline - Date.now());
+            if (line === 'DONE' && end === payload.length) verifiedByLastBlock = true;
+            if (line === 'OK ' + end || verifiedByLastBlock) { received = true; break; }
+          }
+        }
+        if (!received) throw new Error(failed);
+      } else {
+        await writer.write(chunk);
+        if (await nextLine(15000) !== 'OK') throw new Error(failed);
+      }
+      transferProgress('link', Math.min(end, Math.floor(payload.length * 0.99)), payload.length, t(writing));
+    }
+    status('Verifying firmware…');
+    if (!verifiedByLastBlock && await nextLine(15000) !== 'DONE') throw new Error(failed);
+    transferProgress('link', payload.length, payload.length, t(otaVerified));
+    status(otaVerified);
+  }
+
   connect.onclick = async () => {
     let port, opened = false, reader, writer;
-    const factory = mode.value === 'factory';
+    const factory = mode.value === 'factory', ota = mode.value === 'ota';
+    const release = releases[board.value];
+    showVersions();
     const guard = event => { event.preventDefault(); event.returnValue = ''; };
-    mode.disabled = connect.disabled = true;
+    mode.disabled = board.disabled = connect.disabled = true;
     progress.hidden = true;
     try {
       port = await navigator.serial.requestPort({filters:[boot, runtime]});
-      if (port.getInfo().usbProductId === runtime.usbProductId) {
+      const runtimePort = port.getInfo().usbProductId === runtime.usbProductId;
+      if (ota) {
+        if (!runtimePort) throw new Error('Select the running ParaLink in the USB list for OTA.');
+        if (!await deviceDialog(t('Install the selected firmware and keep settings and favorites?'),
+          'ParaLink ' + release.board + ' v' + release.version, t('Continue'))) { status('Cancelled'); return; }
+        window.addEventListener('beforeunload', guard);
+        status(checking);
+        const {compressed} = await download(release['firmware.bin']);
+        const payload = new Uint8Array(await new Response(
+          new Blob([compressed]).stream().pipeThrough(new DecompressionStream('deflate'))).arrayBuffer());
+        if (payload.length !== release['firmware.bin'].size) throw new Error(failed);
+        // Force a line-coding change even when the OS remembers the previous OTA rate.
+        await port.open({baudRate:460800});
+        await port.close();
+        await port.open({baudRate:2400});
+        opened = true;
+        reader = port.readable.getReader();
+        writer = port.writable.getWriter();
+        await runOta(reader, writer, release, payload);
+        return;
+      }
+      if (runtimePort) {
         await port.open({baudRate:1200});
         opened = true;
         await new Promise(resolve => setTimeout(resolve, 180));
         status(nextPort);
         return;
       }
-      const prompt = factory ? 'Erase all firmware, settings and favorites on this 16 MiB H717?' :
-        'Update the firmware and assets on this H717 and keep its settings and favorites?';
-      if (!await deviceDialog(t(prompt), 'ParaLab Link v' + release.version, t('Continue'))) {
+      const prompt = factory ? 'Erase all firmware, settings and favorites on the selected ParaLink?' :
+        'Update firmware and assets while keeping settings and favorites?';
+      if (!await deviceDialog(t(prompt), 'ParaLink ' + release.board + ' v' + release.version, t('Continue'))) {
         status('Cancelled');
         return;
       }
@@ -147,10 +280,11 @@
       if (security.length < 16 || new DataView(security.buffer).getUint32(12, true) !== 9 ||
           (security[0] & 5) || security[4] !== 0) throw new Error(incompatible);
       await command(0x0d, words(0, 0));
-      await command(0x0b, words(0, 0x1000000, 0x10000, 0x1000, 0x100, 0xffff));
+      if (await flashBytes(command) !== release.flashBytes) throw new Error(incompatible);
+      await command(0x0b, words(0, release.flashBytes, 0x10000, 0x1000, 0x100, 0xffff));
       if (!factory && await digestOnChip(command, release.layout) !== release.layout.md5)
         throw new Error(incompatible);
-      const images = await Promise.all((factory ? [release.factory] : [release['firmware.bin'], release['assets.bin']]).map(download));
+      const images = await Promise.all((factory ? [release.factory] : [release['firmware.bin'], {...release['firmware.bin'], address:0x1a0000}, release['assets.bin']]).map(download));
       const total = images.reduce((sum, {compressed}) => sum + compressed.length, 0);
       let written = 0;
       status(writing);
@@ -164,14 +298,14 @@
       status(verified);
     } catch (error) {
       progress.hidden = true;
-      status(error.name === 'NotFoundError' ? 'Cancelled' : error.message === incompatible ? incompatible : failed);
+      status(error.name === 'NotFoundError' ? 'Cancelled' : error.message || failed);
     } finally {
       try { if (reader) await reader.cancel(); } catch (_) {}
       reader?.releaseLock();
       writer?.releaseLock();
       try { if (opened) await port.close(); } catch (_) {}
       window.removeEventListener('beforeunload', guard);
-      mode.disabled = connect.disabled = false;
+      mode.disabled = board.disabled = connect.disabled = false;
     }
   };
 }

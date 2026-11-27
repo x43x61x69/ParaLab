@@ -8,7 +8,7 @@ An offline ROM Lab for **Tamagotchi Paradise** and **My Lab**. Explore character
 
 **Open ParaLab in your browser:** [https://x43x61x69.github.io/ParaLab/](https://x43x61x69.github.io/ParaLab/)
 
-[Report a problem](https://github.com/x43x61x69/ParaLab/issues) · [Quick Start](#quick-start) · [Workspace](#workspace) · [My Lab on Paradise](#my-lab-on-paradise) · [Device Console](#device-console) · [ParaLab Link](#paralab-link) · [Lab Codes](#lab-codes) · [My Lab Updates](#my-lab-updates) · [Source Layout](#source-layout) · [Credits and Licenses](#credits-and-licenses)
+[Report a problem](https://github.com/x43x61x69/ParaLab/issues) · [Quick Start](#quick-start) · [Workspace](#workspace) · [My Lab on Paradise](#my-lab-on-paradise) · [Device Console](#device-console) · [ParaLink](#paralink) · [Lab Codes](#lab-codes) · [Change Log](https://x43x61x69.github.io/ParaLab/#changelog) · [My Lab Updates](#my-lab-updates) · [Source Layout](#source-layout) · [Credits and Licenses](#credits-and-licenses)
 
 ## Quick Start
 
@@ -109,21 +109,23 @@ For a ROM file, use **Workspace → Lab Items → Add from Lab Item Catalog…**
 <details>
 <summary>How the built-in catalogs are loaded</summary>
 
-Built-in Lab Items live in [assets/lab-items](assets/lab-items/). To add an item, place its ARC2 archive there and add its filename at the top of [catalog.json](assets/lab-items/catalog.json). Both builds follow this display order and include identical archives once.
+Built-in Lab Items live in [assets/lab-items](assets/lab-items/). Use `node tools/lab_items_sync.js --import item.arc2` to add an archive and its timestamp to [catalog.json](assets/lab-items/catalog.json). Both builds sort by the item ID stored in the ARC2 archive, highest first. Identical archives appear once.
 
 The gift and item tabs load their catalogs and thumbnail atlas when opened. Selecting a Lab Item loads its full ARC2 for the sprite gallery and price editor. The standalone build reads it from its embedded catalog. The static build fetches it as a separate file.
 
 </details>
 
-## ParaLab Link
+<a id="paralab-link"></a>
 
-Open **ParaLab Link** next to **Guide** for the H717 materials list, numbered wiring diagrams for both devices, and touchscreen previews. The H717 can send gifts and Playdate visitors, look up Lab Codes, and act as a USB–UART bridge for Paradise.
+## ParaLink
 
-The firmware and build instructions are in the [ParaLab Link repository](https://github.com/x43x61x69/ParaLab-Link).
+Open **ParaLink** next to **Guide** for the H717 touchscreen and K191 two-button models. Both can send gifts and Playdate visitors, look up Lab Codes, and act as a USB–UART bridge for Paradise. The USB port name and the title bar show the last four hexadecimal digits of the board’s MAC.
 
-The **H717 USB Firmware Update** panel uses Web Serial in desktop Chrome or Edge. Disconnect the Paradise and use a USB-C data cable to connect the H717. The update option preserves Link settings and favorites. Use first installation or recovery when you intend to erase the H717.
+With ParaLink v0.1.16 or later, Chrome can show a notification when you plug in the device. Click the notification to open [Device](https://x43x61x69.github.io/ParaLab/#device), then use the page’s USB connection controls.
 
-The browser USB updater has been verified on H717 hardware.
+The Web Serial updater in desktop Chrome or Edge shows the installed and target versions, write progress and validation. Choose **USB OTA** for firmware updates on compatible ParaLink installations, or use a ROM update to replace the asset pack. **First installation or recovery** writes the full image for the selected hardware.
+
+The firmware and build instructions are in the [ParaLink repository](https://github.com/x43x61x69/ParaLab-Link).
 
 ## Lab Codes
 

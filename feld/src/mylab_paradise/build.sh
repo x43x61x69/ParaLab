@@ -10,7 +10,7 @@ esac
 cd "$(dirname "$0")"
 work=$(mktemp -d "${TMPDIR:-/tmp}/paramix-mylab-game.XXXXXX")
 trap 'rm -rf "$work"' EXIT
-clang --target=thumbv7m-none-eabi -mcpu=cortex-m3 -mthumb -ffreestanding -fropi -Os $test_flag -c game.c -o "$work/game.o"
+clang --target=thumbv7m-none-eabi -mcpu=cortex-m3 -mthumb -ffreestanding -fropi -Oz $test_flag -c game.c -o "$work/game.o"
 clang --target=thumbv7m-none-eabi -c launch.S -o "$work/launch.o"
 printf 'SECTIONS { .text 0x1008D000 : { *(.entry) *(.text*) *(.rodata*) } }\n' > "$work/link.ld"
 ld.lld --entry=0x1008D001 -T "$work/link.ld" "$work/game.o" "$work/launch.o" -o "$work/game.elf"

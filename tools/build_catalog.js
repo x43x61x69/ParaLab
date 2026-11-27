@@ -47,8 +47,8 @@ function buildCatalog(root, webDirectory) {
   const assets = new Map(), payloads = {};
   const items = [], images = [], seen = new Set();
   const directory = path.join(root, 'assets', 'lab-items');
-  const filenames = JSON.parse(fs.readFileSync(path.join(directory, 'catalog.json'), 'utf8'));
-  for (const filename of filenames) {
+  const catalog = JSON.parse(fs.readFileSync(path.join(directory, 'catalog.json'), 'utf8'));
+  for (const { filename } of catalog) {
     const bytes = fs.readFileSync(path.join(directory, filename));
     const key = createHash('sha256').update(bytes).digest('hex');
     if (seen.has(key)) continue;
@@ -74,7 +74,26 @@ function buildCatalog(root, webDirectory) {
   }
 
   const cell = 40, columns = 8;
-  const lab = { items, cell, columns, atlas: images.length ? imageSource('lab.png', labAtlas(images, cell, columns)) : null };
+  const { events, sources, groups } = JSON.parse(fs.readFileSync(path.join(directory, 'acquisition.json'), 'utf8'));
+  const byItem = {};
+  for (const [id, event] of Object.entries(events)) {
+    if (!Object.hasOwn(sources, event.source)) throw new Error('Missing official source for Lab Item event: ' + id);
+  }
+  for (const links of Object.values(sources)) {
+    if (!Object.values(links).length || Object.values(links).some(link => !/^\/[a-z]+\/(?:series\/paradise\/)?news\/\d+_\d+\/$/.test(link)))
+      throw new Error('Invalid official Lab Item article path');
+  }
+  for (const group of groups) {
+    if (group.events.some(id => !Object.hasOwn(events, id))) throw new Error('Unknown Lab Item event: ' + group.events);
+    const { ids, ...record } = group;
+    for (const id of ids) {
+      if (Object.hasOwn(byItem, id)) throw new Error('Duplicate Lab Item acquisition record: ' + id);
+      byItem[id] = record;
+    }
+  }
+  items.sort((a, b) => b.id - a.id);
+  const lab = { items, cell, columns, acquisition: { events, sources, byItem },
+    atlas: images.length ? imageSource('lab.png', labAtlas(images, cell, columns)) : null };
   // gift-atlas.webp is the lossless encoding of the original PNG atlas.
   const giftFormat = ['webp', 'png'].find(type => fs.existsSync(path.join(root, 'src/art/gift-atlas.' + type)));
   const gift = { items: gifts, atlas: giftFormat
