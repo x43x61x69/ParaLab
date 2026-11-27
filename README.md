@@ -129,7 +129,9 @@ The firmware and build instructions are in the [ParaLink repository](https://git
 
 ## Lab Codes
 
-Open **Lab Codes** in the main navigation to browse 11 Paradise characters, their codes, and their raise conditions. The codes work as an offline reference. Character portraits load from the [official Tama Collection](https://tamagotchi-official.com/us/series/paradise/character/) when online. A loaded ROM supplies a local preview if the official image is unavailable.
+Open **Lab & Shop Codes** in the main navigation to search Paradise Lab Sticker Codes and Shop Codes by name or code. The offline build includes both lists. Character portraits load from the [official Tama Collection](https://tamagotchi-official.com/us/series/paradise/character/) when online. A loaded ROM supplies a local preview if the official image is unavailable.
+
+Code references include the Tamagotchi Center [Lab Sticker Codes](https://tamagotchicenter.com/paradise/microscope-lab-sticker-codes) and [Shop Codes](https://tamagotchicenter.com/paradise/shop-codes).
 
 ## My Lab Updates
 

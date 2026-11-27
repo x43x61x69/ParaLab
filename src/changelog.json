@@ -1,6 +1,41 @@
 {
   "releases": [
     {
+      "version": "0.2.137",
+      "changes": [
+        {
+          "kind": "improvement",
+          "text": {
+            "en": "Added 17 Lab Sticker Codes and 9 Shop Codes.",
+            "zh-Hant": "新增 17 組研究所貼紙代碼和 9 組商店代碼。",
+            "zh-Hans": "新增 17 组研究所贴纸代码和 9 组商店代码。",
+            "ja": "ラボステッカーコード17件とショップコード9件を追加しました。",
+            "ko": "연구소 스티커 코드 17개와 상점 코드 9개를 추가했습니다.",
+            "fr": "Ajout de 17 codes de stickers du labo et de 9 codes de la boutique.",
+            "de": "17 Labor-Sticker-Codes und 9 Shop-Codes hinzugefügt.",
+            "es": "Se añadieron 17 códigos de pegatinas del laboratorio y 9 códigos de la tienda.",
+            "it": "Aggiunti 17 codici adesivo del laboratorio e 9 codici del negozio.",
+            "pt": "Foram adicionados 17 códigos de adesivos do laboratório e 9 códigos da loja."
+          }
+        },
+        {
+          "kind": "improvement",
+          "text": {
+            "en": "ParaLink 0.1.18 adds 9 Lab Items, lists all 39 Lab Sticker Codes, and shows Shop Codes in gift details.",
+            "zh-Hant": "ParaLink 0.1.18 新增 9 個研究所物品，收錄全部 39 組研究所貼紙代碼，並在禮物詳情顯示商店代碼。",
+            "zh-Hans": "ParaLink 0.1.18 新增 9 个研究所物品，收录全部 39 组研究所贴纸代码，并在礼物详情显示商店代码。",
+            "ja": "ParaLink 0.1.18 でラボアイテム9点を追加し、全39件のラボステッカーコードと、ギフトの詳細でショップコードを確認できます。",
+            "ko": "ParaLink 0.1.18에서 연구소 아이템 9개를 추가하고, 스티커 코드 39개와 선물 상세의 상점 코드를 제공합니다.",
+            "fr": "ParaLink 0.1.18 ajoute 9 objets du labo, liste les 39 codes de stickers et affiche les codes de la boutique dans les détails des cadeaux.",
+            "de": "ParaLink 0.1.18 ergänzt 9 Laborartikel, listet alle 39 Labor-Sticker-Codes und zeigt Shop-Codes in den Geschenkdetails.",
+            "es": "ParaLink 0.1.18 añade 9 objetos del laboratorio, incluye los 39 códigos de pegatinas y muestra los códigos de tienda en los detalles de los regalos.",
+            "it": "ParaLink 0.1.18 aggiunge 9 oggetti del laboratorio, include tutti i 39 codici adesivo e mostra i codici negozio nei dettagli dei regali.",
+            "pt": "O ParaLink 0.1.18 adiciona 9 itens do laboratório, reúne os 39 códigos de adesivos e mostra códigos da loja nos detalhes dos presentes."
+          }
+        }
+      ]
+    },
+    {
       "version": "0.2.136",
       "changes": [
         {

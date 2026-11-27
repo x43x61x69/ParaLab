@@ -79,6 +79,7 @@
     "7060": "35606107",
     "7061": "28520716",
     "7087": "12926847",
+    "7102": "21368731",
     "8045": "04015149",
     "8046": "43280105",
     "8047": "53741858",
@@ -116,8 +117,17 @@
     "8103": "64107201",
     "8104": "47058763",
     "8105": "29674697",
+    "8106": "76048379",
+    "8107": "04015149",
     "8108": "45619639",
-    "8124": "95851016"
+    "8123": "81598342",
+    "8124": "95851016",
+    "8126": "15207495",
+    "8127": "28264385",
+    "8128": "99274315",
+    "8129": "73286167",
+    "8130": "10291897",
+    "8131": "26149850"
   },
   "characters": {
     "4018": {
@@ -408,6 +418,51 @@
       "official": 557,
       "image": "https://tamagotchi-official.com/tamagotchi/us/character/2026/10/09/orYQm676cDvDXh1s/%E3%81%8F%E3%81%A1%E3%81%B1%E3%81%A3%E3%81%A1.png"
     },
+    "4076": {
+      "code": "35LPY0WX",
+      "young": 3070,
+      "names": [
+        "たいがおっち",
+        "Tigaotchi",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "老虎吉",
+        "타이가오치"
+      ],
+      "official": 569,
+      "image": "https://tamagotchi-official.com/tamagotchi/jp/character/2025/10/09/j5BbU3NvLSiI0qzg/70_%E3%81%9F%E3%81%84%E3%81%8C%E3%81%8A%E3%81%A3%E3%81%A1_JADE.png",
+      "editions": [
+        "jade",
+        "tropics",
+        "glacier"
+      ]
+    },
+    "4078": {
+      "code": "9EBAMVF8",
+      "young": 3071,
+      "names": [
+        "れさぱんっち",
+        "Lessapantchi",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "小熊猫吉",
+        "레서판치"
+      ],
+      "official": 571,
+      "image": "https://tamagotchi-official.com/tamagotchi/jp/character/2025/10/09/2IMoNGtyhlK5vVh4/72_%E3%82%8C%E3%81%95%E3%81%B1%E3%82%93%E3%81%A3%E3%81%A1_JADE.png",
+      "editions": [
+        "jade",
+        "tropics",
+        "glacier",
+        "neon"
+      ]
+    },
     "4079": {
       "code": "4Y8ECKXP",
       "names": [
@@ -430,6 +485,28 @@
         "glacier"
       ],
       "young": 3071
+    },
+    "4082": {
+      "code": "T97YQ3U5",
+      "young": 3072,
+      "names": [
+        "かちっち",
+        "Kachitchi",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "鹊鹊吉",
+        "까치치"
+      ],
+      "official": 575,
+      "image": "https://tamagotchi-official.com/tamagotchi/jp/character/2025/10/09/idCQDDahAH16iDcY/76_%E3%81%8B%E3%81%A1%E3%81%A3%E3%81%A1_JADE.png",
+      "editions": [
+        "jade",
+        "tropics",
+        "glacier"
+      ]
     },
     "4083": {
       "code": "02UXR90S",
@@ -499,6 +576,27 @@
       ],
       "young": 3092
     },
+    "4097": {
+      "code": "3MTWNK6X",
+      "young": 3092,
+      "names": [
+        "まじろっち",
+        "Madillotchi",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "犰狳吉",
+        "마지로치"
+      ],
+      "official": 595,
+      "image": "https://tamagotchi-official.com/tamagotchi/jp/character/2026/05/11/2W0IrYviejNAOig3/%E3%81%BE%E3%81%98%E3%82%8D%E3%81%A3%E3%81%A1_TROPICS.png",
+      "editions": [
+        "tropics",
+        "glacier"
+      ]
+    },
     "4101": {
       "code": "WN9Q7X85",
       "names": [
@@ -542,6 +640,48 @@
       ],
       "care": "0-1 care mistakes",
       "young": 3094
+    },
+    "4108": {
+      "code": "KT31XBG1",
+      "young": 3095,
+      "names": [
+        "やしきっち",
+        "Yashikitchi",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "椰树吉",
+        "야시키치"
+      ],
+      "official": 606,
+      "image": "https://tamagotchi-official.com/tamagotchi/jp/character/2026/05/11/Gq87bdWgdj9qscv8/%E3%82%84%E3%81%97%E3%81%8D%E3%81%A3%E3%81%A1_TROPICS.png",
+      "editions": [
+        "tropics",
+        "glacier"
+      ]
+    },
+    "4109": {
+      "code": "0Y1G7G66",
+      "young": 3095,
+      "names": [
+        "なんごくぽつねんっち",
+        "Tropical Potsunentchi",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "南方一朵吉",
+        "남국 포츠넨치"
+      ],
+      "official": 607,
+      "image": "https://tamagotchi-official.com/tamagotchi/jp/character/2026/05/11/OD0CDq5HKrYme9By/%E3%81%AA%E3%82%93%E3%81%94%E3%81%8F%E3%81%BD%E3%81%A4%E3%81%AD%E3%82%93%E3%81%A3%E3%81%A1_TROPICS.png",
+      "editions": [
+        "tropics",
+        "glacier"
+      ]
     },
     "4119": {
       "code": "V5A0EP28",
@@ -609,6 +749,189 @@
       "care": "0-1 care mistakes",
       "young": 3116
     },
+    "4125": {
+      "code": "1HUNV49V",
+      "young": 3116,
+      "names": [
+        "らっこっち",
+        "Rakkotchi",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "海獭吉",
+        "랏코치"
+      ],
+      "official": 622,
+      "image": "https://tamagotchi-official.com/tamagotchi/jp/character/2026/05/13/cABZpN5Q8hGPREne/%E3%82%89%E3%81%A3%E3%81%93%E3%81%A3%E3%81%A1_GLACIER.png",
+      "editions": [
+        "tropics",
+        "glacier"
+      ]
+    },
+    "4126": {
+      "code": "4NEYYB0B",
+      "young": 3115,
+      "names": [
+        "ムースっち",
+        "Moosetchi",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "驼鹿吉",
+        "무스치"
+      ],
+      "official": 623,
+      "image": "https://tamagotchi-official.com/tamagotchi/jp/character/2026/05/13/VU7cSYKyug2Cpp9R/%E3%83%A0%E3%83%BC%E3%82%B9%E3%81%A3%E3%81%A1_GLACIER.png",
+      "editions": [
+        "tropics",
+        "glacier"
+      ]
+    },
+    "4130": {
+      "code": "PA9E4NAQ",
+      "young": 3117,
+      "names": [
+        "ネリネっち",
+        "Nerinetchi",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "海天使吉",
+        "네리네치"
+      ],
+      "official": 627,
+      "image": "https://tamagotchi-official.com/tamagotchi/jp/character/2026/05/13/GbvC7EC0wsdsILv1/%E3%83%8D%E3%83%AA%E3%83%8D%E3%81%A3%E3%81%A1_GLACIER.png",
+      "editions": [
+        "tropics",
+        "glacier"
+      ]
+    },
+    "4140": {
+      "code": "CCU056KH",
+      "young": 3136,
+      "names": [
+        "コズミっち",
+        "Cosmitchi",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "银河吉",
+        "코즈미치"
+      ],
+      "official": 638,
+      "image": "https://tamagotchi-official.com/tamagotchi/us/character/2026/10/07/dIgAfaRVt8j1aHGb/%E3%82%B3%E3%82%BA%E3%83%9F%E3%81%A3%E3%81%A1_COSMIC.png",
+      "editions": [
+        "neon"
+      ]
+    },
+    "4141": {
+      "code": "52GSVBYQ",
+      "young": 3136,
+      "names": [
+        "ほしもりっち",
+        "Hoshimortchi",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "守星吉",
+        "호시모리치"
+      ],
+      "official": 639,
+      "image": "https://tamagotchi-official.com/tamagotchi/us/character/2026/10/07/x1aoTWk6Fdxl74az/%E3%81%BB%E3%81%97%E3%82%82%E3%82%8A%E3%81%A3%E3%81%A1_COSMIC.png",
+      "editions": [
+        "neon"
+      ]
+    },
+    "4144": {
+      "code": "K0T76S7W",
+      "young": 3137,
+      "names": [
+        "ウキウキっち",
+        "Ukiukitchi",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "星嘻嘻吉",
+        "우키우키치"
+      ],
+      "official": 642,
+      "image": "https://tamagotchi-official.com/tamagotchi/us/character/2026/10/07/yvFN4nkjy1kHxxsz/%E3%82%A6%E3%82%AD%E3%82%A6%E3%82%AD%E3%81%A3%E3%81%A1_COSMIC.png",
+      "editions": [
+        "neon"
+      ]
+    },
+    "4145": {
+      "code": "N1KAK9WM",
+      "young": 3137,
+      "names": [
+        "ポチポチっち",
+        "Pochipotchi",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "星波吉",
+        "포치포치치"
+      ],
+      "official": 643,
+      "image": "https://tamagotchi-official.com/tamagotchi/us/character/2026/10/07/9YgVETmuWNvAsodE/%E3%83%9D%E3%83%81%E3%83%9D%E3%83%81%E3%81%A3%E3%81%A1_COSMIC.png",
+      "editions": [
+        "neon"
+      ]
+    },
+    "4149": {
+      "code": "XT4EM76L",
+      "young": 3138,
+      "names": [
+        "ながれぼっち",
+        "Nagarebotchi",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "流星吉",
+        "나가레보치"
+      ],
+      "official": 647,
+      "image": "https://tamagotchi-official.com/tamagotchi/us/character/2026/10/07/GxuRafUD0HOtkz3n/%E3%81%AA%E3%81%8C%E3%82%8C%E3%81%BC%E3%81%A3%E3%81%A1_COSMIC.png",
+      "editions": [
+        "neon"
+      ]
+    },
+    "4152": {
+      "code": "R15YCM3B",
+      "young": 3139,
+      "names": [
+        "まめロボっち",
+        "Mamerobotchi",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "机器豆丁吉",
+        "마메로보치"
+      ],
+      "official": 650,
+      "image": "https://tamagotchi-official.com/tamagotchi/us/character/2026/10/07/IqwBBbrQqEkU2zZQ/%E3%81%BE%E3%82%81%E3%83%AD%E3%83%9C%E3%81%A3%E3%81%A1_COSMIC.png",
+      "editions": [
+        "neon"
+      ]
+    },
     "4183": {
       "code": "YDVCYU37",
       "names": [
@@ -643,6 +966,46 @@
       ],
       "official": 662,
       "image": "https://tamagotchi-official.com/tamagotchi/auz/character/2026/10/07/aEsAGzDKj9nK6qMf/%E3%83%A9%E3%83%96%E3%83%AA%E3%81%A3%E3%81%A1_TAMAGOTCHI.png",
+      "editions": [
+        "neon"
+      ]
+    },
+    "4188": {
+      "code": "R3TKW5H5",
+      "young": 3180,
+      "names": [
+        "メロディっち",
+        "Melodytchi",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "旋律吉",
+        "멜로디치"
+      ],
+      "official": 663,
+      "image": "https://tamagotchi-official.com/tamagotchi/us/character/2026/10/07/jfNvb9EdqjKIXqUA/%E3%83%A1%E3%83%AD%E3%83%87%E3%82%A3%E3%81%A3%E3%81%A1_TAMAGOTCHI.png",
+      "editions": [
+        "neon"
+      ]
+    },
+    "4190": {
+      "code": "6LWVAJQF",
+      "young": 3180,
+      "names": [
+        "くろまめっち",
+        "Kuromametchi",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "黑豆吉",
+        "쿠로마메치"
+      ],
+      "official": 665,
+      "image": "https://tamagotchi-official.com/tamagotchi/us/character/2026/10/07/v48xTnbQtlsEVORn/%E3%81%8F%E3%82%8D%E3%81%BE%E3%82%81%E3%81%A3%E3%81%A1_TAMAGOTCHI.png",
       "editions": [
         "neon"
       ]
@@ -756,6 +1119,17 @@
       "卡奇卡奇青年",
       "딱딱이 영"
     ],
+    "3070": [
+      "もりがおヤング",
+      "Roar Young",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "森林羔羔青年",
+      "숲의 으르렁 영"
+    ],
     "3071": [
       "もりとこヤング",
       "Forest Toddle Young",
@@ -844,6 +1218,17 @@
       "冰原羔羔青年",
       "얼음 으르렁 영"
     ],
+    "3115": [
+      "こおりのとこヤング",
+      "Toddle Young",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "冰原特库特库青年",
+      "얼음 아장이 영"
+    ],
     "3116": [
       "こおりのすいヤング",
       "Frozen Glide Young",
@@ -865,6 +1250,61 @@
       "",
       "冰原浮游浮游青年",
       "얼음 둥실이 영"
+    ],
+    "3136": [
+      "ピコピコヤング",
+      "Piko Young",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "皮库皮库青年",
+      "뿅뿅이 영"
+    ],
+    "3137": [
+      "にょろにょろヤング",
+      "Slithr Young",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "扭噜扭噜青年",
+      "꿈틀이 영"
+    ],
+    "3138": [
+      "くるくるヤング",
+      "Orbit Young",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "库鲁库鲁青年",
+      "뱅글이 영"
+    ],
+    "3139": [
+      "メカメカヤング",
+      "Mech Young",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "咩咔咩咔青年",
+      "메카메카 영"
+    ],
+    "3180": [
+      "キラキラヤング",
+      "Sparkl Young",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "绮罗绮罗青年",
+      "반짝이 영"
     ],
     "4066": [
       "ちょどらこっち",
@@ -966,9 +1406,7 @@
       "land",
       "water",
       "sky",
-      "jade",
-      "tropics",
-      "glacier"
+      "jade"
     ],
     "8103": [
       "tropics",
@@ -982,9 +1420,15 @@
       "tropics",
       "glacier"
     ],
+    "8107": [
+      "tropics",
+      "glacier",
+      "neon"
+    ],
     "8108": [
       "tropics",
-      "glacier"
+      "glacier",
+      "neon"
     ],
     "8124": [
       "neon"

@@ -1,11 +1,11 @@
 {
-  "version": "0.1.16",
+  "version": "0.1.18",
   "board": "h717",
   "chip": "ESP32-S3R8",
   "flash_bytes": 16777216,
-  "factory_image": "paralink-h717-0.1.16-factory.bin",
+  "factory_image": "paralink-h717-0.1.18-factory.bin",
   "image_bytes": 16777216,
-  "sha256": "f2e894659b11a23f616a679c3fefa0bf68046f22728032b3dfe737f36a207564",
+  "sha256": "903ee0a36586e8aa15469f0cd919f6af029328a41f22d14b706575eaf3f0807e",
   "components": [
     {
       "name": "bootloader.bin",
@@ -28,20 +28,20 @@
     {
       "name": "firmware.bin",
       "offset": "0x20000",
-      "bytes": 1534976,
-      "sha256": "d54e21f883bed4ca7407318a8a349e47336434195d7c172d55d888c89178e196"
+      "bytes": 1548048,
+      "sha256": "cce310bbb40de5898958ec00d5c4effa0588162a45b8d96726c0f1db6e130711"
     },
     {
       "name": "assets.bin",
       "offset": "0x320000",
-      "bytes": 3241120,
-      "sha256": "4de16b9bcbc7b1253cb5ae992e0a9d4aaeb218d7d2503ff6b0fd98c5794c6745"
+      "bytes": 3274856,
+      "sha256": "d4ab3c36865b5652dd46c430add71ee32615d36d0e84c0f2ea42d16089906c66"
     },
     {
       "name": "userdata.bin",
       "offset": "0x7a0000",
       "bytes": 8781824,
-      "sha256": "066ebc44563b1f943b4722efa72a920bbba2b093e313dd64a08a47e9a46409a1"
+      "sha256": "188f9b833855cb55debf037b8013e78a62632a066a5decc854538e8312efcff3"
     }
   ]
 }
