@@ -117,7 +117,7 @@ The gift and item tabs load their catalogs and thumbnail atlas when opened. Sele
 
 ## ParaLab Link
 
-Open **ParaLab Link** next to **Guide** for the H717 materials list, UART wiring table, and touchscreen previews. The H717 can send gifts and Playdate visitors, look up Lab Codes, and act as a USB–UART bridge for Paradise.
+Open **ParaLab Link** next to **Guide** for the H717 materials list, numbered wiring diagrams for both devices, and touchscreen previews. The H717 can send gifts and Playdate visitors, look up Lab Codes, and act as a USB–UART bridge for Paradise.
 
 The firmware and build instructions are in the [ParaLab Link repository](https://github.com/x43x61x69/ParaLab-Link).
 

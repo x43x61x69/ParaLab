@@ -1,10 +1,10 @@
 {
-  "version": "0.1.10",
+  "version": "0.1.11",
   "chip": "ESP32-S3R8",
   "flash_bytes": 16777216,
-  "factory_image": "paralab-link-0.1.10-factory.bin",
+  "factory_image": "paralab-link-0.1.11-factory.bin",
   "image_bytes": 16777216,
-  "sha256": "a79beea2a3fd0d572d679620713d9a34576ef2f8fda8b1356dbdd5cf0db82bb4",
+  "sha256": "4f5573bb48d264223538eb8ded46afe53e54827c7b0803d2430af35a9dbe924e",
   "components": [
     {
       "name": "bootloader.bin",
@@ -27,8 +27,8 @@
     {
       "name": "firmware.bin",
       "offset": "0x20000",
-      "bytes": 1500624,
-      "sha256": "a931f7aaf2e225bbf70feb5008ff90b9ecd05c34b03f33e3dcf2469cc3d7ef80"
+      "bytes": 1502688,
+      "sha256": "1d75bbef127ab1e5b3a96a0725885486b4488e2cfa3c9578dffb8a0f420357ec"
     },
     {
       "name": "assets.bin",
@@ -40,7 +40,7 @@
       "name": "userdata.bin",
       "offset": "0x7a0000",
       "bytes": 8781824,
-      "sha256": "e5965dba331e31b64a2abec100f8a099ad5dd5ce70ae72fdc7f0e4c041798fb7"
+      "sha256": "889b454ddf42ca4cd1d296208621e56138078105e9e524362e8dce2ace78170d"
     }
   ]
 }

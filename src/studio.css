@@ -951,6 +951,13 @@ body:has(#saveEditor:not([hidden]) #editSaveDocument:not([hidden])) .toast {
 #linkPage h2 small { font-size:.7em; color:var(--soft); }
 #linkPage table { width:100%; border-collapse:collapse; }
 #linkPage th,#linkPage td { text-align:start; padding:.45em; border-bottom:1px solid var(--line); }
+.link-materials { margin-block:0 18px; padding-inline-start:1.3em; }
+.link-wiring-figures { margin-block-end:16px; }
+.link-wiring-figures figure { margin:0; min-width:0; }
+.link-wiring-figures img { display:block; width:100%; height:auto; border-radius:12px; margin-block-end:8px; }
+.link-wiring-figures figcaption p { margin:.35em 0; }
+.link-wiring-power td { font-weight:700; }
+.link-controls { margin-block-start:16px; }
 #linkScreens img { width:100%; height:auto; border-radius:12px; }
 #linkScreenButtons { display:flex; gap:.4rem; flex-wrap:wrap; margin-top:.75rem; }
 #linkScreenButtons [aria-pressed=true] { color:var(--sky); outline:2px solid currentColor; }

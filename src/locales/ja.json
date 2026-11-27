@@ -1928,5 +1928,13 @@
   "Water": "水辺",
   "Sky": "空",
   "Glacier": "氷河",
-  "Source Code": "ソースコード"
+  "Source Code": "ソースコード",
+  "USB-C data cable": "USB-C データケーブル",
+  "JST-SH 1.0 mm 4-pin plug with bare leads": "JST-SH 1.0 mm 4 ピンプラグ付きバラ線",
+  "Paradise 3-contact UART adapter": "パラダイス用 3 接点 UART アダプター",
+  "Face the back of the H717 with USB-C at the bottom. Use the four-hole socket to the right of USB-C and count from left to right as shown.": "H717 の背面を手前に向け、USB-C が下に来るように持ちます。USB-C の右にある 4 ピンのソケットを使い、図のとおり左から順に数えます。",
+  "LILYGO pinout photo": "LILYGO 公式ピン配置写真",
+  "Paradise contacts photo": "パラダイスの接点写真",
+  "Count from the board view shown. The cable plug looks reversed from its mating face. Check pin labels or continuity instead of wire colors.": "番号は図の基板側から見た順番です。ケーブルのプラグを差し込み面から見ると左右が逆になります。ピン表示や導通を確認してください。",
+  "Power the H717 by USB and Paradise with its own batteries. Connect the signal wires after the H717 starts and insulate the unused 3V3 lead.": "H717 は USB、パラダイスは本体の電池で給電します。H717 が起動してから信号線をつなぎ、未使用の 3V3 線の先端は絶縁してください。"
 }

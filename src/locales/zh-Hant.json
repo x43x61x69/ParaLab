@@ -1928,5 +1928,13 @@
   "Write verified. Press RESET on the H717 and check the version on its screen.": "寫入驗證成功。請按一下 H717 的 RESET，並在螢幕上確認版本。",
   "USB Bridge": "USB 橋接",
   "The browser USB updater has been verified on H717 hardware.": "瀏覽器 USB 更新工具已通過 H717 實機驗證。",
-  "Source Code": "原始碼"
+  "Source Code": "原始碼",
+  "USB-C data cable": "USB-C 資料線",
+  "JST-SH 1.0 mm 4-pin plug with bare leads": "JST-SH 1.0 mm 四孔插頭轉散線",
+  "Paradise 3-contact UART adapter": "樂園塔麻歌子三接點 UART 轉接座",
+  "Face the back of the H717 with USB-C at the bottom. Use the four-hole socket to the right of USB-C and count from left to right as shown.": "將 H717 背面朝向自己，USB-C 朝下。使用 USB-C 右側的四孔插座，依圖由左至右數第 1 至第 4 孔。",
+  "LILYGO pinout photo": "LILYGO 官方腳位照片",
+  "Paradise contacts photo": "樂園塔麻歌子接點照片",
+  "Count from the board view shown. The cable plug looks reversed from its mating face. Check pin labels or continuity instead of wire colors.": "孔位以圖中的板端視角為準。正對線材插頭的插合面時，左右會相反。請依腳位標示或導通量測辨識。",
+  "Power the H717 by USB and Paradise with its own batteries. Connect the signal wires after the H717 starts and insulate the unused 3V3 lead.": "H717 由 USB 供電，樂園塔麻歌子使用自己的電池。等 H717 啟動後再接訊號線，並將未使用的 3V3 線頭絕緣。"
 }

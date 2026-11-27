@@ -362,13 +362,43 @@ __ANALYTICS_CARD__
   <section id="linkPage" hidden aria-labelledby="linkTitle">
     <h1 id="linkTitle">ParaLab Link</h1>
     <p data-t="Send gifts, invite Playdate visitors and look up Lab Codes on the H717 touchscreen. Connect it to a computer to use it as a USB–UART bridge for Paradise."></p>
-    <div class="guide-grid">
-      <section class="guide-card"><h2 data-t="Materials and Wiring"></h2>
-        <ul><li>LILYGO H717 · T-Display-S3 AMOLED Touch 1.91″ · 16 MiB</li><li data-t="USB-C data cable, JST-SH 1.0 mm 4-pin cable and a Paradise contact adapter"></li></ul>
-        <p data-t="Use the socket marked UART. Power the H717 by USB and Paradise with its own batteries. Connect the signal wires after the H717 starts."></p>
-        <table><thead><tr><th>H717 UART</th><th>Tamagotchi Paradise</th></tr></thead>
-          <tbody><tr><td>TX · GPIO43</td><td>RX</td></tr><tr><td>RX · GPIO44</td><td>TX</td></tr><tr><td>GND</td><td>GND</td></tr><tr><td>3V3</td><td data-t="Leave disconnected"></td></tr></tbody></table>
-      </section>
+    <section class="guide-card link-wiring" aria-labelledby="linkWiringTitle">
+      <h2 id="linkWiringTitle" data-t="Materials and Wiring"></h2>
+      <ul class="link-materials">
+        <li>LILYGO H717 · T-Display-S3 AMOLED Touch 1.91″ · 16 MiB</li>
+        <li data-t="USB-C data cable"></li>
+        <li data-t="JST-SH 1.0 mm 4-pin plug with bare leads"></li>
+        <li data-t="Paradise 3-contact UART adapter"></li>
+      </ul>
+      <div class="guide-grid link-wiring-figures">
+        <figure>
+          <img src="__LINK_WIRING_h717__" alt="" width="900" height="520">
+          <figcaption><strong>H717 UART</strong>
+            <p data-t="Face the back of the H717 with USB-C at the bottom. Use the four-hole socket to the right of USB-C and count from left to right as shown."></p>
+            <a href="https://cdn.shopify.com/s/files/1/0617/7190/7253/files/T-Display-S3-AMOLED-Touch_1.jpg?v=1736151639" target="_blank" rel="noopener noreferrer" data-t="LILYGO pinout photo"></a>
+          </figcaption>
+        </figure>
+        <figure>
+          <img src="__LINK_WIRING_paradise__" alt="" width="900" height="520">
+          <figcaption><strong data-edition-label="paradise">Tamagotchi Paradise</strong>
+            <p data-t="Open the top cover and hold the device with the screen facing you and the buttons below it."></p>
+            <a href="https://github.com/GMMan/tama-para-research/blob/master/hardware/prongs.jpg" target="_blank" rel="noopener noreferrer" data-t="Paradise contacts photo"></a>
+          </figcaption>
+        </figure>
+      </div>
+      <table aria-labelledby="linkWiringTitle">
+        <thead><tr><th scope="col">H717 UART</th><th scope="col" data-edition-label="paradise">Tamagotchi Paradise</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">1 · GND</th><td>2 · <span data-t="Center">Center</span> · GND</td></tr>
+          <tr class="link-wiring-power"><th scope="row">2 · 3V3</th><td data-t="Leave disconnected"></td></tr>
+          <tr><th scope="row">3 · TX (GPIO43)</th><td>3 · <span data-t="Right">Right</span> · RX</td></tr>
+          <tr><th scope="row">4 · RX (GPIO44)</th><td>1 · <span data-t="Left">Left</span> · TX</td></tr>
+        </tbody>
+      </table>
+      <p class="hint" data-t="Count from the board view shown. The cable plug looks reversed from its mating face. Check pin labels or continuity instead of wire colors."></p>
+      <p class="hint" data-t="Power the H717 by USB and Paradise with its own batteries. Connect the signal wires after the H717 starts and insulate the unused 3V3 lead."></p>
+    </section>
+    <div class="guide-grid link-controls">
       <section class="guide-card"><h2 data-t="Screen Preview"></h2>
         <div id="linkScreens">
           <img src="__LINK_SCREEN_home__" alt="ParaLab Link · Home" width="536" height="240">
@@ -379,7 +409,6 @@ __ANALYTICS_CARD__
           <button type="button" class="btn small" aria-pressed="false" data-t="Item Catalog"></button>
           <button type="button" class="btn small" aria-pressed="false" data-t="USB Bridge">USB Bridge</button></div>
       </section>
-    </div>
     <section class="guide-card link-update"><h2 id="linkUpdateTitle"><span data-t="H717 USB Firmware Update"></span> <small>v__LINK_VERSION__</small></h2>
       <p class="hint" data-t="The browser USB updater has been verified on H717 hardware."></p>
       <p data-t="Disconnect Paradise and close other serial connections. Connect only your H717 by USB. To enter download mode manually, hold BOOT, tap RESET, then release BOOT."></p>
@@ -392,6 +421,7 @@ __ANALYTICS_CARD__
       <p role="status" id="linkStatus"></p>
       <a id="linkSource" href="https://github.com/x43x61x69/ParaLab-Link" target="_blank" rel="noopener noreferrer"><span data-t="Source Code">Source Code</span> · GPL-3.0</a>
     </section>
+    </div>
   </section>
   <section class="plan help" id="helpBox" hidden>
     <div class="guide-heading"><h1>Guide</h1><button class="btn" id="helpClose" type="button">Back to Workspace</button></div>

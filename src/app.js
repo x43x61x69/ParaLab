@@ -5689,7 +5689,7 @@ function filterGuides() {
   const normalize = value => value.normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase();
   const words = normalize($('guideSearch').value.trim()).split(/\s+/).filter(Boolean);
   const demos = [...document.querySelectorAll('.demo-group details')];
-  const references = [...document.querySelectorAll('#helpBox > .guide-workflow, .guide-grid > section, #helpBox > .guide-reference:not(#guideTasks):not(#guide-demos)')];
+  const references = [...document.querySelectorAll('#helpBox > .guide-workflow, #helpBox .guide-grid > section, #helpBox > .guide-reference:not(#guideTasks):not(#guide-demos)')];
   for (const topic of [...guideTopics, ...demos, ...references]) {
     const heading = topic.closest('.demo-group')?.querySelector('h3').textContent || '';
     const content = normalize([heading, topic.textContent, topic.dataset.keywords].join(' '));
@@ -5699,7 +5699,7 @@ function filterGuides() {
   $('guideTasks').hidden = guideTopics.every(topic => topic.hidden);
   $('guide-demos').hidden = demos.every(topic => topic.hidden);
   for (const group of document.querySelectorAll('.demo-group')) group.hidden = !group.querySelector('details:not([hidden])');
-  const grid = document.querySelector('.guide-grid');
+  const grid = document.querySelector('#helpBox > .guide-grid');
   grid.hidden = !grid.querySelector('section:not([hidden])');
   $('guideEmpty').hidden = [...guideTopics, ...demos, ...references].some(topic => !topic.hidden);
 }

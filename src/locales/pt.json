@@ -1928,5 +1928,13 @@
   "Water": "Água",
   "Sky": "Céu",
   "Glacier": "Geleira",
-  "Source Code": "Código-fonte"
+  "Source Code": "Código-fonte",
+  "USB-C data cable": "Cabo de dados USB-C",
+  "JST-SH 1.0 mm 4-pin plug with bare leads": "Ficha JST-SH de 4 pinos (1,0 mm) com fios descarnados",
+  "Paradise 3-contact UART adapter": "Adaptador UART de 3 contactos para o Paradise",
+  "Face the back of the H717 with USB-C at the bottom. Use the four-hole socket to the right of USB-C and count from left to right as shown.": "Vire a parte de trás do H717 para si, com a porta USB-C em baixo. Use a tomada de quatro orifícios à direita da porta USB-C e conte da esquerda para a direita, como na figura.",
+  "LILYGO pinout photo": "Fotografia da pinagem da LILYGO",
+  "Paradise contacts photo": "Fotografia dos contactos do Paradise",
+  "Count from the board view shown. The cable plug looks reversed from its mating face. Check pin labels or continuity instead of wire colors.": "Conte na vista da placa ilustrada. Vista pelo lado de encaixe, a ficha do cabo aparece invertida. Confirme as marcações dos pinos ou teste a continuidade elétrica.",
+  "Power the H717 by USB and Paradise with its own batteries. Connect the signal wires after the H717 starts and insulate the unused 3V3 lead.": "Alimente o H717 por USB e o Paradise com as suas próprias pilhas. Ligue os fios de sinal após o arranque do H717 e isole o fio 3V3 que fica solto."
 }

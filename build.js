@@ -131,7 +131,9 @@ const { config: catalogConfig, assets: catalogAssets } = require('./tools/build_
 const linkRelease = require('./tools/build_link')(__dirname, webDirectory, path.dirname(output));
 html = html.replaceAll('__LINK_VERSION__', linkRelease.version)
   .replace(/__LINK_SCREEN_(home|catalog|bridge)__/g, (_, screen) =>
-    'data:image/png;base64,' + fs.readFileSync(path.join(__dirname, 'assets/paralab-link', screen + '.png')).toString('base64'));
+    'data:image/png;base64,' + fs.readFileSync(path.join(__dirname, 'assets/paralab-link', screen + '.png')).toString('base64'))
+  .replace(/__LINK_WIRING_(h717|paradise)__/g, (_, device) =>
+    'data:image/webp;base64,' + fs.readFileSync(path.join(__dirname, 'assets/paralab-link', 'wiring-' + device + '.webp')).toString('base64'));
 const linkScript = fs.readFileSync(path.join(__dirname, 'src/link.js'), 'utf8')
   .replace('/*__LINK_RELEASE__*/ {}', () => JSON.stringify(linkRelease));
 const { arc2Files, arc2Build } = require('./src/core.js');

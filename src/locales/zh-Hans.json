@@ -1928,5 +1928,13 @@
   "Water": "水域",
   "Sky": "天空",
   "Glacier": "冰川",
-  "Source Code": "源代码"
+  "Source Code": "源代码",
+  "USB-C data cable": "USB-C 数据线",
+  "JST-SH 1.0 mm 4-pin plug with bare leads": "JST-SH 1.0 mm 四孔插头转散线",
+  "Paradise 3-contact UART adapter": "乐园拓麻歌子三触点 UART 转接座",
+  "Face the back of the H717 with USB-C at the bottom. Use the four-hole socket to the right of USB-C and count from left to right as shown.": "将 H717 背面朝向自己，USB-C 朝下。使用 USB-C 右侧的四孔插座，按图从左到右数第 1 至第 4 孔。",
+  "LILYGO pinout photo": "LILYGO 官方引脚照片",
+  "Paradise contacts photo": "乐园拓麻歌子触点照片",
+  "Count from the board view shown. The cable plug looks reversed from its mating face. Check pin labels or continuity instead of wire colors.": "孔位以图中的板端视角为准。面对线材插头的插接面时，左右会相反。请根据引脚标记或通断测量辨别。",
+  "Power the H717 by USB and Paradise with its own batteries. Connect the signal wires after the H717 starts and insulate the unused 3V3 lead.": "H717 由 USB 供电，乐园拓麻歌子使用自己的电池。等 H717 启动后再接信号线，并将未使用的 3V3 线头绝缘。"
 }
