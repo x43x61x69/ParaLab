@@ -362,6 +362,36 @@ __ANALYTICS_CARD__
   <section id="linkPage" hidden aria-labelledby="linkTitle">
     <h1 id="linkTitle">ParaLab Link</h1>
     <p data-t="Send gifts, invite Playdate visitors and look up Lab Codes on the H717 touchscreen. Connect it to a computer to use it as a USB–UART bridge for Paradise."></p>
+    <div class="link-controls">
+      <section class="guide-card" aria-labelledby="linkPreviewTitle">
+        <h2 id="linkPreviewTitle" data-t="Screen Preview"></h2>
+        <div id="linkScreens">
+          <img src="__LINK_SCREEN_home__" alt="ParaLab Link · Home" width="536" height="240">
+          <img src="__LINK_SCREEN_catalog__" alt="ParaLab Link · Catalog" width="536" height="240" hidden>
+          <img src="__LINK_SCREEN_bridge__" alt="ParaLab Link · USB Bridge" width="536" height="240" hidden>
+        </div>
+        <div id="linkScreenButtons"><button type="button" class="btn small" aria-pressed="true" data-t="Home"></button>
+          <button type="button" class="btn small" aria-pressed="false" data-t="Item Catalog"></button>
+          <button type="button" class="btn small" aria-pressed="false" data-t="USB Bridge">USB Bridge</button></div>
+      </section>
+      <section class="guide-card" aria-labelledby="linkUpdateTitle">
+        <h2 id="linkUpdateTitle"><span data-t="H717 USB Firmware Update"></span> <small>v__LINK_VERSION__</small></h2>
+        <div class="link-update-copy">
+          <p class="hint" data-t="The browser USB updater has been verified on H717 hardware."></p>
+          <p data-t="Disconnect Paradise and close other serial connections. Connect only your H717 by USB. To enter download mode manually, hold BOOT, tap RESET, then release BOOT."></p>
+        </div>
+        <div class="link-update-actions">
+          <select id="linkMode" aria-labelledby="linkUpdateTitle"><option value="update" data-t="Update firmware and assets · keep settings and favorites"></option><option value="factory" data-t="First installation or recovery · erase all H717 data"></option></select>
+          <button id="linkConnect" class="btn primary" type="button" data-t="Connect H717 via USB"></button>
+          <div class="transfer-progress" id="linkProgress" hidden>
+            <div class="flash" id="linkMeter" role="progressbar" aria-label="H717 USB" aria-valuemin="0" aria-valuemax="100"><span class="seg emu" id="linkBar"></span></div>
+            <span id="linkPercent" aria-hidden="true"></span>
+          </div>
+          <p role="status" id="linkStatus"></p>
+          <a id="linkSource" href="https://github.com/x43x61x69/ParaLab-Link" target="_blank" rel="noopener noreferrer"><span data-t="Source Code">Source Code</span> · GPL-3.0</a>
+        </div>
+      </section>
+    </div>
     <section class="guide-card link-wiring" aria-labelledby="linkWiringTitle">
       <h2 id="linkWiringTitle" data-t="Materials and Wiring"></h2>
       <ul class="link-materials">
@@ -398,30 +428,6 @@ __ANALYTICS_CARD__
       <p class="hint" data-t="Count from the board view shown. The cable plug looks reversed from its mating face. Check pin labels or continuity instead of wire colors."></p>
       <p class="hint" data-t="Power the H717 by USB and Paradise with its own batteries. Connect the signal wires after the H717 starts and insulate the unused 3V3 lead."></p>
     </section>
-    <div class="guide-grid link-controls">
-      <section class="guide-card"><h2 data-t="Screen Preview"></h2>
-        <div id="linkScreens">
-          <img src="__LINK_SCREEN_home__" alt="ParaLab Link · Home" width="536" height="240">
-          <img src="__LINK_SCREEN_catalog__" alt="ParaLab Link · Catalog" width="536" height="240" hidden>
-          <img src="__LINK_SCREEN_bridge__" alt="ParaLab Link · USB Bridge" width="536" height="240" hidden>
-        </div>
-        <div id="linkScreenButtons"><button type="button" class="btn small" aria-pressed="true" data-t="Home"></button>
-          <button type="button" class="btn small" aria-pressed="false" data-t="Item Catalog"></button>
-          <button type="button" class="btn small" aria-pressed="false" data-t="USB Bridge">USB Bridge</button></div>
-      </section>
-    <section class="guide-card link-update"><h2 id="linkUpdateTitle"><span data-t="H717 USB Firmware Update"></span> <small>v__LINK_VERSION__</small></h2>
-      <p class="hint" data-t="The browser USB updater has been verified on H717 hardware."></p>
-      <p data-t="Disconnect Paradise and close other serial connections. Connect only your H717 by USB. To enter download mode manually, hold BOOT, tap RESET, then release BOOT."></p>
-      <label><select id="linkMode" aria-labelledby="linkUpdateTitle"><option value="update" data-t="Update firmware and assets · keep settings and favorites"></option><option value="factory" data-t="First installation or recovery · erase all H717 data"></option></select></label>
-      <button id="linkConnect" class="btn primary" type="button" data-t="Connect H717 via USB"></button>
-      <div class="transfer-progress" id="linkProgress" hidden>
-        <div class="flash" id="linkMeter" role="progressbar" aria-label="H717 USB" aria-valuemin="0" aria-valuemax="100"><span class="seg emu" id="linkBar"></span></div>
-        <span id="linkPercent" aria-hidden="true"></span>
-      </div>
-      <p role="status" id="linkStatus"></p>
-      <a id="linkSource" href="https://github.com/x43x61x69/ParaLab-Link" target="_blank" rel="noopener noreferrer"><span data-t="Source Code">Source Code</span> · GPL-3.0</a>
-    </section>
-    </div>
   </section>
   <section class="plan help" id="helpBox" hidden>
     <div class="guide-heading"><h1>Guide</h1><button class="btn" id="helpClose" type="button">Back to Workspace</button></div>
