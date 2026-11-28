@@ -474,6 +474,7 @@ function renderGameLabels() {
 }
 
 function applyLang() {
+  refreshLinkStatus();
   document.querySelectorAll('[data-t]').forEach(el => { el.textContent = t(el.dataset.t); });
   renderWorkspaceButton();
   renderSourceEdition('headerRomEdition', sourceEdition());

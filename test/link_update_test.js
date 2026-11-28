@@ -11,11 +11,23 @@ const source = fs.readFileSync(path.join(root, 'src/link.js'), 'utf8')
   .replace('/*__LINK_RELEASE__*/ {}', () => JSON.stringify(releases));
 const factoryFor = board => zlib.inflateSync(fs.readFileSync(path.join(root, 'assets/paralink', board, 'factory.zlib')));
 const hash = data => crypto.createHash('md5').update(data).digest('hex');
+const document = {createElement: () => ({dataset:{}})};
+function testNodes() {
+  const nodes = {};
+  return id => nodes[id] ||= {
+    children: [],
+    setAttribute(name, value) { this[name] = value; },
+    replaceChildren(...children) {
+      this.children = children;
+      this.textContent = children.map(child => child.textContent ?? child).join('');
+    },
+  };
+}
 
 async function exercise(mode, failure, board = "h717") {
   const factory = factoryFor(board), release = releases[board];
-  const written = [], progress = [], nodes = {};
-  const $ = id => nodes[id] ||= {children:[], dataset:{}};
+  const written = [], progress = [];
+  const $ = testNodes();
   $('linkMode').value = mode;
   $('linkBoard').value = board;
   let input, address, chunks, blocks, closed = false, deviceError;
@@ -59,7 +71,7 @@ async function exercise(mode, failure, board = "h717") {
       } catch (error) { deviceError = error; throw error; }
     }})
   };
-  vm.runInNewContext(source, {$, t:x=>x, deviceDialog:async()=>failure !== 'cancel',
+  vm.runInNewContext(source, {$,document, t:x=>x, deviceDialog:async()=>failure !== 'cancel',
     transferProgress(prefix, done, total) {
       assert.equal(prefix, 'link');
       progress.push({done, total});
@@ -88,11 +100,11 @@ async function exercise(mode, failure, board = "h717") {
   assert.equal(closed, failure !== 'cancel');
   assert.equal($('linkConnect').disabled,false);
 }
-async function exerciseOta(board, mismatch = false, framed = false) {
+async function exerciseOta(board, mismatch = false, framed = false, failure) {
   const release = releases[board];
   const image = factoryFor(board).subarray(0x20000, 0x20000+release['firmware.bin'].size);
-  const nodes = {}, progress = [];
-  const $ = id => nodes[id] ||= {children:[], dataset:{}};
+  const progress = [];
+  const $ = testNodes();
   $('linkMode').value = 'ota';
   $('linkBoard').value = board;
   let input, cursor = 0, header = false, closed = false, droppedAck = false, repeated = false;
@@ -108,7 +120,7 @@ async function exerciseOta(board, mismatch = false, framed = false) {
         const firmware=release['firmware.bin'], assets=release['assets.bin'];
         assert.equal(message, ['UPDATE',release.board,release.version,firmware.size,assets.size,release.assetCrc,firmware.rawSha256].join(' '));
         header = true;
-        send(framed ? 'OK 0' : 'OK');
+        send(failure ? 'ERROR ' + failure : framed ? 'OK 0' : 'OK');
       } else {
         let data = Buffer.from(chunk), offset = cursor;
         if (framed) {
@@ -130,12 +142,25 @@ async function exerciseOta(board, mismatch = false, framed = false) {
       }
     }})
   };
-  vm.runInNewContext(source, {$,t:x=>x,deviceDialog:async()=>true,transferProgress(_,done,total){progress.push({done,total});},
+  let locale = 'en';
+  const translate = (key, variables) => {
+    const dictionary = locale === 'en' ? {} : require('../src/locales/' + locale + '.json');
+    return (dictionary[key] || key).replace(/\{(\w+)\}/g, (_, name) => variables[name]);
+  };
+  const refreshLinkStatus = vm.runInNewContext(source + '\nrefreshLinkStatus;', {$,document,t:translate,deviceDialog:async()=>true,transferProgress(_,done,total){progress.push({done,total});},
     navigator:{serial:{requestPort:async()=>port}},window:{isSecureContext:true,ParamixCore:{crc32:zlib.crc32},addEventListener(){},removeEventListener(){}},
     fetch,crypto:crypto.webcrypto,setTimeout,clearTimeout,Uint8Array,DataView,TextDecoder,TextEncoder,Response,Blob,DecompressionStream});
   await $('linkConnect').onclick();
   assert(closed);
-  if (mismatch) {
+  if (failure) {
+    assert.equal(cursor, 0);
+    assert.equal($('linkStatus').textContent, 'Write failed at byte 1024 (0xABCD).');
+    locale = 'zh-Hant';
+    refreshLinkStatus();
+    const localized = '寫入至位元組偏移量 1024 時失敗（0xABCD）。';
+    assert.equal($('linkStatus').textContent, localized);
+    assert.equal($('linkMeter')['aria-label'], localized);
+  } else if (mismatch) {
     assert.equal(cursor,0);
     assert.match($('linkStatus').textContent,/does not match/);
   } else {
@@ -155,6 +180,7 @@ async function exerciseOta(board, mismatch = false, framed = false) {
   await exerciseOta('h717');
   await exerciseOta('k191');
   await exerciseOta('k191', true);
+  await exerciseOta('h717', false, true, 'Write failed at 1024: 0xABCD');
   await exerciseOta('h717', false, true);
   await exerciseOta('k191', false, true);
   console.log('PASS: Link update and installation, payloads, checksums, cancellation, target checks and verification failure');

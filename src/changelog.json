@@ -1,6 +1,26 @@
 {
   "releases": [
     {
+      "version": "0.2.141",
+      "changes": [
+        {
+          "kind": "bug",
+          "text": {
+            "en": "Completed ParaLink page translations for wiring, button controls and USB update messages.",
+            "zh-Hant": "補齊 ParaLink 頁面的接線指引、按鍵操作和 USB 更新訊息翻譯。",
+            "zh-Hans": "补齐 ParaLink 页面的接线指引、按键操作和 USB 更新消息翻译。",
+            "ja": "ParaLink ページの配線、ボタン操作、USB 更新メッセージの翻訳を補いました。",
+            "ko": "ParaLink 페이지의 배선, 버튼 조작, USB 업데이트 메시지 번역을 보완했습니다.",
+            "fr": "Traductions complétées pour le câblage, les boutons et les messages de mise à jour USB sur la page ParaLink.",
+            "de": "Übersetzungen für Verkabelung, Tastenbedienung und USB-Update-Meldungen auf der ParaLink-Seite ergänzt.",
+            "es": "Se completaron las traducciones del cableado, los botones y los mensajes de actualización USB de ParaLink.",
+            "it": "Completate le traduzioni di cablaggio, comandi e messaggi di aggiornamento USB nella pagina ParaLink.",
+            "pt": "Foram completadas as traduções das ligações, dos botões e das mensagens de atualização USB na página do ParaLink."
+          }
+        }
+      ]
+    },
+    {
       "version": "0.2.139",
       "changes": [
         {

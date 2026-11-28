@@ -1,5 +1,5 @@
 // ESP32-S3 ROM loader. Use the native USB download port, without installing a RAM stub.
-{
+const refreshLinkStatus = (() => {
   const releases = /*__LINK_RELEASE__*/ {};
   const board = $('linkBoard'), versions = $('linkVersions');
   const mode = $('linkMode'), connect = $('linkConnect'), progress = $('linkProgress');
@@ -12,10 +12,43 @@
   const checking = 'Checking hardware and firmware…';
   const writing = 'Writing and verifying. Keep USB connected.';
   const verified = 'Write verified. Press RESET on ParaLink and check its title bar.';
-  function status(message) {
-    const output = $('linkStatus');
-    output.dataset.t = message;
-    output.textContent = t(message);
+  const otaUnavailable = 'No USB OTA response. Install the latest firmware in ROM mode first.';
+  const otaInterrupted = 'USB OTA update interrupted. Check the cable and retry.';
+  const otaErrors = new Set([
+    'Invalid update header',
+    'Update needs new assets',
+    'Firmware does not fit',
+    'Could not open update partition',
+    'Update interrupted',
+    'Firmware checksum failed',
+    'Firmware validation failed',
+  ]);
+  class LinkUpdateError extends Error {
+    constructor(message, variables) {
+      super(message);
+      this.variables = variables;
+    }
+  }
+  function otaError(reason) {
+    const timeout = /^Read timed out at (\d+)$/.exec(reason);
+    if (timeout) return new LinkUpdateError('Read timed out at byte {offset}.', {offset: timeout[1]});
+    const write = /^Write failed at (\d+): (0x[\dA-F]+)$/i.exec(reason);
+    if (write) return new LinkUpdateError('Write failed at byte {offset} ({code}).', {offset: write[1], code: write[2]});
+    if (otaErrors.has(reason)) return new LinkUpdateError(reason);
+    console.error('ParaLink USB OTA:', reason);
+    return new LinkUpdateError(otaInterrupted);
+  }
+  let statusMessage, statusVariables;
+  function renderStatus() {
+    if (!statusMessage) return;
+    const label = t(statusMessage, statusVariables);
+    $('linkStatus').textContent = label;
+    $('linkMeter').setAttribute('aria-label', label);
+  }
+  function status(message, variables) {
+    statusMessage = message;
+    statusVariables = variables;
+    renderStatus();
   }
   if (!navigator.serial || !window.isSecureContext) {
     connect.disabled = true;
@@ -54,7 +87,7 @@
     let frame = [], escaped = false, started = false;
     for (;;) {
       const {value, done} = await reader.read();
-      if (done) throw new Error(failed);
+      if (done) throw new LinkUpdateError(failed);
       for (const byte of value) {
         if (byte === 0xc0) {
           if (started && frame.length && !escaped) yield Uint8Array.from(frame);
@@ -63,12 +96,12 @@
           frame = [];
         } else if (started) {
           if (escaped) {
-            if (byte !== 0xdc && byte !== 0xdd) throw new Error(failed);
+            if (byte !== 0xdc && byte !== 0xdd) throw new LinkUpdateError(failed);
             frame.push(byte === 0xdc ? 0xc0 : 0xdb);
             escaped = false;
           } else if (byte === 0xdb) escaped = true;
           else frame.push(byte);
-          if (frame.length > 65544) throw new Error(failed);
+          if (frame.length > 65544) throw new LinkUpdateError(failed);
         }
       }
     }
@@ -90,10 +123,10 @@
         await writer.write(Uint8Array.from(slip));
         for (;;) {
           const {value:frame, done} = await stream.next();
-          if (done) throw new Error(failed);
+          if (done) throw new LinkUpdateError(failed);
           if (frame[0] !== 1 || frame[1] !== op) continue;
           if (frame.length < 12 || frame.length !== 8 + frame[2] + 256 * frame[3] ||
-              frame[frame.length - 4] !== 0) throw new Error(failed);
+              frame[frame.length - 4] !== 0) throw new LinkUpdateError(failed);
           return returnValue ? new DataView(frame.buffer, frame.byteOffset).getUint32(4, true) : frame.slice(8, -4);
         }
       } finally { clearTimeout(timer); }
@@ -106,11 +139,11 @@
   }
   async function download(part) {
     const response = await fetch(part.source);
-    if (!response.ok) throw new Error(failed);
+    if (!response.ok) throw new LinkUpdateError(failed);
     const compressed = new Uint8Array(await response.arrayBuffer());
     const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', compressed));
     if (Array.from(digest, byte => byte.toString(16).padStart(2, '0')).join('') !== part.sha256)
-      throw new Error(failed);
+      throw new LinkUpdateError(failed);
     return {part, compressed};
   }
 
@@ -125,7 +158,7 @@
       await command(0x11, packet, chunk.reduce((sum, byte) => sum ^ byte, 0xef), 60000);
       report(chunk.length);
     }
-    if (await digestOnChip(command, part) !== part.md5) throw new Error(failed);
+    if (await digestOnChip(command, part) !== part.md5) throw new LinkUpdateError(failed);
   }
 
   // Follow the ESP32-S3 ROM loader's SPI RDID sequence. The high JEDEC byte is the capacity exponent.
@@ -143,7 +176,7 @@
       for (let retry = 0; retry < 10; retry++) {
         if (!(await read(0) & (1 << 18))) return 2 ** ((await read(0x58) >>> 16) & 0xff);
       }
-      throw new Error(incompatible);
+      throw new LinkUpdateError(incompatible);
     } finally {
       await write(0x18, usr);
       await write(0x20, usr2);
@@ -167,9 +200,9 @@
     async function readLine() {
       while (!pending.includes('\n')) {
         const {value, done} = await reader.read();
-        if (done) throw new Error('No USB OTA response. Install the latest firmware in ROM mode first.');
+        if (done) throw new LinkUpdateError(otaUnavailable);
         pending += new TextDecoder().decode(value);
-        if (pending.length > 512) throw new Error(failed);
+        if (pending.length > 512) throw new LinkUpdateError(failed);
       }
       const split = pending.indexOf('\n');
       const line = pending.slice(0, split).trim();
@@ -182,13 +215,13 @@
         reading ||= readLine();
         const line = await Promise.race([reading, new Promise(resolve => {timer=setTimeout(resolve,timeout,null);})]);
         if (line !== null) reading = null;
-        if (line?.startsWith('ERROR')) throw new Error(line.slice(5).trim() || failed);
+        if (line?.startsWith('ERROR')) throw otaError(line.slice(5).trim());
         return line;
       } finally { clearTimeout(timer); }
     }
     const hello = /^PARALINK (OTA2?) (\w+) (\d+\.\d+\.\d+)$/.exec((await nextLine(6000)) || '');
-    if (!hello) throw new Error('No USB OTA response. Install the latest firmware in ROM mode first.');
-    if (hello[2] !== release.board) throw new Error(incompatible);
+    if (!hello) throw new LinkUpdateError(otaUnavailable);
+    if (hello[2] !== release.board) throw new LinkUpdateError(incompatible);
     const framed = hello[1] === 'OTA2';
     showVersions(hello[3]);
     const firmware = release['firmware.bin'];
@@ -196,7 +229,7 @@
     const header = 'UPDATE ' + release.board + ' ' + release.version + ' ' + payload.length + ' ' +
       assets.size + ' ' + release.assetCrc + ' ' + firmware.rawSha256 + '\n';
     await writer.write(new TextEncoder().encode(header));
-    if (await nextLine(20000) !== (framed ? 'OK 0' : 'OK')) throw new Error(failed);
+    if (await nextLine(20000) !== (framed ? 'OK 0' : 'OK')) throw new LinkUpdateError(failed);
     status(writing);
     transferProgress('link', 0, payload.length, t(writing));
     let verifiedByLastBlock = false;
@@ -215,15 +248,15 @@
             if (line === 'OK ' + end || verifiedByLastBlock) { received = true; break; }
           }
         }
-        if (!received) throw new Error(failed);
+        if (!received) throw new LinkUpdateError(failed);
       } else {
         await writer.write(chunk);
-        if (await nextLine(15000) !== 'OK') throw new Error(failed);
+        if (await nextLine(15000) !== 'OK') throw new LinkUpdateError(failed);
       }
       transferProgress('link', Math.min(end, Math.floor(payload.length * 0.99)), payload.length, t(writing));
     }
     status('Verifying firmware…');
-    if (!verifiedByLastBlock && await nextLine(15000) !== 'DONE') throw new Error(failed);
+    if (!verifiedByLastBlock && await nextLine(15000) !== 'DONE') throw new LinkUpdateError(failed);
     transferProgress('link', payload.length, payload.length, t(otaVerified));
     status(otaVerified);
   }
@@ -240,7 +273,7 @@
       port = await navigator.serial.requestPort({filters:[boot, runtime]});
       const runtimePort = port.getInfo().usbProductId === runtime.usbProductId;
       if (ota) {
-        if (!runtimePort) throw new Error('Select the running ParaLink in the USB list for OTA.');
+        if (!runtimePort) throw new LinkUpdateError('Select the running ParaLink in the USB list for OTA.');
         if (!await deviceDialog(t('Install the selected firmware and keep settings and favorites?'),
           'ParaLink ' + release.board + ' v' + release.version, t('Continue'))) { status('Cancelled'); return; }
         window.addEventListener('beforeunload', guard);
@@ -248,7 +281,7 @@
         const {compressed} = await download(release['firmware.bin']);
         const payload = new Uint8Array(await new Response(
           new Blob([compressed]).stream().pipeThrough(new DecompressionStream('deflate'))).arrayBuffer());
-        if (payload.length !== release['firmware.bin'].size) throw new Error(failed);
+        if (payload.length !== release['firmware.bin'].size) throw new LinkUpdateError(failed);
         // Force a line-coding change even when the OS remembers the previous OTA rate.
         await port.open({baudRate:460800});
         await port.close();
@@ -283,12 +316,12 @@
       await command(0x08, Uint8Array.from([7, 7, 18, 32, ...Array(32).fill(0x55)]));
       const security = await command(0x14, new Uint8Array());
       if (security.length < 16 || new DataView(security.buffer).getUint32(12, true) !== 9 ||
-          (security[0] & 5) || security[4] !== 0) throw new Error(incompatible);
+          (security[0] & 5) || security[4] !== 0) throw new LinkUpdateError(incompatible);
       await command(0x0d, words(0, 0));
-      if (await flashBytes(command) !== release.flashBytes) throw new Error(incompatible);
+      if (await flashBytes(command) !== release.flashBytes) throw new LinkUpdateError(incompatible);
       await command(0x0b, words(0, release.flashBytes, 0x10000, 0x1000, 0x100, 0xffff));
       if (!factory && await digestOnChip(command, release.layout) !== release.layout.md5)
-        throw new Error(incompatible);
+        throw new LinkUpdateError(incompatible);
       const images = await Promise.all((factory ? [release.factory] : [release['firmware.bin'], {...release['firmware.bin'], address:0x1a0000}, release['assets.bin']]).map(download));
       const total = images.reduce((sum, {compressed}) => sum + compressed.length, 0);
       let written = 0;
@@ -303,7 +336,12 @@
       status(verified);
     } catch (error) {
       progress.hidden = true;
-      status(error.name === 'NotFoundError' ? 'Cancelled' : error.message || failed);
+      if (error.name === 'NotFoundError') status('Cancelled');
+      else if (error instanceof LinkUpdateError) status(ota && error.message === failed ? otaInterrupted : error.message, error.variables);
+      else {
+        console.error('ParaLink USB update:', error);
+        status(ota ? otaInterrupted : failed);
+      }
     } finally {
       try { if (reader) await reader.cancel(); } catch (_) {}
       reader?.releaseLock();
@@ -313,4 +351,5 @@
       mode.disabled = board.disabled = connect.disabled = false;
     }
   };
-}
+  return renderStatus;
+})();
