@@ -23,9 +23,14 @@
   }
   function showVersions(previous) {
     const release = releases[board.value];
-    versions.textContent = previous
-      ? release.board + ' · v' + previous + ' → v' + release.version
-      : release.board + ' · ' + t('Target version') + ' v' + release.version;
+    if (previous) {
+      versions.textContent = release.board + ' · v' + previous + ' → v' + release.version;
+      return;
+    }
+    const label = document.createElement('span');
+    label.dataset.t = 'Target version';
+    label.textContent = t(label.dataset.t);
+    versions.replaceChildren(release.board + ' · ', label, ' v' + release.version);
   }
   board.onchange = () => showVersions();
   if (releases[board.value]) showVersions();

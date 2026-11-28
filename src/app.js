@@ -241,7 +241,7 @@ const T = {
     keysTitle: 'Buttons', kFire: 'Fire', kFwd: 'Forward', kBack: 'Back', kUse: 'Use', kMod: 'Change weapon: hold + wheel',
     kWheel: 'Wheel press', kRun: 'Run with 2x forward', kInv: 'Wheel reversed', kFixed: 'Always the same: A+C menu, B+C map. Sound on/off: hold the "Change weapon" key and press the wheel briefly. Back: as set in the Menu tab under "Back from programs".',
     kOld: 'This DOOM is older and has no own button layout yet. Build it in again with the WAD.',
-    device: 'Device', devTitle: 'Device over UART',
+    device: 'Device', devTitle: 'Device over UART', 'Site menu': 'Menu',
     devConnect: 'Connect', devDump: 'Read ROM', devWrite: 'Write new ROM to the device', devOnly: 'Only write changes', devKeep: 'Keep saves', devStop: 'Cancel',
     devFast: 'Fast UART transfer',
     devMixedWriteCount: 'Write {small} × 4 KiB and {large} × 64 KiB flash blocks? Progress counts {total} units of 4 KiB.',
@@ -481,6 +481,9 @@ function applyLang() {
   I18n.applyMarkup();
   refreshGuideText();
   refreshEditionOptions();
+  for (const picker of deviceTabPickers.values()) {
+    for (const option of picker.options) option.textContent = $(option.value).textContent.trim();
+  }
   for (const [key, tabs] of [['paradise', paradiseTabs], ['lab', myLabTabs]]) {
     updateToolLabels(key, tabs);
   }
@@ -5173,6 +5176,13 @@ const canReadLabItems = device => !!device && device.info.editionIdentified !== 
   Number.isInteger(device.info.edition) && device.info.edition >= 1 && device.info.edition <= 8;
 const deviceTabs = Array.from($('deviceTabs').querySelectorAll('[role="tab"]'));
 const uartToolTabs = Array.from($('uartToolTabs').querySelectorAll('[role="tab"]'));
+const deviceTabPickers = new Map([[deviceTabs, $('deviceTabPicker')], [uartToolTabs, $('uartToolPicker')]]);
+
+function visibleDeviceTabControl(tab) {
+  if (tab.offsetWidth) return tab;
+  return deviceTabPickers.get(deviceTabs.includes(tab) ? deviceTabs : uartToolTabs);
+}
+
 function selectDevicePanel(tabs, tab) {
   if (tab.getAttribute('aria-selected') !== 'true' && warnDeviceWrite()) return false;
   if (tab.getAttribute('aria-selected') !== 'true')
@@ -5183,6 +5193,7 @@ function selectDevicePanel(tabs, tab) {
     item.tabIndex = selected ? 0 : -1;
     $(item.getAttribute('aria-controls')).hidden = !selected;
   }
+  deviceTabPickers.get(tabs).value = tab.id;
   rememberNavigation(tabs === deviceTabs ? { device: tab.id } : { uart: tab.id });
   return true;
 }
@@ -5231,6 +5242,15 @@ bindDeviceTabs(uartToolTabs, tab => {
   if (tab.id === 'deviceClockTitle') renderUartClock();
   else clockDevice = null;
 });
+for (const [tabs, picker] of deviceTabPickers) {
+  picker.replaceChildren(...tabs.map(tab => new Option(tab.textContent.trim(), tab.id)));
+  const selectedTab = () => tabs.find(tab => tab.getAttribute('aria-selected') === 'true');
+  picker.value = selectedTab().id;
+  picker.onchange = () => {
+    $(picker.value).click();
+    picker.value = selectedTab().id;
+  };
+}
 let deviceOnlyChanged = $('devOnly').checked, deviceKeepSaves = $('devKeep').checked;
 const FAST_UART_PREFERENCE_KEY = 'paralab.fastUartTransfer';
 let deviceFastPreferred = null;
@@ -5726,6 +5746,27 @@ async function restartDevice() {
 }
 $('btnDevRestart').onclick = restartDevice;
 const viewScroll = new Map();
+const headerMenu = $('headerMenu');
+const headerMenuToggle = $('headerMenuToggle');
+const compactNavigation = window.matchMedia('(max-width: 800px)');
+const headerMenuIsOpen = () => headerMenuToggle.getAttribute('aria-expanded') === 'true';
+
+function closeHeaderMenu(restoreFocus = false) {
+  if (!headerMenuIsOpen()) return;
+  if (restoreFocus) headerMenuToggle.focus({ preventScroll: true });
+  headerMenuToggle.setAttribute('aria-expanded', 'false');
+}
+
+headerMenuToggle.onclick = () => headerMenuToggle.setAttribute('aria-expanded', String(!headerMenuIsOpen()));
+compactNavigation.addEventListener('change', () => closeHeaderMenu());
+document.addEventListener('click', event => {
+  if (!headerMenu.contains(event.target) && !headerMenuToggle.contains(event.target)) closeHeaderMenu();
+});
+document.addEventListener('keydown', event => {
+  if (event.defaultPrevented || event.key !== 'Escape' || !headerMenuIsOpen()) return;
+  event.preventDefault();
+  closeHeaderMenu(true);
+});
 const releases = /*__CHANGELOG__*/ [];
 const changelogKinds = { feature: 'Feature', improvement: 'Improvement', bug: 'Bug' };
 const changelogKindOrder = Object.keys(changelogKinds);
@@ -5768,6 +5809,7 @@ function renderChangelog() {
 function showDestination(view, newRom = false) {
   const main = document.querySelector('main');
   if (main.dataset.view !== view && warnDeviceWrite()) return;
+  closeHeaderMenu(headerMenu.contains(document.activeElement));
   if (view !== 'device') saveReadAfterConnect = false;
   if (main.dataset.view !== view && !newRom) measure('feature_view', view);
   viewScroll.set(main.dataset.view, window.scrollY);
@@ -5903,11 +5945,13 @@ for (const link of document.querySelectorAll('[data-view-link]')) {
     if (route === 'device') {
       showDestination('device');
       showDeviceTab(target);
+      target = visibleDeviceTabControl(target);
     } else if (route === 'uart') {
       showDestination('device');
       showDeviceTab($('deviceTabUart'));
       const tool = uartToolTabs.find(tab => tab === target || $(tab.getAttribute('aria-controls')).contains(target));
       if (tool && !selectDevicePanel(uartToolTabs, tool)) return;
+      if (target === tool) target = visibleDeviceTabControl(target);
     } else if (route === 'save-editor') {
       showDestination(route);
     } else {
@@ -5926,7 +5970,7 @@ for (const link of document.querySelectorAll('[data-view-link]')) {
         tab.click();
         target = tab.offsetWidth ? tab : $(myLabRom ? 'labTool' : 'paradiseTool');
       } else if (!myLabRom && !state.ctx) target = $('drop');
-      else if (route === 'workspace') target = $('btnWorkspace');
+      else if (route === 'workspace') target = compactNavigation.matches ? headerMenuToggle : $('btnWorkspace');
     }
     if (target.disabled) {
       const heading = $(myLabRom ? 'labHeading' : 'paradiseHeading');
@@ -6951,7 +6995,7 @@ function adapterHint(element, tab) {
   link.onclick = event => {
     event.preventDefault();
     showDeviceTab(tab);
-    tab.focus();
+    if (tab.getAttribute('aria-selected') === 'true') visibleDeviceTabControl(tab).focus();
   };
   const [before, after] = t('The adapter is in use. Open {tab} to end the connection.').split('{tab}');
   element.append(before, link, after);

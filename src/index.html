@@ -273,18 +273,23 @@ __STUDIO_LAYOUT__
 <body>
 <header class="bar">
   <div class="brand"><img class="brand-icon" src="__BRAND_ICON__" width="34" height="34" alt=""><span class="brand-name">ParaLab</span></div>
-  <nav class="destinations" aria-label="Main navigation">
-    <button class="rom-action" id="btnWorkspace" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10l9-7 9 7M5 9v11h14V9M10 20v-6h4v6"/></svg><span></span></button>
-    <button id="btnDevice" data-t="device"></button>
-    <button id="btnSaveEditor" data-t="Save Editor">Save Editor</button>
-    <button id="btnLabCodes" data-t="Lab & Shop Codes">Lab &amp; Shop Codes</button>
-    <button id="btnHelp">Guide</button>
-    <button id="btnLink">ParaLink</button>
-    <button id="btnChangelog" data-t="Change Log">Change Log</button>
-  </nav>
-  <div class="interface-language">
-    <span class="interface-language-icon" aria-hidden="true"></span>
-    <select id="interfaceLanguage" aria-label="Interface language" title="Language"></select>
+  <button class="header-menu-toggle" id="headerMenuToggle" type="button" aria-controls="headerMenu" aria-expanded="false">
+    <span data-t="Site menu">Menu</span><span class="header-menu-chevron" aria-hidden="true"></span>
+  </button>
+  <div class="header-menu" id="headerMenu">
+    <nav class="destinations" aria-label="Main navigation">
+      <button class="rom-action" id="btnWorkspace" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10l9-7 9 7M5 9v11h14V9M10 20v-6h4v6"/></svg><span></span></button>
+      <button id="btnDevice" data-t="device"></button>
+      <button id="btnSaveEditor" data-t="Save Editor">Save Editor</button>
+      <button id="btnLabCodes" data-t="Lab & Shop Codes">Lab &amp; Shop Codes</button>
+      <button id="btnHelp">Guide</button>
+      <button id="btnLink">ParaLink</button>
+      <button id="btnChangelog" data-t="Change Log">Change Log</button>
+    </nav>
+    <div class="interface-language">
+      <span class="interface-language-icon" aria-hidden="true"></span>
+      <select id="interfaceLanguage" aria-label="Interface language" title="Language"></select>
+    </div>
   </div>
   <div class="file-actions">
     <div class="header-rom"><span class="romname" id="romname"><span></span></span><span class="rom-source-edition" id="headerRomEdition" hidden></span></div>
@@ -826,6 +831,7 @@ __ANALYTICS_CARD__
       <h1>Device Console</h1>
       <button type="button" class="btn" id="changeDevicePort" hidden>Change USB Adapter…</button>
     </div>
+    <select class="device-tab-picker" id="deviceTabPicker" aria-label="Device Console"></select>
     <div class="tabs device-tabs" id="deviceTabs" role="tablist" aria-labelledby="btnDevice">
       <button class="tab" id="deviceTabUart" type="button" role="tab" aria-selected="true" aria-controls="deviceUart" data-t="devTitle"></button>
       <button class="tab" id="deviceTabPlaydate" type="button" role="tab" aria-selected="false" aria-controls="devicePlaydate" tabindex="-1" data-t="visTitle"></button>
@@ -917,6 +923,7 @@ __ANALYTICS_CARD__
           </section>
         </section>
         <div class="uart-tools">
+          <select class="device-tab-picker" id="uartToolPicker" aria-label="UART Tools"></select>
           <div class="tabs uart-tool-tabs" id="uartToolTabs" role="tablist" aria-label="UART Tools">
             <button type="button" class="tab" id="romTransferTitle" role="tab" aria-selected="true" aria-controls="uartRomTools">ROM Transfer</button>
             <button type="button" class="tab" id="deviceSaveTools" role="tab" aria-selected="false" aria-controls="uartSaveTools" tabindex="-1">Save Backup &amp; Restore</button>
